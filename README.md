@@ -1,8 +1,8 @@
-# Sample GitLab Project
+This GitLab repository contains just the implementation of the master thesis project.
 
-This sample project shows how a project in GitLab looks for demonstration purposes. It contains issues, merge requests and Markdown files in many branches,
-named and filled with lorem ipsum.
+The documentation can be found on SVN at the link below:
 
-You can look around to get an idea how to structure your project and, when done, you can safely delete this project.
+https://destc0strsvn01/svn/eutecStudents/220401_MatteoCaligiuri
 
-[Learn more about creating GitLab projects.](https://docs.gitlab.com/ee/gitlab-basics/create-project.html)
+
+
