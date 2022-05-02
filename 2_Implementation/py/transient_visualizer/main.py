@@ -335,8 +335,7 @@ def cv2_transient_video(in_path, out_path, alpha):
     for file in img_files:
         img_list.append(cv2.imread(file))  # Load all the png transient files
 
-    out = cv2.VideoWriter(str(out_path), cv2.VideoWriter_fourcc(*"mp4v"), 30,
-                          img_list[0].shape[0:2])  # Create the cv2 video
+    out = cv2.VideoWriter(str(out_path), cv2.VideoWriter_fourcc(*"mp4v"), 30, (img_list[0].shape[1], img_list[0].shape[0]))  # Create the cv2 video
 
     for img in tqdm(img_list):
         if alpha:
