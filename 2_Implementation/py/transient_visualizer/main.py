@@ -123,10 +123,10 @@ def reshape_frame(files):
         np_pt = np.float32
 
     # Define an empty matrix of size image_height x image_width x temporal_samples for each channel
-    frame_A = np.empty([size[1], size[1], size[0]])
-    frame_R = np.empty([size[1], size[1], size[0]])
-    frame_G = np.empty([size[1], size[1], size[0]])
-    frame_B = np.empty([size[1], size[1], size[0]])
+    frame_A = np.empty([len(files), size[1], size[0]])
+    frame_R = np.empty([len(files), size[1], size[0]])
+    frame_G = np.empty([len(files), size[1], size[0]])
+    frame_B = np.empty([len(files), size[1], size[0]])
 
     # Set initial value to the global min e global max (updated later)
     global_max = 0
