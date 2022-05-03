@@ -1,6 +1,3 @@
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
 import sys
 import getopt
 import os
@@ -123,10 +120,10 @@ def reshape_frame(files):
         np_pt = np.float32
 
     # Define an empty matrix of size image_height x image_width x temporal_samples for each channel
-    frame_A = np.empty([len(files), size[1], size[0]])
-    frame_R = np.empty([len(files), size[1], size[0]])
-    frame_G = np.empty([len(files), size[1], size[0]])
-    frame_B = np.empty([len(files), size[1], size[0]])
+    frame_A = np.empty([len(files), size[1], size[0]], dtype=np.float32)
+    frame_R = np.empty([len(files), size[1], size[0]], dtype=np.float32)
+    frame_G = np.empty([len(files), size[1], size[0]], dtype=np.float32)
+    frame_B = np.empty([len(files), size[1], size[0]], dtype=np.float32)
 
     # Set initial value to the global min e global max (updated later)
     global_max = 0
