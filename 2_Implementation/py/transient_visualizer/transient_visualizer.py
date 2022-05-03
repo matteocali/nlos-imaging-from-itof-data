@@ -244,7 +244,7 @@ def img_matrix(channels, output, out_type, alpha):
     images = []  # Empty list that will contain all the images
     # Fuse the channels together to obtain a proper [A, R, G, B] image
     for i in tqdm(range(np.shape(frame_A)[2])):
-        img = numpy.empty([np.shape(frame_A)[0], np.shape(frame_A)[1], len(channels)])  # Create an empty numpy array of the correct shape
+        img = numpy.empty([np.shape(frame_A)[0], np.shape(frame_A)[1], len(channels)], dtype=np.float32)  # Create an empty numpy array of the correct shape
 
         img[:, :, 0] = frame_R[:, :, i]
         img[:, :, 1] = frame_G[:, :, i]
