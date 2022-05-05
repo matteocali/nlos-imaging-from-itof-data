@@ -141,7 +141,16 @@ def extract_first_peak(channels):
     :param channels: list of all the channels
     :return: return a list of two list the firs containing the peak position for each channel the second one the value of each peak
     """
-    max_index_R, max_index_G, max_index_B = [np.nanargmax(channel, axis=2) for channel in channels]  # Find the index of the maximum value in the third dimension
+
+    try:
+        max_index_R, max_index_G, max_index_B = [np.nanargmax(channel, axis=2) for channel in channels]  # Find the index of the maximum value in the third dimension
+    except ValueError:  # Manage the all NaN situation
+        channels_no_nan = []
+        for channel in channels:
+            temp = channel
+            temp[np.isnan(channel)] = 0
+            channels_no_nan.append(temp)
+        max_index_R, max_index_G, max_index_B = [np.nanargmax(channel, axis=2) for channel in channels_no_nan]
     peak_pos = [data[int(data.shape[0]/2), int(data.shape[1]/2)] for data in [max_index_R, max_index_G, max_index_B]]  # Extract the position of the maximum value in the middle pixel
     peak_values = [channel[int(channel.shape[0]/2), int(channel.shape[1]/2), peak_pos[index]] for index, channel in enumerate(channels)]  # Extract the radiance value in the peak position of the middle pixel
     return [peak_pos, peak_values]
@@ -154,8 +163,8 @@ def compute_distance(peak_pos, exposure_time):
     :param exposure_time: size of each time bean
     :return:
     """
-    return (((peak_pos + 1) * exposure_time) / 2) - 0.05  # compute the actual measured distance
-                                                          # the "- 0.05" is needed to ocmpensate for an offset of the sensor
+    return round((((peak_pos + 1) * exposure_time) / 2) - round(exposure_time / 2, 4), 4)  # Compute the actual measured distance
+                                                                                           # the "- round(exposure_time / 2, 4)" is needed to ocmpensate for an offset of the sensor
 
 
 if __name__ == '__main__':
