@@ -16,10 +16,11 @@ def arg_parser(argv):
 
     arg_input = ""  # Argument containing the input directory
     arg_output = "distance_plot"  # Argument containing the output file name
-    arg_help = "{0} -i <input> -o <output> -p <ptype> -v <video> (default = True) -t <type> (default = plt) -a <alpha> (default = False)".format(argv[0])  # Help string
+    arg_mm = "False"  # Argument to select if we are considering the millimeter case or not
+    arg_help = "{0} -i <input> -o <output> -m <millimiter> (default = False)".format(argv[0])  # Help string
 
     try:
-        opts, args = getopt.getopt(argv[1:], "hi:o:", ["help", "input=", "output="])  # Recover the passed options and arguments from the command line (if any)
+        opts, args = getopt.getopt(argv[1:], "hi:o:m:", ["help", "input=", "output=", "millimiter="])  # Recover the passed options and arguments from the command line (if any)
     except:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -32,12 +33,14 @@ def arg_parser(argv):
             arg_input = Path(arg)  # Set the input directory
         elif opt in ("-o", "--output"):
             arg_output = arg  # Set the output file name
+        elif opt in ("-m", "--millimiter"):
+            arg_mm = arg  # Set the millimiter flag
 
     print('Input folder:', arg_input)
     print('Output folder:', arg_output)
     print()
 
-    return [arg_input, arg_output,]
+    return [arg_input, arg_output, arg_mm]
 
 
 def reed_files(path, extension, reorder=True):
@@ -115,11 +118,39 @@ def save_plot(dist, radiance, output, ext = ".svg", annotation = False):
     plt.show()  # Show the plot
 
 
+def save_millimiter_plot(dist, output, ext = ".svg"):
+    """
+    Function to generate and save the plot
+    :param dist: vector containing al the measured distance values
+    :param output: name of the output file
+    :param ext: extension of the saved file
+    """
+
+    lin = np.linspace(2, 30, 1000)  # Build the ground truth linear model
+
+    x = [x for x in range(2, 32, 2)]  # x axes of the measured data
+
+    plt.figure(figsize=(10, 8))
+    plt.plot(lin, lin, '--', label="Ideal distances values [mm]")  # Plot the ground truth value as a dashed line
+    plt.step(x, [x * 1000 for x in dist], linewidth=2, label="Measured distances [mm]")  # Plot the measured data as steps
+    plt.xticks(list(range(2, 32, 2)))  # Define the values displayed on the x axes
+    plt.yticks(list(range(2, 36, 1)))  # Define the values displayed on the y axes
+    plt.xlabel("Distances value [m]")  # Define the label on the x axis
+    plt.ylabel(r"Radiance value on he red channel [$W·m^{2}/sr$]")  # Define the label on the y axes
+    plt.grid()  # Add the grid to the plot
+    plt.legend()  # Add the legend to the plot
+    plt.savefig(output + ext)  # Save the generated plot
+    plt.show()  # Show the plot
+
+
 if __name__ == '__main__':
-    arg_input, arg_output = arg_parser(sys.argv)  # Recover the input and output folder from the console args
+    arg_input, arg_output, arg_mm = arg_parser(sys.argv)  # Recover the input and output folder from the console args
 
     files = reed_files(str(arg_input), "txt")  # Load the path of all the files in the input folder with extension .exr
 
     dist, radiance = extract_data_from_file(files)  # Extract the distance and radiance values from the files
 
-    save_plot(dist, radiance, arg_output)  # Generate and save the plot
+    if not arg_mm:
+        save_plot(dist, radiance, arg_output)  # Generate and save the standard plot
+    else:
+        save_millimiter_plot(dist, arg_output)  # Generate and save the millimiter plot
