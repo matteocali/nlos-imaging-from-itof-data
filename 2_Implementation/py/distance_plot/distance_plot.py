@@ -131,12 +131,12 @@ def save_millimiter_plot(dist, output, ext = ".svg"):
     x = [x for x in range(2, 32, 2)]  # x axes of the measured data
 
     plt.figure(figsize=(10, 8))
-    plt.plot(lin, lin, '--', label="Ideal distances values [mm]")  # Plot the ground truth value as a dashed line
-    plt.step(x, [x * 1000 for x in dist], linewidth=2, label="Measured distances [mm]")  # Plot the measured data as steps
+    plt.plot(lin, lin, '--', label="Ideal distances values")  # Plot the ground truth value as a dashed line
+    plt.step(x, [x * 1000 for x in dist], linewidth=2, label="Measured distances")  # Plot the measured data as steps
     plt.xticks(list(range(2, 32, 2)))  # Define the values displayed on the x axes
     plt.yticks(list(range(2, 36, 1)))  # Define the values displayed on the y axes
-    plt.xlabel("Distances value [m]")  # Define the label on the x axis
-    plt.ylabel(r"Radiance value on he red channel [$W·m^{2}/sr$]")  # Define the label on the y axes
+    plt.xlabel("Distances value [mm]")  # Define the label on the x axis
+    plt.ylabel("Distances value [mm]")  # Define the label on the y axes
     plt.grid()  # Add the grid to the plot
     plt.legend()  # Add the legend to the plot
     plt.savefig(output + ext)  # Save the generated plot
