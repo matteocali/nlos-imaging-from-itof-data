@@ -17,7 +17,7 @@ def arg_parser(argv):
 
     arg_input = os.getcwd()  # Argument containing the input directory
     arg_output = "distance_plot"  # Argument containing the output file name
-    arg_mm = "False"  # Argument to select if we are considering the millimeter case or not
+    arg_mm = False  # Argument to select if we are considering the millimeter case or not
     arg_help = "{0} -i <input> -o <output> -m <millimiter> (default = False)".format(argv[0])  # Help string
 
     try:
@@ -35,7 +35,7 @@ def arg_parser(argv):
         elif opt in ("-o", "--output"):
             arg_output = arg  # Set the output file name
         elif opt in ("-m", "--millimiter"):
-            arg_mm = arg  # Set the millimiter flag
+            arg_mm = bool(arg)  # Set the millimiter flag
 
     print('Input folder:', arg_input)
     print('Output folder:', arg_output)
