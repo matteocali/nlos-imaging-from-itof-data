@@ -27,7 +27,7 @@ def arg_parser(argv):
     :return: list containing the input and output path
     """
 
-    arg_input = ""  # Argument containing the input directory
+    arg_input = os.getcwd()  # Argument containing the input directory
     arg_output = ""  # Argument containing the output directory
     arg_video = True  # Argument defining if it is required to render the transient video
     arg_out_type = "cv2"  # Argument defining the type of the output (both for images and video)
@@ -49,11 +49,11 @@ def arg_parser(argv):
         elif opt in ("-o", "--output"):
             arg_output = Path(arg)  # Set the output directory
         elif opt in ("-v", "--video"):
-            arg_video = arg  # Set if we need the video or not
+            arg_video = bool(arg)  # Set if we need the video or not
         elif opt in ("-t", "--type"):
             arg_out_type = arg  # Set the output type (cv2, plt, both)
         elif opt in ("-a", "--alpha"):
-            arg_alpha = arg  # Set if we need the alpha channel or not
+            arg_alpha = bool(arg)  # Set if we need the alpha channel or not
 
     if arg_output == "":  # if no output folder is provided define the default one
         arg_output = Path("output")
