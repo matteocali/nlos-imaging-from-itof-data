@@ -20,7 +20,7 @@ def arg_parser(argv):
     :return: list containing the input and output path
     """
 
-    arg_input = ""  # Argument containing the input directory
+    arg_input = os.getcwd()  # Argument containing the input directory
     arg_output = ""  # Argument containing the output directory
     arg_exposure = ""  # Argument containing the used exposure time
     arg_help = "{0} -i <input> -o <output> -p <ptype> -v <video> (default = True) -t <type> (default = plt) -a <alpha> (default = False)".format(argv[0])  # Help string

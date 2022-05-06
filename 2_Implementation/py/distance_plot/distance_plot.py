@@ -1,5 +1,6 @@
 import sys
 import getopt
+import os
 from pathlib import Path
 import glob
 from natsort import natsorted
@@ -14,7 +15,7 @@ def arg_parser(argv):
     :return: list containing the input and output path
     """
 
-    arg_input = ""  # Argument containing the input directory
+    arg_input = os.getcwd()  # Argument containing the input directory
     arg_output = "distance_plot"  # Argument containing the output file name
     arg_mm = "False"  # Argument to select if we are considering the millimeter case or not
     arg_help = "{0} -i <input> -o <output> -m <millimiter> (default = False)".format(argv[0])  # Help string
