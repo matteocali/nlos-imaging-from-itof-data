@@ -32,7 +32,7 @@ def arg_parser(argv):
     arg_video = True  # Argument defining if it is required to render the transient video
     arg_out_type = "cv2"  # Argument defining the type of the output (both for images and video)
     arg_alpha = False  # Argument defining if the video will use or not the alpha channel
-    arg_help = "{0} -i <input> -o <output> -p <ptype> -v <video> (default = True) -t <type> (default = plt) -a <alpha> (default = False)".format(argv[0])  # Help string
+    arg_help = "{0} -i <input> -o <output> -p <ptype> -v <video> (default = True) -t <type> (default = cv2) -a <alpha> (default = False)".format(argv[0])  # Help string
 
     try:
         opts, args = getopt.getopt(argv[1:], "hi:o:v:t:a:", ["help", "input=", "output=", "video=", "type", "alpha"])  # Recover the passed options and arguments from the command line (if any)
