@@ -139,7 +139,7 @@ def save_millimiter_plot(dist, step, max_value, output, ext = ".svg"):
 
     plt.figure(figsize=(10, 8))
     plt.plot(lin, lin, '--', label="Ideal distances values")  # Plot the ground truth value as a dashed line
-    plt.step(x, [x * 1000 for x in dist], linewidth=2, label="Measured distances")  # Plot the measured data as steps
+    plt.step(x, [x * 1000 for x in dist], where="post", linewidth=2, label="Measured distances")  # Plot the measured data as steps
     plt.xticks(list(range(step, 32, 2)))  # Define the values displayed on the x axes
     plt.yticks(list(range(step, 36, 1)))  # Define the values displayed on the y axes
     plt.xlabel("Distances value [mm]")  # Define the label on the x axes
