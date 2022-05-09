@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 import glob
 import time
+from statistics import mean
+
 from natsort import natsorted
 from tqdm import tqdm
 import OpenEXR
@@ -217,19 +219,69 @@ def theta_calculator(peak_pos, peak_row_values, peak_col_values, e_time, fov):
     return [theta_row, theta_col, plane_row_distance, plane_col_distance]
 
 
-def plot_generator(x, real, model, name, ext):
+def plot_generator(x, real, model, ticks_interval, name, ext):
     """
     Function to save a single plot
+    :param ticks_interval: number of skipped ticks between each other
     :param x: x axes values
     :param real: measured values to put on the y axes
     :param model: expected values (ground truth) to put on the y axes
     :param name: name of the plot
     :param ext: extension of the plot
     """
+
+    # Create the x axes for the plot
+    if len(x) % 2 == 0:
+        r_x = [i for i in range(1, int(len(x) / 2) + 1, 1)]
+        l_x = [- elm for elm in r_x[::-1]]
+        x_label_full = [*l_x, *r_x]  # Define the all the ticks label to match the pixel position instead of the distance from the center
+                                     # Code from: https://www.geeksforgeeks.org/python-ways-to-concatenate-two-lists/
+        x_label = []  # List that will contain only the label of the desired ticks
+        indexes = []  # List that will contain the index where the correspondent ticks are located
+        for i, elm in enumerate(x_label_full):
+            if i % ticks_interval == 0 and i < int(len(x) / 2):
+                x_label.append(elm)
+                indexes.append(i)
+            if i == int(len(x) / 2):
+                x_label.append(0)
+            if i % ticks_interval == 0 and i > int(len(x) / 2):
+                x_label.append(x_label_full[i - 1])
+                indexes.append(i - 1)
+        x_label.append(x_label_full[-1])
+        indexes.append(len(x) - 1)
+
+        ticks = [x[i] for i in indexes]  # List of only the desired ticks
+        ticks.insert(int(len(ticks) / 2), 0)  # Add to the ticks list the one in 0
+    else:
+        r_x = [i for i in range(math.floor(len(x) / 2))]
+        l_x = [- elm for elm in r_x[::-1]]
+        l_x.append(0)
+        x_label_full = [*l_x, *r_x]  # Define the all the ticks label to match the pixel position instead of the distance from the center
+                                     # Code from: https://www.geeksforgeeks.org/python-ways-to-concatenate-two-lists/
+
+        x_label = []  # List that will contain only the label of the desired ticks
+        indexes = []  # List that will contain the index where the correspondent ticks are located
+        for i, elm in enumerate(x_label_full):
+            if i % ticks_interval == 0 and i < int(len(x) / 2):
+                x_label.append(elm)
+                indexes.append(i)
+            if i == int(len(x) / 2) + 1:
+                x_label.append(elm)
+                indexes.append(i)
+            if i % ticks_interval == 0 and i > int(len(x) / 2):
+                x_label.append(x_label_full[i - 1])
+                indexes.append(i - 1)
+        x_label.append(x_label_full[-1])
+        indexes.append(len(x) - 1)
+
+        ticks = [x[i] for i in indexes]  # List of only the desired ticks
+
     plt.scatter(x, real, 6, label="Measured distances", color="tab:orange")  # Plot the measured data as dots
     plt.plot(x, model, '--', label="Ideal decaying of the intensities value", color="tab:blue")  # Plot the ground truth value as a dashed line
-    plt.xlabel("Distances from the center of the scene [m]")  # Define the label on the x axes
-    plt.ylabel(r"Radiance value on he red channel [$W·m^{2}/sr$]")  # Define the label on the y axes
+    plt.locator_params(axis='x', nbins=8)
+    plt.xticks(ticks, x_label)
+    plt.xlabel("Pixel position")  # Define the label on the x axes
+    plt.ylabel(r"Radiance value on he red channel [$W/(m^{2}·sr)$]")  # Define the label on the y axes
     plt.grid()  # Add the grid to the plot
     plt.legend()  # Add the legend to the plot
     plt.savefig(name + ext)  # Save the generated plot
@@ -252,11 +304,11 @@ def save_plot(theta_r, theta_c, r_values, c_values, row_distance, col_distance, 
     print("Generating the two plots:")
     start = time.time()  # Compute the execution time
 
-    y_r = [pow(math.cos(math.radians(theta)), 3) * max(r_values[int(len(r_values)/2) - 10 : int(len(r_values)/2) + 10]) for theta in theta_r]  # Define the ground truth model for the main row as the cos^3(theta) * the max value of the radiance (outliers excluded)
-    y_c = [pow(math.cos(math.radians(theta)), 3) * max(c_values[int(len(c_values)/2) - 10 : int(len(c_values)/2) + 10]) for theta in theta_c]  # Define the ground truth model for the main column
+    y_r = [pow(math.cos(math.radians(theta)), 3) * mean(r_values[int(len(r_values)/2) - 3 : int(len(r_values)/2) + 3]) for theta in theta_r]  # Define the ground truth model for the main row as the cos^3(theta) * the max value of the radiance (outliers excluded)
+    y_c = [pow(math.cos(math.radians(theta)), 3) * mean(c_values[int(len(c_values)/2) - 3 : int(len(c_values)/2) + 3]) for theta in theta_c]  # Define the ground truth model for the main column
 
-    plot_generator(row_distance, r_values, y_r, output + "_row", ext)  # Plot the main row plot
-    plot_generator(col_distance, c_values, y_c, output + "_col", ext)  # Plot the main column plot
+    plot_generator(row_distance, r_values, y_r, 80, output + "_row", ext)  # Plot the main row plot
+    plot_generator(col_distance, c_values, y_c, 60, output + "_col", ext)  # Plot the main column plot
 
     end = time.time()
     print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
