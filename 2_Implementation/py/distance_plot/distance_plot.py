@@ -18,10 +18,12 @@ def arg_parser(argv):
     arg_input = os.getcwd()  # Argument containing the input directory
     arg_output = "distance_plot"  # Argument containing the output file name
     arg_mm = False  # Argument to select if we are considering the millimeter case or not
-    arg_help = "{0} -i <input> -o <output> -m <millimiter> (default = False)".format(argv[0])  # Help string
+    arg_step = 1  # Argument containing the increasing step in the millimiter test in mm
+    arg_max = 30  # Argument containing the maximum distance in the millimiter test in mm
+    arg_help = "{0} -i <input> -o <output> -m <millimiter> (default = False) -s <step> (default = 1) -v <max_value> (default = 30)".format(argv[0])  # Help string
 
     try:
-        opts, args = getopt.getopt(argv[1:], "hi:o:m:", ["help", "input=", "output=", "millimiter="])  # Recover the passed options and arguments from the command line (if any)
+        opts, args = getopt.getopt(argv[1:], "hi:o:m:s:v:", ["help", "input=", "output=", "millimiter=", "step=", "value="])  # Recover the passed options and arguments from the command line (if any)
     except:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -36,12 +38,16 @@ def arg_parser(argv):
             arg_output = arg  # Set the output file name
         elif opt in ("-m", "--millimiter"):
             arg_mm = bool(arg)  # Set the millimiter flag
+        elif opt in ("-s", "--step"):
+            arg_step = int(arg)  # Set the step value
+        elif opt in ("-v", "--value"):
+            arg_max = int(arg)  # Set the step value
 
     print('Input folder:', arg_input)
     print('Output folder:', arg_output)
     print()
 
-    return [arg_input, arg_output, arg_mm]
+    return [arg_input, arg_output, arg_mm, arg_step, arg_max]
 
 
 def reed_files(path, extension, reorder=True):
@@ -109,7 +115,7 @@ def save_plot(dist, radiance, output, ext = ".svg", annotation = False):
     plt.plot(x, y, '--', label="Ideal decaying of the intensities value")  # Plot the ground truth value as a dashed line
     plt.plot(dist, radiance, 'o', label="Measured distances")  # Plot the measured data as dots
     plt.xlabel("Distances value [m]")  # Define the label on the x axis
-    plt.ylabel(r"Radiance value on he red channel [$W·m^{2}/sr$]")  # Define the label on the y axis
+    plt.ylabel(r"Radiance value on he red channel [$W/(m^{2}·sr)$]")  # Define the label on the y axis
     if annotation:
         for i, j in zip(dist, radiance):
             plt.annotate(str(round(j, 3)), xy=(i, j))  # Add the annotation to each measured data point
@@ -119,7 +125,7 @@ def save_plot(dist, radiance, output, ext = ".svg", annotation = False):
     plt.show()  # Show the plot
 
 
-def save_millimiter_plot(dist, output, ext = ".svg"):
+def save_millimiter_plot(dist, step, max_value, output, ext = ".svg"):
     """
     Function to generate and save the plot
     :param dist: vector containing al the measured distance values
@@ -127,16 +133,16 @@ def save_millimiter_plot(dist, output, ext = ".svg"):
     :param ext: extension of the saved file
     """
 
-    lin = np.linspace(2, 30, 1000)  # Build the ground truth linear model
+    lin = np.linspace(step, max_value, 1000)  # Build the ground truth linear model
 
-    x = [x for x in range(2, 32, 2)]  # x axes of the measured data
+    x = [x for x in range(step, max_value + step, step)]  # x axes of the measured data
 
     plt.figure(figsize=(10, 8))
     plt.plot(lin, lin, '--', label="Ideal distances values")  # Plot the ground truth value as a dashed line
     plt.step(x, [x * 1000 for x in dist], linewidth=2, label="Measured distances")  # Plot the measured data as steps
-    plt.xticks(list(range(2, 32, 2)))  # Define the values displayed on the x axes
-    plt.yticks(list(range(2, 36, 1)))  # Define the values displayed on the y axes
-    plt.xlabel("Distances value [mm]")  # Define the label on the x axis
+    plt.xticks(list(range(step, 32, 2)))  # Define the values displayed on the x axes
+    plt.yticks(list(range(step, 36, 1)))  # Define the values displayed on the y axes
+    plt.xlabel("Distances value [mm]")  # Define the label on the x axes
     plt.ylabel("Distances value [mm]")  # Define the label on the y axes
     plt.grid()  # Add the grid to the plot
     plt.legend()  # Add the legend to the plot
@@ -145,7 +151,7 @@ def save_millimiter_plot(dist, output, ext = ".svg"):
 
 
 if __name__ == '__main__':
-    arg_input, arg_output, arg_mm = arg_parser(sys.argv)  # Recover the input and output folder from the console args
+    arg_input, arg_output, arg_mm, arg_step, arg_max = arg_parser(sys.argv)  # Recover the input and output folder from the console args
 
     files = reed_files(str(arg_input), "txt")  # Load the path of all the files in the input folder with extension .exr
 
@@ -154,4 +160,6 @@ if __name__ == '__main__':
     if not arg_mm:
         save_plot(dist, radiance, arg_output)  # Generate and save the standard plot
     else:
-        save_millimiter_plot(dist, arg_output)  # Generate and save the millimiter plot
+        save_millimiter_plot(dist, arg_step, arg_max, arg_output)  # Generate and save the millimiter plot
+
+    print("Process concluded")
