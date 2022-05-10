@@ -52,7 +52,7 @@ def arg_parser(argv):
 
 def reed_files(path, extension, reorder=True):
     """
-    Function to load all the files in a folder and if needed reoder them using the numbers in the name
+    Function to load all the files in a folder and if needed reorder them using the numbers in the name
     :param reorder: flag to toggle the reorder process
     :param path: folder path
     :param extension: extension of the files to load
@@ -94,7 +94,6 @@ def generate_quadratic_model(min_x, max_x, max_y, precision):
     :return: x and y value of the quadratic model
     """
     x = np.linspace(min_x, max_x, precision)  # Define the x vector as a linear space
-    #y = 25.471 / pow(x, 2)
     scaling = max_y * pow(min_x, 2)  # Define the scale factor to center the quadratic model on the measured data
     y = scaling / pow(x, 2)  # Build the quadratic model
     return [x, y]
