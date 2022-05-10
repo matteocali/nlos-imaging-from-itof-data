@@ -267,9 +267,9 @@ def img_comparison(o_img, t_img):
     fig.show()
 
     # Compute the differences between the original and transient image, channel by channel
-    R_diff = t_img[:, :, 0] - o_img[:, :, 0]
-    G_diff = t_img[:, :, 1] - o_img[:, :, 1]
-    B_diff = t_img[:, :, 2] - o_img[:, :, 2]
+    R_diff = abs(t_img[:, :, 0] - o_img[:, :, 0])
+    G_diff = abs(t_img[:, :, 1] - o_img[:, :, 1])
+    B_diff = abs(t_img[:, :, 2] - o_img[:, :, 2])
 
     # Extract the minimum and maximum displayed value to normalize the colors
     min_val = min([np.min(R_diff), np.min(G_diff), np.min(B_diff)])

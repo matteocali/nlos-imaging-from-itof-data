@@ -160,7 +160,7 @@ def compute_distance(peak_pos, exposure_time):
     Function that take the position of the peak and the exposure time and compute the measured distance
     :param peak_pos: position of the peak in the transient
     :param exposure_time: size of each time bean
-    :return:
+    :return: distance value
     """
     return round(((peak_pos * exposure_time) / 2), 4)  # General equation to compute the distance given the peak_position (p) and the exposure_time (e): ((p + 1) * e) / 2
                                                        # We have to add the correction term, - e/2, to compensate for the rounding in the been size: ((p + 1) * e) / 2 - e/2
