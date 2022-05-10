@@ -220,9 +220,9 @@ def compute_mse(x, y):
     Compute the MSE error between two images
     The 'Mean Squared Error' between the two images is the sum of the squared difference between the two images
     The lower the error, the more "similar" the two images are
-    code from: https://pyimagesearch.com/2014/09/15/python-compare-two-images/
+    (code from: https://pyimagesearch.com/2014/09/15/python-compare-two-images/)
     :param x: image 1
-    :param y: image 2 (must have same dimension of image 1)
+    :param y: image 2 (must have same dimensions of image 1)
     :return The MSE value rounded at the fourth value after comma
     """
 
