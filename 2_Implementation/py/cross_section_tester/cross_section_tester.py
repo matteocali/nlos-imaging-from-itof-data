@@ -58,7 +58,7 @@ def arg_parser(argv):
 
 def reed_files(path, extension, reorder=True):
     """
-    Function to load all the files in a folder and if needed reoder them using the numbers in the name
+    Function to load all the files in a folder and if needed reorder them using the numbers in the name
     :param reorder: flag to toggle the reorder process
     :param path: folder path
     :param extension: extension of the files to load
