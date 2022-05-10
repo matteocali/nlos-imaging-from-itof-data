@@ -4,12 +4,12 @@ import os
 from pathlib import Path
 import glob
 import time
-import warnings
 from natsort import natsorted
 
 import numpy
 from tqdm import tqdm
 
+import imageio
 import OpenEXR
 import Imath
 import numpy as np
@@ -109,9 +109,7 @@ def reshape_frame(files):
 
     dw = OpenEXR.InputFile(files[0]).header()['dataWindow']    # Extract the data window dimension from the header of the exr file
     size = (dw.max.x - dw.min.x + 1, dw.max.y - dw.min.y + 1)  # Define the actual size of the image
-    pt = OpenEXR.InputFile(files[0]).header()['channels']['R'].type  # Recover the pixel type from the header
-    #pt = Imath.PixelType(Imath.PixelType.HALF)                 # Define the type of the pixel (HALF = float16, FLOAT = float32)
-    #                                                           # code from: https://excamera.com/articles/26/doc/intro.html
+    pt = OpenEXR.InputFile(files[0]).header()['channels']['R'].type  # Recover the pixel type from the header (HALF = float16, FLOAT = float32)
 
     # Check if the pt is HALF (pt.v == 1) or FLOAT (pt.v == 2)
     if pt.v == Imath.PixelType.HALF:
@@ -124,10 +122,6 @@ def reshape_frame(files):
     frame_R = np.empty([len(files), size[1], size[0]], dtype=np.float32)
     frame_G = np.empty([len(files), size[1], size[0]], dtype=np.float32)
     frame_B = np.empty([len(files), size[1], size[0]], dtype=np.float32)
-
-    # Set initial value to the global min e global max (updated later)
-    global_max = 0
-    global_min = float("inf")
 
     for index, file in enumerate(tqdm(files)):  # For each provided file in the input folder
         img = OpenEXR.InputFile(file)  # Open each file
@@ -145,48 +139,11 @@ def reshape_frame(files):
             frame_G[index, :, i] = G[:, i]
             frame_B[index, :, i] = B[:, i]
 
-        warnings.filterwarnings('ignore')  # Remove warning about the presence of matrix completely empty (full of nan)
-        # Compute the local minimum and maximum (the one of the open fil). Ignore the Alpha matrix
-        local_min = min([np.nanmin(R), np.nanmin(G), np.nanmin(B)])
-        local_max = max([np.nanmax(R), np.nanmax(G), np.nanmax(B)])
-
-        # Update the value of the global minimum and maximum
-        if local_min < global_min: global_min = local_min
-        if local_max > global_max: global_max = local_max
-
     time.sleep(0.05)  # Wait a bit to allow a proper visualization in the console
     end = time.time()
     print("Reshaping concluded in %.2f sec\n" % (round((end - start), 2)))
 
-    return [frame_A, frame_R, frame_G, frame_B, global_min, global_max]
-
-
-def channel_norm(channels, min_val=None, max_val=None):
-    """
-    Function to normalize the values of the channels in the range [0, 1]
-    :param channels: list of 3 or 4 channels [A, R, G, B]
-    :param min_val: global minimum value
-    :param max_val: global maximum value
-    :return: list of 3 or 4 normalized channels
-    """
-
-    # Check the number of input channels, if the Alpha one is provided do not normalize it
-    if len(channels) == 4:
-        norm_channels = [channels[0]]
-        iteration = channels[1:]
-    else:
-        norm_channels = []
-        iteration = channels
-
-    print("Normalize channels value in the range [0, 1]")
-    # Normalize the channels
-    for data in tqdm(iteration):
-        if not (min_val == None) and not (max_val == None):
-            norm_channels.append((data - min_val) / (max_val - min_val))  # Normalize the value of each channel in the range [0, 1] using the global minimum and maximum instead of the local ones
-        else:
-            norm_channels.append((data - np.nanmin(data)) / (np.nanmax(data) - np.nanmin(data)))  # Normalize the value of each channel in the range [0, 1]
-                                                                                                  # Code from: https://www.stackvidhya.com/how-to-normalize-data-between-0-and-1-range/
-    return norm_channels
+    return [frame_A, frame_R, frame_G, frame_B]
 
 
 def save_png(img, path, alpha):
@@ -223,8 +180,6 @@ def img_matrix(channels, output, out_type, alpha):
     :param alpha: define if the outputted images will use or not the alpha channel
     :param output: output folder path
     :param channels: list of the 4 channels
-    :param min_val: global minimum value (used for the normalization)
-    :param max_val: global maximum value (used for the normalization)
     :return: list of image matrix [R, G, B, A]
     """
 
@@ -277,24 +232,26 @@ def total_img(images, output, out_type, alpha):
     Function to build the image obtained by sum all the temporal instant of the transient
     :param images: list of all the images
     :param output: output path
-    :param out_type: define the desired output type (cv2, plt, both)
-    :param alpha: use the alpha channel or not
     """
     print("Generate the total image = sum over all the time instants")
+    start = time.time()  # Compute the execution time
 
-    summed_images = np.nansum(np.asarray(images), axis=0)  # Sum all the produced images over the time dimension
-    summed_images = (summed_images - np.nanmin(summed_images)) / (np.nanmax(summed_images) - np.nanmin(summed_images))  # Normalize the values
+    summed_images = np.nansum(np.asarray(images)[:, :, :, :-1], axis=0)  # Sum all the produced images over the time dimension ignoring the alpha channel
 
-    # Saving the images
-    if out_type == "cv2":
-        save_png(summed_images, output / "total_image.png", alpha)
-    elif out_type == "plt":
-        save_plt(summed_images, output / "total_image.png", alpha)
-    elif out_type == "both":
-        save_png(summed_images, output / "total_image_cv2.png", alpha)
-        save_plt(summed_images, output / "total_image_plt.png", alpha)
+    # Generate a mask matrix that will contain the number of active beans in each pixel (needed to normalize the image)
+    mask = np.zeros([images[0].shape[0], images[0].shape[1]])
+    for img in images:
+        tmp = np.nansum(img, axis=2)
+        mask[tmp.nonzero()] += 1
+    mask = np.stack((mask, mask, mask), axis=2)  # make the mask a three layer matrix
 
-    print("Process concluded\n")
+    total_image = np.divide(summed_images, mask).astype(np.float32)
+
+    imageio.plugins.freeimage.download()  # Download (if needed the required plugin in order to export .exr file)
+    imageio.imwrite(output + ".exr", total_image)  # Save yhe image
+
+    end = time.time()
+    print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
 
 
 def plt_transient_video(images, path, alpha):
