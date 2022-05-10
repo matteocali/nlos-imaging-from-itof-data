@@ -1,6 +1,6 @@
 # To import the function inside this file add the following line in the beginning of the desired script
 # import sys
-# sys.path.append("C:\Users\DECaligM\Documents\thesis-nlos-for-itof\2_Implementation\py\utils")
+# sys.path.append("C:\\Users\\DECaligM\\Documents\\thesis-nlos-for-itof\\2_Implementation\\py\\resources")
 #
 # from transient_handler import *
 
@@ -11,7 +11,7 @@ from tqdm import tqdm
 import OpenEXR
 import numpy as np
 
-sys.path.append("C:\\Users\\DECaligM\\Documents\\thesis-nlos-for-itof\\2_Implementation\\py\\utils")
+sys.path.append("/utils")
 from exr_handler import load_exr, save_exr
 
 
