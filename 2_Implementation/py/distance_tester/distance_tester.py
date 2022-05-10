@@ -7,7 +7,6 @@ import time
 import warnings
 from natsort import natsorted
 from tqdm import tqdm
-
 import OpenEXR
 import Imath
 import numpy as np
@@ -23,7 +22,7 @@ def arg_parser(argv):
     arg_input = os.getcwd()  # Argument containing the input directory
     arg_output = ""  # Argument containing the output directory
     arg_exposure = ""  # Argument containing the used exposure time
-    arg_help = "{0} -i <input> -o <output> -p <ptype> -v <video> (default = True) -t <type> (default = plt) -a <alpha> (default = False)".format(argv[0])  # Help string
+    arg_help = "{0} -i <input> -o <output> -e <exposure>".format(argv[0])  # Help string
 
     try:
         opts, args = getopt.getopt(argv[1:], "hi:o:e:", ["help", "input=", "output=", "exposure="])  # Recover the passed options and arguments from the command line (if any)
@@ -70,7 +69,7 @@ def create_folder(path):
 
 def reed_files(path, extension, reorder=True):
     """
-    Function to load all the files in a folder and if needed reoder them using the numbers in the name
+    Function to load all the files in a folder and if needed reorder them using the numbers in the name
     :param reorder: flag to toggle the reorder process
     :param path: folder path
     :param extension: extension of the files to load
