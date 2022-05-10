@@ -198,10 +198,11 @@ def total_img(images, output):
     summed_images = np.nansum(images[:, :, :, :-1], axis=0)  # Sum all the produced images over the time dimension ignoring the alpha channel
 
     # Generate a mask matrix that will contain the number of active beans in each pixel (needed to normalize the image)
-    mask = np.zeros([images[0].shape[0], images[0].shape[1]])
+    mask = np.zeros([images[0].shape[0], images[0].shape[1]], dtype=np.float32)
     for img in images:
         tmp = np.nansum(img, axis=2)
         mask[tmp.nonzero()] += 1
+    mask[np.where(mask == 0)] = 1  # Remove eventual 0 values
     mask = np.stack((mask, mask, mask), axis=2)  # make the mask a three layer matrix
 
     total_image = np.divide(summed_images, mask).astype(np.float32)
@@ -304,4 +305,8 @@ if __name__ == '__main__':
 
     total_image = total_img(images, arg_output)  # Create and save the total image
 
-    img_comparison(load_exr(str(arg_img))[:, :, 1 :], total_image)  # Compare the original render with the one obtained by summing up all the transient images
+    original_img = load_exr(str(arg_img))  # Load the original image
+    original_img[np.isnan(original_img[:, :, 0])] = 0  # Remove the nan value
+    original_img = original_img[:, :, 1 :]  # Remove the alpha channel
+
+    img_comparison(original_img, total_image)  # Compare the original render with the one obtained by summing up all the transient images
