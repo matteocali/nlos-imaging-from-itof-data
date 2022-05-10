@@ -5,18 +5,13 @@ from pathlib import Path
 import glob
 import time
 from natsort import natsorted
-
-import numpy
 from tqdm import tqdm
-
 import imageio
 import OpenEXR
 import Imath
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-
-os.environ["OPENCV_IO_ENABLE_OPENEXR"]="1"
 import cv2
 
 
@@ -83,7 +78,7 @@ def create_folder(path):
 
 def reed_files(path, extension, reorder=True):
     """
-    Function to load all the files in a folder and if needed reoder them using the numbers in the name
+    Function to load all the files in a folder and if needed reorder them using the numbers in the name
     :param reorder: flag to toggle the reorder process
     :param path: folder path
     :param extension: extension of the files to load
@@ -199,7 +194,7 @@ def img_matrix(channels, output, out_type, alpha):
     images = []  # Empty list that will contain all the images
     # Fuse the channels together to obtain a proper [A, R, G, B] image
     for i in tqdm(range(np.shape(frame_A)[2])):
-        img = numpy.empty([np.shape(frame_A)[0], np.shape(frame_A)[1], len(channels)], dtype=np.float32)  # Create an empty numpy array of the correct shape
+        img = np.empty([np.shape(frame_A)[0], np.shape(frame_A)[1], len(channels)], dtype=np.float32)  # Create an empty numpy array of the correct shape
 
         img[:, :, 0] = frame_R[:, :, i]
         img[:, :, 1] = frame_G[:, :, i]
@@ -257,11 +252,12 @@ def total_img(images, output, out_type, alpha):
 def plt_transient_video(images, path, alpha):
     """
     Function that generate a video of the transient and save it in the matplotlib format
+    (code from: https://stackoverflow.com/questions/34975972/how-can-i-make-a-video-from-array-of-images-in-matplotlib)
     :param images: list of all the transient images
     :param path: path where to save the video
     :param alpha: define if it has to use the alpha channel or not
     """
-    # code from: https://stackoverflow.com/questions/34975972/how-can-i-make-a-video-from-array-of-images-in-matplotlib
+
     frames = []  # For storing the generated images
     fig = plt.figure()  # Create the figure
 
@@ -278,11 +274,12 @@ def plt_transient_video(images, path, alpha):
 def cv2_transient_video(in_path, out_path, alpha):
     """
     Function that generate a video of the transient and save it in the cv2 format
+    (code from: https://theailearner.com/2018/10/15/creating-video-from-images-using-opencv-python/)
     :param in_path: path where all the transient images are located
     :param out_path: path where to save the video
     :param alpha: define if it has to use the alpha channel or not
     """
-    # code from: https://theailearner.com/2018/10/15/creating-video-from-images-using-opencv-python/
+
     img_files = reed_files(in_path, "png")  # Load all the png transient files path
 
     img_list = []
