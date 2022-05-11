@@ -1,18 +1,10 @@
-# To import the function inside this file add the following line in the beginning of the desired script
-# import sys
-# sys.path.append("C:\\Users\\DECaligM\\Documents\\thesis-nlos-for-itof\\2_Implementation\\py\\resources")
-#
-# from transient_handler import *
-
-
-import sys
 import time
 from tqdm import tqdm
 import OpenEXR
-import numpy as np
-
-sys.path.append("/utils")
-from exr_handler import load_exr, save_exr
+from numpy import empty, shape, asarray, save, where, stack, divide, zeros
+from numpy import isnan, nansum, nanargmax
+from numpy import float32
+from modules import exr_handler as exr
 
 
 def reshape_frame(files):
@@ -30,13 +22,13 @@ def reshape_frame(files):
     size = (dw.max.x - dw.min.x + 1, dw.max.y - dw.min.y + 1)  # Define the actual size of the image
 
     # Define an empty matrix of size image_height x image_width x temporal_samples for each channel
-    frame_a = np.empty([len(files), size[1], size[0]], dtype=np.float32)
-    frame_r = np.empty([len(files), size[1], size[0]], dtype=np.float32)
-    frame_g = np.empty([len(files), size[1], size[0]], dtype=np.float32)
-    frame_b = np.empty([len(files), size[1], size[0]], dtype=np.float32)
+    frame_a = empty([len(files), size[1], size[0]], dtype=float32)
+    frame_r = empty([len(files), size[1], size[0]], dtype=float32)
+    frame_g = empty([len(files), size[1], size[0]], dtype=float32)
+    frame_b = empty([len(files), size[1], size[0]], dtype=float32)
 
     for index, file in enumerate(tqdm(files)):  # For each provided file in the input folder
-        img = load_exr(file)
+        img = exr.load_exr(file)
 
         # Perform the reshaping saving the results in frame_i for i in A, R,G , B
         for i in range(size[0]):
@@ -62,20 +54,19 @@ def img_matrix(channels):
     print("Generating the image files:")
     start = time.time()  # Compute the execution time
 
-    print(f"Build the {np.shape(channels[0])[2]} image matrices:")
+    print(f"Build the {shape(channels[0])[2]} image matrices:")
     time.sleep(0.02)
-    images = np.empty([np.shape(channels[0])[2], np.shape(channels[0])[0], np.shape(channels[0])[1], len(channels)],
-                      dtype=np.float32)  # Empty array that will contain all the images
+    images = empty([shape(channels[0])[2], shape(channels[0])[0], shape(channels[0])[1], len(channels)], dtype=float32)  # Empty array that will contain all the images
     # Fuse the channels together to obtain a proper [A, R, G, B] image
-    for i in tqdm(range(np.shape(channels[0])[2])):
+    for i in tqdm(range(shape(channels[0])[2])):
         images[i, :, :, 0] = channels[1][:, :, i]
         images[i, :, :, 1] = channels[2][:, :, i]
         images[i, :, :, 2] = channels[3][:, :, i]
         images[i, :, :, 3] = channels[0][:, :, i]
 
-        images[i, :, :, :][np.isnan(channels[0][:, :, i])] = 0  # Remove all the nan value following the Alpha matrix
+        images[i, :, :, :][isnan(channels[0][:, :, i])] = 0  # Remove all the nan value following the Alpha matrix
 
-    np.save("np_images.npy", np.asarray(images))  # Save the loaded images as a numpy array
+    save("np_images.npy", asarray(images))  # Save the loaded images as a numpy array
 
     end = time.time()
     print("Images created successfully in %.2f sec\n" % (round((end - start), 2)))
@@ -93,21 +84,20 @@ def total_img(images, path=None):
     print("Generate the total image = sum over all the time instants")
     start = time.time()  # Compute the execution time
 
-    summed_images = np.nansum(images[:, :, :, :-1],
-                              axis=0)  # Sum all the produced images over the time dimension ignoring the alpha channel
+    summed_images = nansum(images[:, :, :, :-1], axis=0)  # Sum all the produced images over the time dimension ignoring the alpha channel
 
     # Generate a mask matrix that will contain the number of active beans in each pixel (needed to normalize the image)
-    mask = np.zeros([images[0].shape[0], images[0].shape[1]], dtype=np.float32)
+    mask = zeros([images[0].shape[0], images[0].shape[1]], dtype=float32)
     for img in images:
-        tmp = np.nansum(img, axis=2)
+        tmp = nansum(img, axis=2)
         mask[tmp.nonzero()] += 1
-    mask[np.where(mask == 0)] = 1  # Remove eventual 0 values
-    mask = np.stack((mask, mask, mask), axis=2)  # make the mask a three layer matrix
+    mask[where(mask == 0)] = 1  # Remove eventual 0 values
+    mask = stack((mask, mask, mask), axis=2)  # make the mask a three layer matrix
 
-    total_image = np.divide(summed_images, mask).astype(np.float32)
+    total_image = divide(summed_images, mask).astype(float32)
 
     if path is not None:
-        save_exr(total_image, path)  # Save the image
+        exr.save_exr(total_image, path)  # Save the image
 
     end = time.time()
     print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
@@ -123,15 +113,15 @@ def extract_center_peak(channels):
     """
 
     try:
-        max_index_r, max_index_g, max_index_b = [np.nanargmax(channel, axis=2) for channel in
+        max_index_r, max_index_g, max_index_b = [nanargmax(channel, axis=2) for channel in
                                                  channels]  # Find the index of the maximum value in the third dimension
     except ValueError:  # Manage the all NaN situation
         channels_no_nan = []
         for channel in channels:
             temp = channel
-            temp[np.isnan(channel)] = 0
+            temp[isnan(channel)] = 0
             channels_no_nan.append(temp)
-        max_index_r, max_index_g, max_index_b = [np.nanargmax(channel, axis=2) for channel in channels_no_nan]
+        max_index_r, max_index_g, max_index_b = [nanargmax(channel, axis=2) for channel in channels_no_nan]
     peak_pos = [data[int(data.shape[0] / 2), int(data.shape[1] / 2)] for data in [max_index_r, max_index_g,
                                                                                   max_index_b]]  # Extract the position of the maximum value in the middle pixel
     peak_values = [channel[int(channel.shape[0] / 2), int(channel.shape[1] / 2), peak_pos[index]] for index, channel in

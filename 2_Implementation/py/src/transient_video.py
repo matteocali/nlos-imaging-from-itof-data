@@ -1,9 +1,5 @@
+from modules import utilities as ut, exr_handler as exr, transient_handler as tr
 
-
-import sys
-from utilities import *
-from exr_handler import *
-from transient_handler import *
 
 def transient_video():
     pass

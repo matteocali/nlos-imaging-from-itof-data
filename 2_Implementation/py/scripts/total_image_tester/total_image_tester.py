@@ -266,6 +266,7 @@ def img_comparison(o_img, t_img):
     plt.savefig("channel_comparison.svg")
     fig.show()
 
+
     # Compute the differences between the original and transient image, channel by channel
     R_diff = abs(t_img[:, :, 0] - o_img[:, :, 0])
     G_diff = abs(t_img[:, :, 1] - o_img[:, :, 1])
@@ -286,6 +287,30 @@ def img_comparison(o_img, t_img):
     fig2.colorbar(cm.ScalarMappable(norm=colors.Normalize(vmin=min_val, vmax=max_val), cmap=cm.get_cmap('jet')), ax=axs2, orientation="horizontal")
     plt.savefig("channel_differences.svg")
     fig2.show()
+
+
+    o_img[np.where(o_img == 0)] = 1  # Remove eventual 0 values
+
+    # Compute the ratio between the original and transient image, channel by channel
+    R_div = t_img[:, :, 0] - o_img[:, :, 0]
+    G_div = t_img[:, :, 1] - o_img[:, :, 1]
+    B_div = t_img[:, :, 2] - o_img[:, :, 2]
+
+    # Extract the minimum and maximum displayed value to normalize the colors
+    min_val = min([np.min(R_div), np.min(G_div), np.min(B_div)])
+    max_val = max([np.max(R_div), np.max(G_div), np.max(B_div)])
+
+    # Plot the ratio between the two images, channel by channel
+    fig3, axs3 = plt.subplots(1, 3, figsize=(18, 6))
+    axs3[0].matshow(R_div, cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs3[0].set_title("Ratio on the red channel (original/transient)")
+    axs3[1].matshow(G_div, cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs3[1].set_title("Ratio on the green channel (original/transient)")
+    axs3[2].matshow(B_div, cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs3[2].set_title("Ratio on the blu channel (original/transient)")
+    fig3.colorbar(cm.ScalarMappable(norm=colors.Normalize(vmin=min_val, vmax=max_val), cmap=cm.get_cmap('jet')), ax=axs3, orientation="horizontal")
+    plt.savefig("channel_ratio.svg")
+    fig3.show()
 
     print("Press enter to end ...")
     input()  # Wait for a keystroke to close the windows
