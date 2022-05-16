@@ -121,8 +121,7 @@ def extract_center_peak(channels):
             temp[isnan(channel)] = 0
             channels_no_nan.append(temp)
         max_index_r, max_index_g, max_index_b = [nanargmax(channel, axis=2) for channel in channels_no_nan]
-    peak_pos = [data[int(data.shape[0] / 2), int(data.shape[1] / 2)] for data in [max_index_r, max_index_g,
-                                                                                  max_index_b]]  # Extract the position of the maximum value in the middle pixel
+    peak_pos = [data[int(data.shape[0] / 2), int(data.shape[1] / 2)] for data in [max_index_r, max_index_g, max_index_b]]  # Extract the position of the maximum value in the middle pixel
     peak_values = [channel[int(channel.shape[0] / 2), int(channel.shape[1] / 2), peak_pos[index]] for index, channel in
                    enumerate(channels)]  # Extract the radiance value in the peak position of the middle pixel
     return [peak_pos, peak_values]
@@ -141,6 +140,17 @@ def compute_center_distance(peak_pos, exposure_time):
                                                        # -> ((p + 1) * e) / 2 - e/2 = (pe + e)/2 - e/2 = pe/2 + e/2 - e/2 = pe/2
 
 
+def normalize_img(img):
+    """
+    Normalize the image value in the range [0, 1]
+    :param img: np aray corresponding to an image
+    """
+
+    if nanmax(img) != 0 and nanmin(img) != 0:
+        img = (img - nanmin(img)) / (nanmax(img) - nanmin(img))  # Normalize each image in [0, 1] ignoring the alpha channel
+    return img
+
+
 def plt_transient_video(images, out_path, alpha):
     """
     Function that generate a video of the transient and save it in the matplotlib format
@@ -154,8 +164,8 @@ def plt_transient_video(images, out_path, alpha):
     fig = plt.figure()  # Create the figure
 
     for img in tqdm(images):
-        if nanmax(img[:, :, : -1]) != 0 and nanmin(img[:, :, : -1]) != 0:
-            img[:, :, : -1] = (img[:, :, : -1] - nanmin(img[:, :, : -1])) / (nanmax(img[:, :, : -1]) - nanmin(img[:, :, : -1]))  # Normalize each image in [0, 1] ignoring the alpha channel
+        normalize_img(img[:, :, : -1])
+
         if alpha:
             frames.append([plt.imshow(img, animated=True)])  # Create each frame
         else:
@@ -177,8 +187,7 @@ def cv2_transient_video(images, out_path, alpha):
     out = VideoWriter(str(out_path), VideoWriter_fourcc(*"mp4v"), 30, (images[0].shape[1], images[0].shape[0]))  # Create the cv2 video
 
     for img in tqdm(images):
-        if nanmax(img[:, :, : -1]) != 0 and nanmin(img[:, :, : -1]) != 0:
-            img[:, :, : -1] = (img[:, :, : -1] - nanmin(img[:, :, : -1])) / (nanmax(img[:, :, : -1]) - nanmin(img[:, :, : -1]))  # Normalize each image in [0, 1] ignoring the alpha channel
+        normalize_img(img[:, :, : -1])
 
         # Convert the image from RGBA to BGRA
         tmp = copy(img[:, :, 0])
@@ -229,6 +238,33 @@ def transient_video(images, out_path, out_type="cv2", alpha=False):
     print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
 
 
+def rmv_first_reflection(images):
+    peaks = [print(channel) for channel in images]  # Find the index of the maximum value in the third dimension
+
+    first_zero_pos = [where(images[peaks[index]:, :, :, index] == 0) for index in range(images.shape[3])]  # Extract the position of the first zero after the first peak
+
+    new_images = empty([images[first_zero_pos[0]:, :, :, :]], dtype=float32)
+
+    for i in range(images.shape[3]):
+        new_images[:, :, :, i] = images[first_zero_pos[0]:, :, :, i]
+
+    return new_images
+
+
+def glb_transient_video(images, out_path, out_type="cv2", alpha=False):
+    """
+    Function that generate and save the transient video of only th global component
+    :param images: np.array containing all the images [<n_of_images>, <n_of_rows>, <n_of_columns>, <n_of_channels>]
+    :param out_path: output file path
+    :param out_type: format of the video output, cv2 or plt
+    :param alpha: boolean value that determines if the output video will consider or not the alpha map
+    """
+
+    images = rmv_first_reflection(images)
+
+    transient_video(images, out_path, out_type, alpha)
+
+
 def transient_loader(img_path, np_path=None, store=False):
     """
     Function that starting from the raw mitsuba transient output load the transient and reshape it
@@ -238,7 +274,7 @@ def transient_loader(img_path, np_path=None, store=False):
     :return: a np array containing all the transient
     """
 
-    if np_path:  # If already exists a npy file containing all the transient images load it instead of processing everything again
+    if np_path and not store:  # If already exists a npy file containing all the transient images load it instead of processing everything again
         return load(str(np_path))
     else:
         files = ut.reed_files(str(img_path), "exr")  # Load the path of all the files in the input folder with extension .exr
