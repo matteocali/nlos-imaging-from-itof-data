@@ -1,8 +1,9 @@
 from tqdm import tqdm
 from time import time, sleep
-import OpenEXR
+from modules import utilities as ut
+from OpenEXR import InputFile
 from cv2 import VideoWriter, VideoWriter_fourcc, destroyAllWindows
-from numpy import empty, shape, where, divide, zeros, copy, transpose
+from numpy import empty, shape, where, divide, zeros, copy, transpose, save, load
 from numpy import isnan, nansum, nanargmax, nanmin, nanmax
 from numpy import uint8, float32
 from modules import exr_handler as exr
@@ -20,8 +21,7 @@ def reshape_frame(files):
     print(f"Reshaping {len(files)} frames:")
     start = time()  # Compute the execution time
 
-    dw = OpenEXR.InputFile(files[0]).header()[
-        'dataWindow']  # Extract the data window dimension from the header of the exr file
+    dw = InputFile(files[0]).header()['dataWindow']  # Extract the data window dimension from the header of the exr file
     size = (dw.max.x - dw.min.x + 1, dw.max.y - dw.min.y + 1)  # Define the actual size of the image
 
     # Define an empty matrix of size image_height x image_width x temporal_samples for each channel
@@ -75,11 +75,11 @@ def img_matrix(channels):
     return images
 
 
-def total_img(images, path=None):
+def total_img(images, out_path=None):
     """
     Function to build the image obtained by sum all the temporal instant of the transient
     :param images: np array containing of all the images
-    :param path: output path and name
+    :param out_path: output path and name
     :return: total image as a numpy matrix
     """
     print("Generate the total image = sum over all the time instants")
@@ -95,8 +95,8 @@ def total_img(images, path=None):
 
     total_image = divide(summed_images, mask).astype(float32)
 
-    if path is not None:
-        exr.save_exr(total_image, path)  # Save the image
+    if out_path is not None:
+        exr.save_exr(total_image, out_path)  # Save the image
 
     end = time()
     print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
@@ -141,12 +141,12 @@ def compute_center_distance(peak_pos, exposure_time):
                                                        # -> ((p + 1) * e) / 2 - e/2 = (pe + e)/2 - e/2 = pe/2 + e/2 - e/2 = pe/2
 
 
-def plt_transient_video(images, path, alpha):
+def plt_transient_video(images, out_path, alpha):
     """
     Function that generate a video of the transient and save it in the matplotlib format
     (code from: https://stackoverflow.com/questions/34975972/how-can-i-make-a-video-from-array-of-images-in-matplotlib)
     :param images: list of all the transient images
-    :param path: path where to save the video
+    :param out_path: path where to save the video
     :param alpha: define if it has to use the alpha channel or not
     """
 
@@ -162,7 +162,7 @@ def plt_transient_video(images, path, alpha):
             frames.append([plt.imshow(img[:, :, :-1], animated=True)])  # Create each frame without the alphamap
 
     ani = animation.ArtistAnimation(fig, frames, interval=50, blit=True, repeat_delay=1000)  # Create the animation
-    ani.save(path)
+    ani.save(out_path)
 
 
 def cv2_transient_video(images, out_path, alpha):
@@ -227,3 +227,23 @@ def transient_video(images, out_path, out_type="cv2", alpha=False):
 
     end = time()
     print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
+
+
+def transient_loader(img_path, np_path=None, store=False):
+    """
+    Function that starting from the raw mitsuba transient output load the transient and reshape it
+    :param img_path: path of the transient images
+    :param np_path: path of the np dataset
+    :param store: boolean value that determines if we want to store the loaded transient in np format
+    :return: a np array containing all the transient
+    """
+
+    if np_path:  # If already exists a npy file containing all the transient images load it instead of processing everything again
+        return load(str(np_path))
+    else:
+        files = ut.reed_files(str(img_path), "exr")  # Load the path of all the files in the input folder with extension .exr
+        channels = reshape_frame(files)  # Reshape the frame in a standard layout
+        images = img_matrix(channels)  # Create the image files
+        if store:
+            save(str(np_path), images)  # Save the loaded images as a numpy array
+        return images
