@@ -199,7 +199,7 @@ def img_matrix(channels, output, out_type, alpha):
         img[:, :, 0] = frame_R[:, :, i]
         img[:, :, 1] = frame_G[:, :, i]
         img[:, :, 2] = frame_B[:, :, i]
-        img = (img - np.nanmin(img)) / (np.nanmax(img) - np.nanmin(img))  # Normalize each image in [0, 1] ignoring the aplha channel
+        img = (img - np.nanmin(img)) / (np.nanmax(img) - np.nanmin(img))  # Normalize each image in [0, 1] ignoring the alpha channel
         img[:, :, 3] = frame_A[:, :, i]
 
         img[np.isnan(frame_A[:, :, i])] = 0  # Remove all the nan value following the Alpha matrix
