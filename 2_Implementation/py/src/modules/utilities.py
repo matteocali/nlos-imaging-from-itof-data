@@ -1,4 +1,4 @@
-from numpy import sum, linspace
+from numpy import sum, linspace, zeros
 from numpy import uint8
 from os import path, listdir, remove, makedirs
 from glob import glob
@@ -102,3 +102,17 @@ def save_plt(img, file_path, alpha):
         plt.imsave(file_path, img[:, :, :-1])
     else:
         plt.imsave(file_path, img)
+
+
+def spot_bitmap_gen(file_path, size):
+    img = zeros([size[1], size[0]], dtype=uint8)
+    if size[0] % 2 == 0 and size[1] % 2 == 0:
+        img[(size[1]/2 - 1):(size[1]/2 + 1), (size[0]/2 - 1):(size[0]/2 + 1)] = 255
+    elif size[0] % 2 == 0 and size[1] % 2 != 0:
+        img[size[1]/2, (size[0]/2 - 1):(size[0]/2 + 1)] = 255
+    if size[0] % 2 != 0 and size[1] % 2 == 0:
+        img[(size[1]/2 - 1):(size[1]/2 + 1), size[0]/2] = 255
+    if size[0] % 2 != 0 and size[1] % 2 != 0:
+        img[size[1]/2, size[0]/2] = 255
+
+    imwrite(str(file_path), img)

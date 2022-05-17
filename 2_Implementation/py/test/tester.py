@@ -1,7 +1,6 @@
 import numpy as np
 from modules import transient_handler as tr, utilities as ut
 from pathlib import Path
-from tqdm import tqdm
 import os
 from os.path import exists
 import getopt
@@ -57,5 +56,5 @@ if __name__ == '__main__':
         glb_images = tr.rmv_first_reflection(images=images, file_path=arg_out / "glb_np_transient.npy", store=(not exists(arg_out / "glb_np_transient.npy")))
         tr.transient_video(np.copy(glb_images), arg_out, normalize=True)
         tr.total_img(glb_images, arg_out / "total_image", normalize=False)
-    elif arg_task == "spot_bitmap"
+    elif arg_task == "spot_bitmap":
         ut.spot_bitmap_gen(arg_out / "spot_bitmap.png", [640, 480])
