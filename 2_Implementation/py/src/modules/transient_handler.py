@@ -150,31 +150,15 @@ def normalize_img(img):
     :param img: np aray corresponding to an image
     :return np containing the normalized img
     """
-    
+
+    n_img = copy(img)
+    n_img[where(n_img < 0)] = 0
     min_val = nanmin(img)
-    if min_val < 0:
-        min_val = 0
     max_val = nanmax(img)
+
     if max_val != 0 and min_val != 0:
-        img = (img - min_val) / (max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
-    return img
-
-
-def glb_normalize_img(img, glb_img):
-    """
-    Normalize the global image value in the range [0, 1] using the complete image for the bound
-    :param img: np aray corresponding to a complete image
-    :param glb_img: np aray corresponding to a global image
-    :return np containing the normalized glb_img
-    """
-
-    min_val = nanmin(img)
-    if min_val < 0:
-        min_val = 0
-    max_val = nanmax(img)
-    if max_val - min_val != 0:
-        glb_img = (glb_img - min_val) / (max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
-    return glb_img
+        n_img = (n_img - min_val) / (max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
+    return n_img
 
 
 def plt_transient_video(images, out_path, alpha, normalize):
@@ -269,15 +253,27 @@ def transient_video(images, out_path, out_type="cv2", alpha=False, normalize=Tru
     print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
 
 
-def rmv_first_reflection(images):
+def rmv_first_reflection(images, file_path=None, store=False):
+    """
+    Function that given the transient images remove the first reflection leaving only the global component
+    :param images: input transient images
+    :param file_path: path of the np dataset
+    :param store: if you want to save the np dataset (if already saved set it to false in order to load it)
+    :return: Transient images of only the global component as a np array
+    """
+
+    if file_path and not store:  # If already exists a npy file containing all the transient images load it instead of processing everything again
+        return load(str(file_path))
+
     print("Extracting the first peak (channel by channel):")
+    start = time()
+
     peaks = [nanargmax(images[:, :, :, channel_i], axis=0) for channel_i in tqdm(range(images.shape[3] - 1))]  # Find the index of the maximum value in the third dimension
 
     # Extract the position of the first zero after the first peak and remove the first reflection
     print("Remove the first peak (channel by channel):")
     sleep(0.1)
 
-    first_zero_pos = empty([peaks[0].shape[0], peaks[0].shape[1], 3])
     glb_images = copy(images)
     for channel_i in tqdm(range(images.shape[3] - 1)):
         for pixel_r in range(images.shape[1]):
@@ -285,15 +281,16 @@ def rmv_first_reflection(images):
                 zeros_pos = where(images[:, pixel_r, pixel_c, channel_i] == 0)[0]
                 valid_zero_indexes = zeros_pos[where(zeros_pos > peaks[channel_i][pixel_r, pixel_c])]
                 if valid_zero_indexes.size == 0:
-                    first_zero_pos[pixel_r, pixel_c, channel_i] = -1
                     glb_images[:, pixel_r, pixel_c, channel_i] = 0
                 else:
-                    first_zero_pos[pixel_r, pixel_c, channel_i] = valid_zero_indexes[0]
-                    glb_images[:int(first_zero_pos[pixel_r, pixel_c, channel_i]), pixel_r, pixel_c, channel_i] = 0
+                    glb_images[:int(valid_zero_indexes[0]), pixel_r, pixel_c, channel_i] = 0
 
-    print()
+    end = time()
+    print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
 
-    return glb_images
+    if file_path and store:
+        save(str(file_path), glb_images)  # Save the loaded images as a numpy array
+        return glb_images
 
 
 def transient_loader(img_path, np_path=None, store=False):

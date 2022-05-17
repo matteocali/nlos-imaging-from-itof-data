@@ -3,6 +3,7 @@ from modules import transient_handler as tr, utilities as ut
 from pathlib import Path
 from tqdm import tqdm
 import os
+from os.path import exists
 import getopt
 import sys
 
@@ -47,17 +48,14 @@ def arg_parser(argv):
 if __name__ == '__main__':
     arg_in, arg_out, arg_task = arg_parser(sys.argv)  # Recover the input and output folder from the console args
 
-    images = tr.transient_loader(img_path=arg_in, np_path=arg_out / "np_transient.npy", store=True)  # Load the transient
+    images = tr.transient_loader(img_path=arg_in, np_path=arg_out / "np_transient.npy", store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
 
     if arg_task == "tr_video":
         ut.create_folder(arg_out)  # Create the output folder if not already present
         tr.transient_video(images, arg_out)  # Generate the video
     elif arg_task == "glb_tr_video":
-        glb_images = tr.rmv_first_reflection(images)
-        print("Normalize the resulting images:")
-        glb_images_norm = np.empty(glb_images.shape, dtype=np.float32)
-        for index in tqdm(range(glb_images.shape[0])):
-            glb_images_norm[index, :, :, :-1] = tr.glb_normalize_img(images[index, :, :, :-1], glb_images[index, :, :, :-1])
-        print()
-        tr.transient_video(glb_images, arg_out, normalize=False)
+        glb_images = tr.rmv_first_reflection(images=images, file_path=arg_out / "glb_np_transient.npy", store=(not exists(arg_out / "glb_np_transient.npy")))
+        tr.transient_video(np.copy(glb_images), arg_out, normalize=True)
         tr.total_img(glb_images, arg_out / "total_image", normalize=False)
+    elif arg_task == "spot_bitmap"
+        ut.spot_bitmap_gen(arg_out / "spot_bitmap.png", [640, 480])
