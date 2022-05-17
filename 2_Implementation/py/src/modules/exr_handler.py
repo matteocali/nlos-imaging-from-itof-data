@@ -16,7 +16,10 @@ def load_exr(path):
     n_channels = len(img.header()['channels'])  # Extract the number of channels of the image
     dw = img.header()['dataWindow']  # Extract the data window dimension from the header of the exr file
     size = (dw.max.x - dw.min.x + 1, dw.max.y - dw.min.y + 1)  # Define the actual size of the image
-    pt = img.header()['channels']['R'].type  # Recover the pixel type from the header
+    if n_channels > 1:
+        pt = img.header()['channels']['R'].type  # Recover the pixel type from the header
+    else:
+        pt = img.header()['channels']['Y'].type  # Recover the pixel type from the header
 
     # Check if the pt is HALF (pt.v == 1) or FLOAT (pt.v == 2)
     if pt.v == PixelType.HALF:
@@ -40,6 +43,13 @@ def load_exr(path):
         else:
             (A, R, G, B) = [data.reshape(size[1], -1) for data in [A, R, G, B]]  # Reshape each vector to match the image size
         return stack((A, R, G, B), axis=2)
+    elif n_channels == 1:
+        Y = frombuffer(img.channel("Y", pt), dtype=np_pt)  # Extract the channel from each image
+        if np_pt == float16:
+            Y = Y.reshape(size[1], -1).astype(float32)  # Reshape each vector to match the image size
+        else:
+            Y = Y.reshape(size[1], -1)  # Reshape each vector to match the image size
+        return Y
     else:
         return None
 
