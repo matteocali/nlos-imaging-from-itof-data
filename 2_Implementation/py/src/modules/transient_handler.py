@@ -94,8 +94,10 @@ def total_img(images, out_path=None, normalize=True):
         mask[img[:, :, :-1].nonzero()] += 1
     mask[where(mask == 0)] = 1  # Remove eventual 0 values
 
-    if normalize: total_image = divide(summed_images, mask).astype(float32)
-    else: total_image = summed_images
+    if normalize:
+        total_image = divide(summed_images, mask).astype(float32)
+    else:
+        total_image = summed_images
 
     if out_path is not None:
         exr.save_exr(total_image, out_path)  # Save the image
@@ -148,9 +150,13 @@ def normalize_img(img):
     :param img: np aray corresponding to an image
     :return np containing the normalized img
     """
-
-    if nanmax(img) != 0 and nanmin(img) != 0:
-        img = (img - nanmin(img)) / (nanmax(img) - nanmin(img))  # Normalize each image in [0, 1] ignoring the alpha channel
+    
+    min_val = nanmin(img)
+    if min_val < 0:
+        min_val = 0
+    max_val = nanmax(img)
+    if max_val != 0 and min_val != 0:
+        img = (img - min_val) / (max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
     return img
 
 
@@ -162,8 +168,12 @@ def glb_normalize_img(img, glb_img):
     :return np containing the normalized glb_img
     """
 
-    if nanmax(img) != 0 and nanmin(img) != 0:
-        glb_img = (glb_img - nanmin(img)) / (nanmax(img) - nanmin(img))  # Normalize each image in [0, 1] ignoring the alpha channel
+    min_val = nanmin(img)
+    if min_val < 0:
+        min_val = 0
+    max_val = nanmax(img)
+    if max_val - min_val != 0:
+        glb_img = (glb_img - min_val) / (max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
     return glb_img
 
 
@@ -174,13 +184,15 @@ def plt_transient_video(images, out_path, alpha, normalize):
     :param images: list of all the transient images
     :param out_path: path where to save the video
     :param alpha: define if it has to use the alpha channel or not
+    :param normalize: choose ti perform normalization or not
     """
 
     frames = []  # For storing the generated images
     fig = plt.figure()  # Create the figure
 
     for img in tqdm(images):
-        if normalize: normalize_img(img[:, :, : -1])
+        if normalize:
+            normalize_img(img[:, :, : -1])
 
         if alpha:
             frames.append([plt.imshow(img, animated=True)])  # Create each frame
@@ -198,12 +210,14 @@ def cv2_transient_video(images, out_path, alpha, normalize):
     :param images: numpy array containing all the images
     :param out_path: path where to save the video
     :param alpha: define if it has to use the alpha channel or not
+    :param normalize: choose ti perform normalization or not
     """
 
     out = VideoWriter(str(out_path), VideoWriter_fourcc(*"mp4v"), 30, (images[0].shape[1], images[0].shape[0]))  # Create the cv2 video
 
     for img in tqdm(images):
-        if normalize: normalize_img(img[:, :, : -1])
+        if normalize:
+            normalize_img(img[:, :, : -1])
 
         # Convert the image from RGBA to BGRA
         tmp = copy(img[:, :, 0])
@@ -235,6 +249,7 @@ def transient_video(images, out_path, out_type="cv2", alpha=False, normalize=Tru
     :param out_path: output file path
     :param out_type: format of the video output, cv2 or plt
     :param alpha: boolean value that determines if the output video will consider or not the alpha map
+    :param normalize: choose ti perform normalization or not
     """
 
     print("Generating the final video:")
