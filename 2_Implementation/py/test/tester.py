@@ -1,23 +1,63 @@
+import numpy as np
 from modules import transient_handler as tr, utilities as ut
 from pathlib import Path
-from os import path
-import numpy as np
+from tqdm import tqdm
+import os
+import getopt
+import sys
+
+
+def arg_parser(argv):
+    """
+    Function used to parse the input argument given through the command line (code form https://opensourceoptions.com/blog/how-to-pass-arguments-to-a-python-script-from-the-command-line/)
+    :param argv: system arguments
+    :return: list containing the input and output path
+    """
+
+    arg_in = os.getcwd()  # Argument containing the input directory
+    arg_out = ""  # Argument containing the output directory
+    arg_task = ""  # Argument that define the function that will be used
+    arg_help = "{0} -i <input> -m <image> -o <output>".format(argv[0])  # Help string
+
+    try:
+        opts, args = getopt.getopt(argv[1:], "hi:o:t:", ["help", "input=", "output=", "task="])  # Recover the passed options and arguments from the command line (if any)
+    except:
+        print(arg_help)  # If the user provide a wrong options print the help string
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            print(arg_help)  # Print the help message
+            sys.exit(2)
+        elif opt in ("-i", "--input"):
+            arg_in = Path(arg)  # Set the input directory
+        elif opt in ("-o", "--output"):
+            arg_out = Path(arg)  # Set the output directory
+        elif opt in ("-t", "--task"):
+            arg_task = arg  # Set the task
+
+    print('Input path:', arg_in)
+    print('Output path:', arg_out)
+    print('task:', arg_task)
+    print()
+
+    return [arg_in, arg_out, arg_task]
 
 
 if __name__ == '__main__':
-    in_folder = Path("C:/Users/DECaligM/Documents/Mitsuba2 rendering environment/Tests/Cornel box (point light) - example/Transient images/transient_images_small_256")
-    out_folder = Path("C:/Users/DECaligM/Desktop/Test transinet")
-    out_type = "cv2"
+    arg_in, arg_out, arg_task = arg_parser(sys.argv)  # Recover the input and output folder from the console args
 
-    ut.create_folder(out_folder)  # Create the output folder if not already present
+    images = tr.transient_loader(img_path=arg_in, np_path=arg_out / "np_transient.npy", store=True)  # Load the transient
 
-    # If present in the folder, load the np.array
-    if not path.exists(out_folder / "np_images.npy"):
-        files = ut.reed_files(str(in_folder), "exr")  # Load the path of all the files in the input folder with extension .exr
-        channels = tr.reshape_frame(files)  # Reshape the frame in a standard layout
-        images = tr.img_matrix(channels)  # Create the image files
-        np.save(str(out_folder / "np_images.npy"), images)  # Save the loaded images as a numpy array
-    else:  # If already exists a npy file containing all the transient images load it instead of processing everything again
-        images = np.load(str(out_folder / "np_images.npy"))
-
-    tr.transient_video(images, out_folder, out_type)  # Generate the video
+    if arg_task == "tr_video":
+        ut.create_folder(arg_out)  # Create the output folder if not already present
+        tr.transient_video(images, arg_out)  # Generate the video
+    elif arg_task == "glb_tr_video":
+        glb_images = tr.rmv_first_reflection(images)
+        print("Normalize the resulting images:")
+        glb_images_norm = np.empty(glb_images.shape, dtype=np.float32)
+        for index in tqdm(range(glb_images.shape[0])):
+            glb_images_norm[index, :, :, :-1] = tr.glb_normalize_img(images[index, :, :, :-1], glb_images[index, :, :, :-1])
+        print()
+        tr.transient_video(glb_images, arg_out, normalize=False)
+        tr.total_img(glb_images, arg_out / "total_image", normalize=False)

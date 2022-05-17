@@ -75,11 +75,12 @@ def img_matrix(channels):
     return images
 
 
-def total_img(images, out_path=None):
+def total_img(images, out_path=None, normalize=True):
     """
     Function to build the image obtained by sum all the temporal instant of the transient
     :param images: np array containing of all the images
     :param out_path: output path and name
+    :param normalize: normalize or not the output
     :return: total image as a numpy matrix
     """
     print("Generate the total image = sum over all the time instants")
@@ -93,7 +94,8 @@ def total_img(images, out_path=None):
         mask[img[:, :, :-1].nonzero()] += 1
     mask[where(mask == 0)] = 1  # Remove eventual 0 values
 
-    total_image = divide(summed_images, mask).astype(float32)
+    if normalize: total_image = divide(summed_images, mask).astype(float32)
+    else: total_image = summed_images
 
     if out_path is not None:
         exr.save_exr(total_image, out_path)  # Save the image
@@ -144,6 +146,7 @@ def normalize_img(img):
     """
     Normalize the image value in the range [0, 1]
     :param img: np aray corresponding to an image
+    :return np containing the normalized img
     """
 
     if nanmax(img) != 0 and nanmin(img) != 0:
@@ -151,7 +154,20 @@ def normalize_img(img):
     return img
 
 
-def plt_transient_video(images, out_path, alpha):
+def glb_normalize_img(img, glb_img):
+    """
+    Normalize the global image value in the range [0, 1] using the complete image for the bound
+    :param img: np aray corresponding to a complete image
+    :param glb_img: np aray corresponding to a global image
+    :return np containing the normalized glb_img
+    """
+
+    if nanmax(img) != 0 and nanmin(img) != 0:
+        glb_img = (glb_img - nanmin(img)) / (nanmax(img) - nanmin(img))  # Normalize each image in [0, 1] ignoring the alpha channel
+    return glb_img
+
+
+def plt_transient_video(images, out_path, alpha, normalize):
     """
     Function that generate a video of the transient and save it in the matplotlib format
     (code from: https://stackoverflow.com/questions/34975972/how-can-i-make-a-video-from-array-of-images-in-matplotlib)
@@ -164,7 +180,7 @@ def plt_transient_video(images, out_path, alpha):
     fig = plt.figure()  # Create the figure
 
     for img in tqdm(images):
-        normalize_img(img[:, :, : -1])
+        if normalize: normalize_img(img[:, :, : -1])
 
         if alpha:
             frames.append([plt.imshow(img, animated=True)])  # Create each frame
@@ -175,7 +191,7 @@ def plt_transient_video(images, out_path, alpha):
     ani.save(out_path)
 
 
-def cv2_transient_video(images, out_path, alpha):
+def cv2_transient_video(images, out_path, alpha, normalize):
     """
     Function that generate a video of the transient and save it in the cv2 format
     (code from: https://theailearner.com/2018/10/15/creating-video-from-images-using-opencv-python/)
@@ -187,7 +203,7 @@ def cv2_transient_video(images, out_path, alpha):
     out = VideoWriter(str(out_path), VideoWriter_fourcc(*"mp4v"), 30, (images[0].shape[1], images[0].shape[0]))  # Create the cv2 video
 
     for img in tqdm(images):
-        normalize_img(img[:, :, : -1])
+        if normalize: normalize_img(img[:, :, : -1])
 
         # Convert the image from RGBA to BGRA
         tmp = copy(img[:, :, 0])
@@ -212,7 +228,7 @@ def cv2_transient_video(images, out_path, alpha):
     out.release()
 
 
-def transient_video(images, out_path, out_type="cv2", alpha=False):
+def transient_video(images, out_path, out_type="cv2", alpha=False, normalize=True):
     """
     Function that generate and save the transient video
     :param images: np.array containing all the images [<n_of_images>, <n_of_rows>, <n_of_columns>, <n_of_channels>]
@@ -225,44 +241,44 @@ def transient_video(images, out_path, out_type="cv2", alpha=False):
     start = time()  # Compute the execution time
 
     if out_type == "plt":
-        plt_transient_video(images, out_path / "transient.avi", alpha)
+        plt_transient_video(images, out_path / "transient.avi", alpha, normalize)
     elif out_type == "cv2":
-        cv2_transient_video(images, out_path / "transient.avi", alpha)
+        cv2_transient_video(images, out_path / "transient.avi", alpha, normalize)
     elif out_type == "both":
         print("Matplotlib version:")
-        plt_transient_video(images, out_path / "transient_plt.avi", alpha)
+        plt_transient_video(images, out_path / "transient_plt.avi", alpha, normalize)
         print("Opencv version:")
-        cv2_transient_video(images, out_path / "transient_cv2.avi", alpha)
+        cv2_transient_video(images, out_path / "transient_cv2.avi", alpha, normalize)
 
     end = time()
     print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
 
 
 def rmv_first_reflection(images):
-    peaks = [print(channel) for channel in images]  # Find the index of the maximum value in the third dimension
+    print("Extracting the first peak (channel by channel):")
+    peaks = [nanargmax(images[:, :, :, channel_i], axis=0) for channel_i in tqdm(range(images.shape[3] - 1))]  # Find the index of the maximum value in the third dimension
 
-    first_zero_pos = [where(images[peaks[index]:, :, :, index] == 0) for index in range(images.shape[3])]  # Extract the position of the first zero after the first peak
+    # Extract the position of the first zero after the first peak and remove the first reflection
+    print("Remove the first peak (channel by channel):")
+    sleep(0.1)
 
-    new_images = empty([images[first_zero_pos[0]:, :, :, :]], dtype=float32)
+    first_zero_pos = empty([peaks[0].shape[0], peaks[0].shape[1], 3])
+    glb_images = copy(images)
+    for channel_i in tqdm(range(images.shape[3] - 1)):
+        for pixel_r in range(images.shape[1]):
+            for pixel_c in range(images.shape[2]):
+                zeros_pos = where(images[:, pixel_r, pixel_c, channel_i] == 0)[0]
+                valid_zero_indexes = zeros_pos[where(zeros_pos > peaks[channel_i][pixel_r, pixel_c])]
+                if valid_zero_indexes.size == 0:
+                    first_zero_pos[pixel_r, pixel_c, channel_i] = -1
+                    glb_images[:, pixel_r, pixel_c, channel_i] = 0
+                else:
+                    first_zero_pos[pixel_r, pixel_c, channel_i] = valid_zero_indexes[0]
+                    glb_images[:int(first_zero_pos[pixel_r, pixel_c, channel_i]), pixel_r, pixel_c, channel_i] = 0
 
-    for i in range(images.shape[3]):
-        new_images[:, :, :, i] = images[first_zero_pos[0]:, :, :, i]
+    print()
 
-    return new_images
-
-
-def glb_transient_video(images, out_path, out_type="cv2", alpha=False):
-    """
-    Function that generate and save the transient video of only th global component
-    :param images: np.array containing all the images [<n_of_images>, <n_of_rows>, <n_of_columns>, <n_of_channels>]
-    :param out_path: output file path
-    :param out_type: format of the video output, cv2 or plt
-    :param alpha: boolean value that determines if the output video will consider or not the alpha map
-    """
-
-    images = rmv_first_reflection(images)
-
-    transient_video(images, out_path, out_type, alpha)
+    return glb_images
 
 
 def transient_loader(img_path, np_path=None, store=False):
