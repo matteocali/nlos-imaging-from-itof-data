@@ -104,15 +104,25 @@ def save_plt(img, file_path, alpha):
         plt.imsave(file_path, img)
 
 
-def spot_bitmap_gen(file_path, size):
-    img = zeros([size[1], size[0]], dtype=uint8)
-    if size[0] % 2 == 0 and size[1] % 2 == 0:
-        img[(size[1]/2 - 1):(size[1]/2 + 1), (size[0]/2 - 1):(size[0]/2 + 1)] = 255
-    elif size[0] % 2 == 0 and size[1] % 2 != 0:
-        img[size[1]/2, (size[0]/2 - 1):(size[0]/2 + 1)] = 255
-    if size[0] % 2 != 0 and size[1] % 2 == 0:
-        img[(size[1]/2 - 1):(size[1]/2 + 1), size[0]/2] = 255
-    if size[0] % 2 != 0 and size[1] % 2 != 0:
-        img[size[1]/2, size[0]/2] = 255
+def spot_bitmap_gen(file_path, img_size, spot_size):
+    """
+    Function that generate a black bitmap image of size img_path with a white square in the middle of size (spot_size * spot_size)
+    :param file_path: path where to save the generated image
+    :param img_size: size of the desired image [columns * rows]
+    :param spot_size: number of pixels of the edge of the inner square (must be even)
+    """
 
-    imwrite(str(file_path), img)
+    img = zeros([img_size[1], img_size[0]], dtype=uint8)  # Generate the base black image
+    spot_size = int(spot_size/2)
+
+    # Change ve value to white of only the desired center pixels
+    if img_size[0] % 2 == 0 and img_size[1] % 2 == 0:
+        img[(int(img_size[1] / 2) - spot_size):(int(img_size[1] / 2) + spot_size), (int(img_size[0] / 2) - spot_size):(int(img_size[0] / 2) + spot_size)] = 255
+    elif img_size[0] % 2 == 0 and img_size[1] % 2 != 0:
+        img[int(img_size[1] / 2), (int(img_size[0] / 2) - spot_size):(int(img_size[0] / 2) + spot_size)] = 255
+    if img_size[0] % 2 != 0 and img_size[1] % 2 == 0:
+        img[int((img_size[1] / 2) - spot_size):(int(img_size[1] / 2) + spot_size), int(img_size[0] / 2)] = 255
+    if img_size[0] % 2 != 0 and img_size[1] % 2 != 0:
+        img[int(img_size[1] / 2), int(img_size[0] / 2)] = 255
+
+    imwrite(str(file_path), img)  # Save the image
