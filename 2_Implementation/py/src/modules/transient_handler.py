@@ -3,7 +3,7 @@ from time import time, sleep
 from modules import utilities as ut
 from OpenEXR import InputFile
 from cv2 import VideoWriter, VideoWriter_fourcc, destroyAllWindows, cvtColor, COLOR_RGBA2BGRA
-from numpy import empty, shape, where, divide, zeros, copy, transpose, save, load, ndarray
+from numpy import empty, shape, where, divide, zeros, copy, save, load, ndarray
 from numpy import isnan, nansum, nanargmax, nanmin, nanmax
 from numpy import uint8, float32
 from modules import exr_handler as exr
@@ -183,10 +183,10 @@ def normalize_img(img):
 
     n_img = copy(img)
     n_img[where(n_img < 0)] = 0
-    min_val = nanmin(img)
-    max_val = nanmax(img)
+    min_val = nanmin(n_img)
+    max_val = 65504#nanmax(n_img)
 
-    if max_val != 0 and min_val != 0:
+    if max_val - min_val != 0:
         n_img = (n_img - min_val) / (max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
     return n_img
 
@@ -240,18 +240,10 @@ def cv2_transient_video(images, out_path, alpha, normalize):
 
     for img in tqdm(images):
         if normalize and not mono:
-            img = normalize_img(img[:, :, : -1])
+            norm_img = normalize_img(img[:, :, : -1])
+            img[:, :, : -1] = norm_img
         if normalize and mono:
             img = normalize_img(img)
-
-        # Transpose the image to match the proper resolution
-        if not mono:
-            for i in range(img.shape[-1]):
-                tmp = copy(img[:, :, i])
-                transpose(tmp)
-                img[:, :, i] = copy(tmp)
-        else:
-            transpose(img)
 
         # Map img to uint8
         img = (255 * img).astype(uint8)
@@ -259,11 +251,6 @@ def cv2_transient_video(images, out_path, alpha, normalize):
         # Convert the image from RGBA to BGRA
         if not mono:
             img = cvtColor(img, COLOR_RGBA2BGRA)
-            '''
-            tmp = copy(img[:, :, 0])
-            img[:, :, 0] = copy(img[:, :, 2])
-            img[:, :, 2] = tmp
-            '''
 
         if alpha or mono:
             out.write(img)  # Populate the video
