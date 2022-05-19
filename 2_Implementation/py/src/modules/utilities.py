@@ -98,6 +98,7 @@ def save_plt(img, file_path, alpha):
     :param img: image to save
     :param file_path: path and name
     """
+
     if not alpha:
         plt.imsave(file_path, img[:, :, :-1])
     else:
