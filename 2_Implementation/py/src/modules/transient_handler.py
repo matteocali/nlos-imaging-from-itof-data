@@ -181,14 +181,13 @@ def normalize_img(img):
     :return np containing the normalized img
     """
 
-    n_img = copy(img)
-    n_img[where(n_img < 0)] = 0
-    min_val = nanmin(n_img)
-    max_val = 65504#nanmax(n_img)
+    img[where(img < 0)] = 0
+    min_val = nanmin(img)
+    max_val = nanmax(img)
 
     if max_val - min_val != 0:
-        n_img = (n_img - min_val) / (max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
-    return n_img
+        img = (img - min_val) / (max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
+    return img
 
 
 def plt_transient_video(images, out_path, alpha, normalize):
@@ -210,7 +209,7 @@ def plt_transient_video(images, out_path, alpha, normalize):
         if normalize and not mono:
             img = normalize_img(img[:, :, : -1])
         elif normalize and mono:
-            img = normalize_img(img)
+            img[:, :, :-1] = normalize_img(img)
 
         if alpha or mono:
             frames.append([plt.imshow(img, animated=True)])  # Create each frame
@@ -240,8 +239,7 @@ def cv2_transient_video(images, out_path, alpha, normalize):
 
     for img in tqdm(images):
         if normalize and not mono:
-            norm_img = normalize_img(img[:, :, : -1])
-            img[:, :, : -1] = norm_img
+            normalize_img(img[:, :, : -1])
         if normalize and mono:
             img = normalize_img(img)
 
@@ -251,11 +249,12 @@ def cv2_transient_video(images, out_path, alpha, normalize):
         # Convert the image from RGBA to BGRA
         if not mono:
             img = cvtColor(img, COLOR_RGBA2BGRA)
-
+        
         if alpha or mono:
             out.write(img)  # Populate the video
         elif not alpha and not mono:
             out.write(img[:, :, :-1])  # Populate the video without the alpha channel
+
 
     destroyAllWindows()
     out.release()

@@ -51,9 +51,10 @@ if __name__ == '__main__':
         print(f"TASK: {arg_task}")
         start = time.time()
 
+        ut.create_folder(arg_out, "np_transient.npy")  # Create the output folder if not already present
         images = tr.transient_loader(img_path=arg_in, np_path=arg_out / "np_transient.npy", store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        ut.create_folder(arg_out)  # Create the output folder if not already present
-        tr.transient_video(images, arg_out)  # Generate the video
+
+        tr.transient_video(images, arg_out, normalize=True)  # Generate the video
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))

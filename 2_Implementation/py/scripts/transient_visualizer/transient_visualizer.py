@@ -199,6 +199,7 @@ def img_matrix(channels, output, out_type, alpha):
         img[:, :, 0] = frame_R[:, :, i]
         img[:, :, 1] = frame_G[:, :, i]
         img[:, :, 2] = frame_B[:, :, i]
+        img[np.where(img < 0)] = 0
         img = (img - np.nanmin(img)) / (np.nanmax(img) - np.nanmin(img))  # Normalize each image in [0, 1] ignoring the alpha channel
         img[:, :, 3] = frame_A[:, :, i]
 
@@ -243,7 +244,7 @@ def total_img(images, output, out_type, alpha):
     total_image = np.divide(summed_images, mask).astype(np.float32)
 
     imageio.plugins.freeimage.download()  # Download (if needed the required plugin in order to export .exr file)
-    imageio.imwrite(output + ".exr", total_image)  # Save yhe image
+    imageio.imwrite(str(output) + ".exr", total_image)  # Save yhe image
 
     end = time.time()
     print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
@@ -328,7 +329,7 @@ if __name__ == '__main__':
 
     files = reed_files(str(arg_input), "exr")  # Load the path of all the files in the input folder with extension .exr
 
-    (frame_A, frame_R, frame_G, frame_B, min_val, max_val) = reshape_frame(files)  # Reshape the frame in a standard layout
+    (frame_A, frame_R, frame_G, frame_B) = reshape_frame(files)  # Reshape the frame in a standard layout
 
     images = img_matrix([frame_A, frame_R, frame_G, frame_B], arg_output, arg_out_type, arg_alpha)  # Create the image files
 
