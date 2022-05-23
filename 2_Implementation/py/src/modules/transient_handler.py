@@ -255,7 +255,6 @@ def cv2_transient_video(images, out_path, alpha, normalize):
         elif not alpha and not mono:
             out.write(img[:, :, :-1])  # Populate the video without the alpha channel
 
-
     destroyAllWindows()
     out.release()
 
@@ -360,3 +359,44 @@ def transient_loader(img_path, np_path=None, store=False):
         if store:
             save(str(np_path), images)  # Save the loaded images as a numpy array
         return images
+
+
+def histo_plt(radiance, exp_time, file_path=None):
+
+    plt_start_pos = [where(radiance[:, channel] != 0)[0][0] - 10 for channel in range(0, 3)]
+    plt_end_pos = [where(radiance[:, channel] != 0)[0][-1] + 11 for channel in range(0, 3)]
+
+    radiance[where(radiance < 0)] = 0
+
+    mono = len(radiance.shape) == 1
+
+
+    unit_of_measure = 1e9  # nano seconds
+    unit_of_measure_name = "ns"
+
+    if not mono:
+        colors = ["r", "g", "b"]
+        colors_name = ["Red", "Green", "Blu"]
+
+        fig, axs = plt.subplots(1, 3, figsize=(24, 6))
+        for i in range(radiance.shape[1] - 1):
+            axs[i].plot(radiance[plt_start_pos[i]:plt_end_pos[i], i], colors[i])
+            axs[i].set_xticks(range(0, len(radiance[plt_start_pos[i]:plt_end_pos[i], i]) + 1, int(len(radiance[plt_start_pos[i]:plt_end_pos[i], i] + 1) / 13)))
+            axs[i].set_xticklabels([round(value * exp_time / 3e8 * unit_of_measure, 1) for value in range(plt_start_pos[i], plt_end_pos[i] + 1, int(len(radiance[plt_start_pos[i]:plt_end_pos[i], i] + 1) / 13))], rotation=45)
+            axs[i].set_title(f"{colors_name[i]} channel histogram")
+            axs[i].set_xlabel(f"Time instants [{unit_of_measure_name}]")
+            axs[i].set_ylabel(r"Radiance value [$W/(m^{2}·sr)$]")
+            axs[i].grid()
+    else:
+        plt.plot(radiance[plt_start_pos[0]:plt_end_pos[0]])
+        plt.xticks([round(value * exp_time / 3e8 * unit_of_measure, 1) for value in range(plt_start_pos[i], plt_end_pos[i] + 1, 10)], rotation=45)
+        plt.xlabel(f"Time instants [{unit_of_measure_name}]")
+        plt.ylabel(r"Radiance value [$W/(m^{2}·sr)$]")
+        plt.grid()
+    
+    if file_path is None:
+        plt.show()
+        plt.close()
+    else:
+        plt.savefig(str(file_path))
+        plt.close()
