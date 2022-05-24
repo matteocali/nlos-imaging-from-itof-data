@@ -76,7 +76,7 @@ if __name__ == '__main__':
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
         tr.total_img(images=images,
                      out_path=arg_out / "total_image",
-                     normalize=False)
+                     normalize=True)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
@@ -117,7 +117,7 @@ if __name__ == '__main__':
         images = tr.transient_loader(img_path=arg_in,
                                      np_path=arg_out / "np_transient.npy",
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        tr.histo_plt(radiance=images[:, 320, 240, :],
+        tr.histo_plt(radiance=images[:, 80, 60, :],
                      exp_time=arg_exp_time,
                      file_path=arg_out / "transient_histograms.svg")
 

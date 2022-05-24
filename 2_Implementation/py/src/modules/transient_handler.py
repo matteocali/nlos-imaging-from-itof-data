@@ -370,9 +370,12 @@ def histo_plt(radiance, exp_time, file_path=None):
 
     mono = len(radiance.shape) == 1
 
-
-    unit_of_measure = 1e9  # nano seconds
-    unit_of_measure_name = "ns"
+    if len(str(exp_time).split(".")) > 1:
+        unit_of_measure = 1e9  # nano seconds
+        unit_of_measure_name = "ns"
+    else:
+        unit_of_measure = 1e6  # nano seconds
+        unit_of_measure_name = r"$\mu s"
 
     if not mono:
         colors = ["r", "g", "b"]

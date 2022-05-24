@@ -197,7 +197,6 @@ def total_img(images, output):
 
     summed_images = np.nansum(images[:, :, :, :-1], axis=0)  # Sum all the produced images over the time dimension ignoring the alpha channel
 
-    '''
     # Generate a mask matrix that will contain the number of active beans in each pixel (needed to normalize the image)
     mask = np.zeros([images[0].shape[0], images[0].shape[1]], dtype=np.float32)
     for img in images:
@@ -207,7 +206,6 @@ def total_img(images, output):
     mask = np.stack((mask, mask, mask), axis=2)  # make the mask a three layer matrix
 
     total_image = np.divide(summed_images, mask).astype(np.float32)
-    '''
 
     # Generate a mask matrix that will contain the number of active beans in each pixel (needed to normalize the image)
     mask = np.zeros(summed_images.shape, dtype=np.float32)
@@ -215,7 +213,7 @@ def total_img(images, output):
         mask[img[:, :, :-1].nonzero()] += 1
     mask[np.where(mask == 0)] = 1  # Remove eventual 0 values
 
-    total_image = summed_images#np.divide(summed_images, mask).astype(np.float32)
+    total_image = np.divide(summed_images, mask).astype(np.float32)
 
     imageio.plugins.freeimage.download()  # Download (if needed the required plugin in order to export .exr file)
     imageio.imwrite(output + ".exr", total_image)  # Save yhe image
@@ -307,8 +305,8 @@ def img_comparison(o_img, t_img):
     B_div = t_img[:, :, 2] / o_img[:, :, 2]
 
     # Extract the minimum and maximum displayed value to normalize the colors
-    min_val = 0.5#min([np.min(R_div), np.min(G_div), np.min(B_div)])
-    max_val = 1.5#max([np.max(R_div), np.max(G_div), np.max(B_div)])
+    min_val = min([np.min(R_div), np.min(G_div), np.min(B_div)])
+    max_val = max([np.max(R_div), np.max(G_div), np.max(B_div)])
 
     # Plot the ratio between the two images, channel by channel
     fig3, axs3 = plt.subplots(1, 3, figsize=(18, 6))
