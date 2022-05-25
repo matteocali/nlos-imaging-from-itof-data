@@ -140,8 +140,8 @@ def extract_cross_peak(channels):
 
     peak_row_pos = [data[int(data.shape[0]/2), :] for data in [max_index_R, max_index_G, max_index_B]]  # Extract the peak position in the middle row
     peak_col_pos = [data[:, int(data.shape[1]/2)] for data in [max_index_R, max_index_G, max_index_B]]  # Extract the peak position in the middle column
-    peak_row_values = [[channel[int(channel.shape[0]/2), i, peak_pos] for i, peak_pos in enumerate(peak_row_pos[index])] for index, channel in enumerate(channels)]  # Extract the value of the middle row in the peak position
-    peak_col_values = [[channel[i, int(channel.shape[1]/2), peak_pos] for i, peak_pos in enumerate(peak_col_pos[index])] for index, channel in enumerate(channels)]  # Extract the value of the middle column in the peak position
+    peak_row_values = [[channel[int(channel.shape[0]/2), i, peak_pos]/17290 for i, peak_pos in enumerate(peak_row_pos[index])] for index, channel in enumerate(channels)]  # Extract the value of the middle row in the peak position
+    peak_col_values = [[channel[i, int(channel.shape[1]/2), peak_pos]/17290 for i, peak_pos in enumerate(peak_col_pos[index])] for index, channel in enumerate(channels)]  # Extract the value of the middle column in the peak position
 
     return [peak_row_pos, peak_col_pos, peak_row_values, peak_col_values]
 
@@ -281,7 +281,7 @@ def plot_generator(x, real, model, ticks_interval, name, ext):
     plt.locator_params(axis='x', nbins=8)
     plt.xticks(ticks, x_label)
     plt.xlabel("Pixel position")  # Define the label on the x axes
-    plt.ylabel(r"Radiance value on he red channel [$W/(m^{2}·sr)$]")  # Define the label on the y axes
+    plt.ylabel(r"Radiance value on the red channel [$W/(m^{2}·sr)$]")  # Define the label on the y axes
     plt.grid()  # Add the grid to the plot
     plt.legend()  # Add the legend to the plot
     plt.savefig(name + ext)  # Save the generated plot
@@ -322,7 +322,7 @@ if __name__ == '__main__':
     (frame_A, frame_R, frame_G, frame_B) = reshape_frame(files)  # Reshape the frame in a standard layout
 
     peak_row_pos, peak_col_pos, peak_row_values, peak_col_values = extract_cross_peak([frame_R, frame_G, frame_B])
-    
+
     theta_row, theta_col, row_distance, col_distance = theta_calculator(peak_row_pos[0][int(len(peak_row_pos[0])/2)], peak_row_values, peak_col_values, arg_exp, arg_fov)  # Compute the theta values and the incremental distance vector for the main row and column
 
     save_plot(theta_row, theta_col, peak_row_values[0], peak_col_values[0], row_distance, col_distance, arg_output)  # generate and save the two plots

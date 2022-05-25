@@ -123,3 +123,21 @@ if __name__ == '__main__':
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    elif arg_task == "cross":
+        print(f"TASK: {arg_task}")
+        start = time.time()
+
+        images = tr.transient_loader(img_path=arg_in,
+                                     np_path=arg_out / "np_transient.npy",
+                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
+
+        theta_row, theta_col, row_distance, col_distance = tr.theta_calculator(tr.extract_center_peak(images)[0][0], images[0].shape[1], images[0].shape[0], 0.01, 39.597755)
+
+        tot_img = tr.total_img2(images=images,
+                                out_path=arg_out / "total_image",
+                                normalize=True)
+
+        tr.save_plot(theta_row, theta_col, list(tot_img[int(tot_img.shape[1]/2), :, 0]), list(tot_img[:, int(tot_img.shape[1]/2), 0]), row_distance, col_distance, str(arg_out / "cross_section"))
+
+        end = time.time()
+        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
