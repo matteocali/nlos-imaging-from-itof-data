@@ -159,3 +159,12 @@ if __name__ == '__main__':
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    elif arg_task == "distance_plot":
+        print(f"TASK: {arg_task}")
+        start = time.time()
+
+        mt.distance_plot(in_path=arg_in,
+                         out_name=arg_out)
+
+        end = time.time()
+        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))

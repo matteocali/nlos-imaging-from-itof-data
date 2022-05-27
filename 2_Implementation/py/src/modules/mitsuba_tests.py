@@ -1,8 +1,9 @@
 from statistics import mean
 from time import time
 from matplotlib import pyplot as plt
-from modules import transient_handler as tr
+from modules import transient_handler as tr, utilities as ut
 from math import tan, radians, floor, degrees, atan, cos
+from numpy import linspace
 
 
 def compute_plane_distances_increment(p_distance, h_len, fov):
@@ -137,9 +138,9 @@ def plot_generator(x, real, model, ticks_interval, name, ext, color):
     plt.close()  # Close the currently open plot
 
 
-def save_plot(theta_r, theta_c, row_distance, col_distance, r_values, c_values, output, ext=".svg"):
+def save_cross_section_plot(theta_r, theta_c, row_distance, col_distance, r_values, c_values, output, ext=".svg"):
     """
-    Function to generate and save the two plots (one for the principal row and one for the principal column)
+    Function to generate and save the two cross-section plots (one for the principal row and one for the principal column)
     :param theta_r: theta value on the main row
     :param theta_c: theta value on the main column
     :param r_values: measured values on the main row
@@ -178,10 +179,104 @@ def cross_section_tester(images, tot_img, exp_time, fov, output_path):
                                                                         e_time=exp_time,
                                                                         fov=fov)
 
-    save_plot(theta_r=theta_row,
-              theta_c=theta_col,
-              row_distance=row_distance,
-              col_distance=col_distance,
-              r_values=list(tot_img[int(tot_img.shape[1] / 2), :, 0]),
-              c_values=list(tot_img[:, int(tot_img.shape[1] / 2), 0]),
-              output=str(output_path / "cross_section"))
+    save_cross_section_plot(theta_r=theta_row,
+                            theta_c=theta_col,
+                            row_distance=row_distance,
+                            col_distance=col_distance,
+                            r_values=list(tot_img[int(tot_img.shape[1] / 2), :, 0]),
+                            c_values=list(tot_img[:, int(tot_img.shape[1] / 2), 0]),
+                            output=str(output_path / "cross_section"))
+
+
+def extract_data_from_file(files):
+    """
+    Function to extract the distance and radiance value from the txt files
+    :param files: list of all the paths of all the txt file that has to be analyzed
+    :return: list containing all the distances and another list containing all the radiance values
+    """
+
+    distances = []  # Define the empty list that will contain the distances values
+    radiance = []  # Define the empty list that will contain the radiance values
+    for file in files:  # For each file
+        with open(file, "r") as reader:  # Open the file
+            content = reader.readlines()  # Read the content
+            distances.append(float(content[1].split(":")[1][1:]))  # From the second line extract the distance value parsing the string
+            radiance.append(float(content[2].split(":")[1][1:]))  # From the third line extract the radiance value parsing the string
+
+    return [distances, radiance]
+
+
+def save_distance_plot(dist, radiance, output, ext=".svg", annotation=False):
+    """
+    Function to generate and save the distance plot
+    :param dist: vector containing al the measured distance values
+    :param radiance: vector containing al the measured radiance values
+    :param output: name of the output file
+    :param ext: extension of the saved file
+    :param annotation: boolean value to define if the plot will have annotation on the data
+    """
+
+    x, y = ut.generate_quadratic_model(min(dist), max(dist), max(radiance), 1000)  # Build the ground truth quadratic model
+
+    plt.plot(x, y, '--', label="Ideal decaying of the intensities value")  # Plot the ground truth value as a dashed line
+    plt.plot(dist, radiance, 'o', label="Measured distances")  # Plot the measured data as dots
+    plt.xlabel("Distances value [m]")  # Define the label on the x axis
+    plt.ylabel(r"Radiance value on the red channel [$W/(m^{2}·sr)$]")  # Define the label on the y axis
+    if annotation:
+        for i, j in zip(dist, radiance):
+            plt.annotate(str(round(j, 3)), xy=(i, j))  # Add the annotation to each measured data point
+    plt.grid()  # Add the grid to the plot
+    plt.legend()  # Add the legend to the plot
+    plt.savefig(output+ext)  # Save the generated plot
+    plt.show()  # Show the plot
+
+
+def save_millimiter_plot(dist, step, max_value, output, ext=".svg"):
+    """
+    Function to generate and save the plot
+    :param max_value: maximum value visualized on the x axes
+    :param step: number of skipped ticks between two visualized ones
+    :param dist: vector containing al the measured distance values
+    :param output: name of the output file
+    :param ext: extension of the saved file
+    """
+
+    lin = linspace(step, max_value, 1000)  # Build the ground truth linear model
+
+    x = [x for x in range(step, max_value + step, step)]  # x axes of the measured data
+
+    plt.figure(figsize=(10, 8))
+    plt.plot(lin, lin, '--', label="Ideal distances values")  # Plot the ground truth value as a dashed line
+    plt.step(x, [x * 1000 for x in dist], where="post", linewidth=2, label="Measured distances")  # Plot the measured data as steps
+    plt.xticks(list(range(step, 32, 2)))  # Define the values displayed on the x axes
+    plt.yticks(list(range(step, 36, 1)))  # Define the values displayed on the y axes
+    plt.xlabel("Distances value [mm]")  # Define the label on the x axes
+    plt.ylabel("Distances value [mm]")  # Define the label on the y axes
+    plt.grid()  # Add the grid to the plot
+    plt.legend()  # Add the legend to the plot
+    plt.savefig(output + ext)  # Save the generated plot
+    plt.show()  # Show the plot
+
+
+def distance_plot(in_path, out_name):
+    """
+    Function to generate and save the decaying distance plot
+    :param in_path: input path containing all the txt file of the measured distances
+    :param out_name: path and name (no extension) of the output file
+    """
+    files = ut.reed_files(str(in_path), "txt")  # Load the path of all the files in the input folder with extension .exr
+    dist, radiance = extract_data_from_file(files)  # Extract the distance and radiance values from the files
+    save_distance_plot(dist, radiance, str(out_name))  # Generate and save the standard plot
+
+
+def mm_distance_plot(in_path, step, max_value, out_name):
+    """
+    Function to generate and save the plot regarding the millimiter distance -> evaluate the quantization
+    :param in_path: input path containing all the txt file of the measured distances
+    :param step: number of skipped ticks between two visualized ones
+    :param max_value: maximum value visualized on the x axes
+    :param out_name: path and name (no extension) of the output file
+    """
+    files = ut.reed_files(str(in_path), "txt")  # Load the path of all the files in the input folder with extension .exr
+    dist, radiance = extract_data_from_file(files)  # Extract the distance and radiance values from the files
+    save_millimiter_plot(dist, step, max_value, str(out_name))  # Generate and save the millimiter plot
