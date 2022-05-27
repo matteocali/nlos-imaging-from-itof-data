@@ -17,15 +17,16 @@ def arg_parser(argv):
 
     arg_in = os.getcwd()  # Argument containing the input directory
     arg_out = ""  # Argument containing the output directory
-    arg_task = ""  # Argument that define the function that will be used
-    arg_img_size = None  # Argument that define the img resolution
-    arg_spot_size = None  # Argument that define the size of the white spot in the bitmap
-    arg_exp_time = None  # Argument that define the used exposure time
-    arg_fov = None  # Argument that define the fov of the camera
-    arg_help = "{0} -i <input> -o <output> -t <task> -r <img_resolution> -s <spot_size> -e <exp_time> -f <fov>".format(argv[0])  # Help string
+    arg_task = ""  # Argument that defines the function that will be used
+    arg_img_size = None  # Argument that defines the img resolution
+    arg_spot_size = None  # Argument that defines the size of the white spot in the bitmap
+    arg_exp_time = None  # Argument that defines the used exposure time
+    arg_fov = None  # Argument that defines the fov of the camera
+    arg_rgb = None  # Argument that defines the path where the rgb render is located
+    arg_help = "{0} -i <input> -o <output> -t <task> -m <img_resolution> -s <spot_size> -e <exp_time> -f <fov> -r <rgb>".format(argv[0])  # Help string
 
     try:
-        opts, args = getopt.getopt(argv[1:], "hi:o:t:r:s:e:f:", ["help", "input=", "output=", "task=", "img_resolution=", "spot_size=", "exp_time=", "fov="])  # Recover the passed options and arguments from the command line (if any)
+        opts, args = getopt.getopt(argv[1:], "hi:o:t:m:s:e:f:r:", ["help", "input=", "output=", "task=", "img_resolution=", "spot_size=", "exp_time=", "fov=", "rgb="])  # Recover the passed options and arguments from the command line (if any)
     except:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -40,7 +41,7 @@ def arg_parser(argv):
             arg_out = Path(arg)  # Set the output directory
         elif opt in ("-t", "--task"):
             arg_task = arg  # Set the task
-        elif opt in ("-r", "--img_resolution"):
+        elif opt in ("-m", "--img_resolution"):
             img_size = str(arg)  # Read the img size
             img_size = img_size.split(",")
             arg_img_size = (int(img_size[0]), int(img_size[1]))  # Set the image size
@@ -50,6 +51,8 @@ def arg_parser(argv):
             arg_exp_time = float(arg)  # Set the exposure time
         elif opt in ("-f", "--fov"):
             arg_fov = float(arg)  # Set the fov
+        elif opt in ("-r", "--rgb"):
+            arg_rgb = Path(arg)  # Set the rgb image path location
 
     print('Input path: ', arg_in)
     if arg_out != "":
@@ -62,13 +65,15 @@ def arg_parser(argv):
         print('Exposure time: ', arg_exp_time)
     if arg_fov is not None:
         print('Field of view: ', arg_fov)
+    if arg_rgb is not None:
+        print('RGB render path: ', arg_rgb)
     print()
 
-    return [arg_in, arg_out, arg_task, arg_img_size, arg_spot_size, arg_exp_time, arg_fov]
+    return [arg_in, arg_out, arg_task, arg_img_size, arg_spot_size, arg_exp_time, arg_fov, arg_rgb]
 
 
 if __name__ == '__main__':
-    arg_in, arg_out, arg_task, arg_img_size, arg_spot_size, arg_exp_time, arg_fov = arg_parser(sys.argv)  # Recover the input and output folder from the console args
+    arg_in, arg_out, arg_task, arg_img_size, arg_spot_size, arg_exp_time, arg_fov, arg_rgb= arg_parser(sys.argv)  # Recover the input and output folder from the console args
 
     if arg_task == "tr_video":
         print(f"TASK: {arg_task}")
@@ -165,6 +170,32 @@ if __name__ == '__main__':
 
         mt.distance_plot(in_path=arg_in,
                          out_name=arg_out)
+
+        end = time.time()
+        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    elif arg_task == "mm_distance_plot":
+        print(f"TASK: {arg_task}")
+        start = time.time()
+
+        mt.mm_distance_plot(in_path=arg_in,
+                            step=1,
+                            max_value=30,
+                            out_name=arg_out)
+
+        end = time.time()
+        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    elif arg_task == "tot_img_test":
+        print(f"TASK: {arg_task}")
+        start = time.time()
+
+        images = tr.transient_loader(img_path=arg_in,
+                                     np_path=arg_out / "np_transient.npy",
+                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
+        tot_img = tr.total_img(images=images,
+                               out_path=arg_out / "total_image",
+                               normalization_factor=17290)
+        mt.tot_img_tester(rgb_img_path=arg_rgb,
+                          total_img=tot_img)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))

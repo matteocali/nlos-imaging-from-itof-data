@@ -1,9 +1,9 @@
 from statistics import mean
 from time import time
-from matplotlib import pyplot as plt
-from modules import transient_handler as tr, utilities as ut
+from matplotlib import pyplot as plt, cm, colors
+from modules import transient_handler as tr, utilities as ut, exr_handler as exr
 from math import tan, radians, floor, degrees, atan, cos
-from numpy import linspace
+from numpy import linspace, min, max, mean, where, isnan
 
 
 def compute_plane_distances_increment(p_distance, h_len, fov):
@@ -280,3 +280,103 @@ def mm_distance_plot(in_path, step, max_value, out_name):
     files = ut.reed_files(str(in_path), "txt")  # Load the path of all the files in the input folder with extension .exr
     dist, radiance = extract_data_from_file(files)  # Extract the distance and radiance values from the files
     save_millimiter_plot(dist, step, max_value, str(out_name))  # Generate and save the millimiter plot
+
+
+def img_comparison(o_img, t_img):
+    """
+    Function to plot the comparison between the real image and the one obtained by summing the transient over the temporal direction (+ compute the MSE)
+    :param o_img: original image [R, G, B]
+    :param t_img: transient image [R, G, B]
+    """
+    print("Compare the original images with the one obtained summing all the transient ones")
+    print(f"The MSE is {ut.compute_mse(o_img, t_img)}")
+
+    # Extract the minimum and maximum displayed value to normalize the colors
+    min_val = min([min(o_img), min(t_img)])
+    max_val = max([max(o_img), max(t_img)])
+
+    # Plot each channel of both the image, together with the colorbar
+    fig, axs = plt.subplots(3, 2, figsize=(15, 15))
+    axs[0, 0].matshow(o_img[:, :, 0], cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs[0, 0].set_title("Red channel of the original image")
+    axs[1, 0].matshow(o_img[:, :, 1], cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs[1, 0].set_title("Green channel of the original image")
+    axs[2, 0].matshow(o_img[:, :, 2], cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs[2, 0].set_title("Blu channel of the original image")
+    axs[0, 1].matshow(t_img[:, :, 0], cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs[0, 1].set_title("Red channel of the transient image")
+    axs[1, 1].matshow(t_img[:, :, 1], cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs[1, 1].set_title("Green channel of the transient image")
+    axs[2, 1].matshow(t_img[:, :, 2], cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs[2, 1].set_title("Blu channel of the transient image")
+    fig.colorbar(cm.ScalarMappable(norm=colors.Normalize(vmin=min_val, vmax=max_val), cmap=cm.get_cmap('jet')), ax=axs, label=r"Radiance [$W/(m^{2}·sr)$]")
+    plt.savefig("channel_comparison.svg")
+    fig.show()
+
+    # Compute the differences between the original and transient image, channel by channel
+    r_diff = abs(t_img[:, :, 0] - o_img[:, :, 0])
+    g_diff = abs(t_img[:, :, 1] - o_img[:, :, 1])
+    b_diff = abs(t_img[:, :, 2] - o_img[:, :, 2])
+
+    # Extract the minimum and maximum displayed value to normalize the colors
+    min_val = min([min(r_diff), min(g_diff), min(b_diff)])
+    max_val = max([max(r_diff), max(g_diff), max(b_diff)])
+
+    # Plot the difference between the two images, channel by channel
+    fig2, axs2 = plt.subplots(1, 3, figsize=(18, 6))
+    axs2[0].matshow(r_diff, cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs2[0].set_title("Difference on the red channel")
+    axs2[1].matshow(g_diff, cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs2[1].set_title("Difference on the green channel")
+    axs2[2].matshow(b_diff, cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs2[2].set_title("Difference on the blu channel")
+    fig2.colorbar(cm.ScalarMappable(norm=colors.Normalize(vmin=min_val, vmax=max_val), cmap=cm.get_cmap('jet')), ax=axs2, orientation="horizontal")
+    plt.savefig("channel_differences.svg")
+    fig2.show()
+
+    o_img[where(o_img == 0)] = 1  # Remove eventual 0 values
+
+    # Compute the ratio between the original and transient image, channel by channel
+    r_div = t_img[:, :, 0] / o_img[:, :, 0]
+    g_div = t_img[:, :, 1] / o_img[:, :, 1]
+    b_div = t_img[:, :, 2] / o_img[:, :, 2]
+
+    mean_r = mean(r_div)
+    mean_g = mean(g_div)
+    mean_b = mean(b_div)
+    print(mean_r)
+    print(mean_g)
+    print(mean_b)
+    print(round(mean([mean_r, mean_g, mean_b]), 3))
+
+    # Extract the minimum and maximum displayed value to normalize the colors
+    min_val = min([min(r_div), min(g_div), min(b_div)])
+    max_val = max([max(r_div), max(g_div), max(b_div)])
+
+    # Plot the ratio between the two images, channel by channel
+    fig3, axs3 = plt.subplots(1, 3, figsize=(18, 6))
+    axs3[0].matshow(r_div, cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs3[0].set_title("Ratio on the red channel (original/transient)")
+    axs3[1].matshow(g_div, cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs3[1].set_title("Ratio on the green channel (original/transient)")
+    axs3[2].matshow(b_div, cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
+    axs3[2].set_title("Ratio on the blu channel (original/transient)")
+    fig3.colorbar(cm.ScalarMappable(norm=colors.Normalize(vmin=min_val, vmax=max_val), cmap=cm.get_cmap('jet')), ax=axs3, orientation="horizontal")
+    plt.savefig("channel_ratio.svg")
+    fig3.show()
+
+    print("Press enter to end ...")
+    input()  # Wait for a keystroke to close the windows
+
+
+def tot_img_tester(rgb_img_path, total_img):
+    """
+    Function that compare the total image with the standard rgb render
+    :param rgb_img_path: path of the standard RGB image
+    :param total_img: total image
+    """
+    original_img = exr.load_exr(str(rgb_img_path))  # Load the original image
+    original_img[isnan(original_img[:, :, 0])] = 0  # Remove the nan value
+    original_img = original_img[:, :, 1:]  # Remove the alpha channel
+
+    img_comparison(original_img, total_img)  # Compare the original render with the one obtained by summing up all the transient images
