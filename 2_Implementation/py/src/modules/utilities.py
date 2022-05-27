@@ -1,4 +1,4 @@
-from numpy import sum, linspace, zeros
+from numpy import sum, linspace, zeros, where, nanmin, nanmax
 from numpy import uint8
 from os import path, listdir, remove, makedirs
 from glob import glob
@@ -75,6 +75,22 @@ def compute_mse(x, y):
     err /= float(x.shape[0] * x.shape[1])  # Handles the mean of the MSE
 
     return round(float(err), 4)
+
+
+def normalize_img(img):
+    """
+    Normalize the image value in the range [0, 1]
+    :param img: np aray corresponding to an image
+    :return np containing the normalized img
+    """
+
+    img[where(img < 0)] = 0
+    min_val = nanmin(img)
+    max_val = nanmax(img)
+
+    if max_val - min_val != 0:
+        img = (img - min_val) / (max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
+    return img
 
 
 def save_png(img, file_path, alpha):
