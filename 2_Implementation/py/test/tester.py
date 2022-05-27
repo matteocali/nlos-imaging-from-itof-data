@@ -1,8 +1,6 @@
-import numpy as np
-from modules import transient_handler as tr, utilities as ut, mitsuba_tests as mt
+from modules import utilities as ut
 from pathlib import Path
 import os
-from os.path import exists
 import getopt
 import sys
 import time
@@ -20,13 +18,10 @@ def arg_parser(argv):
     arg_task = ""  # Argument that defines the function that will be used
     arg_img_size = None  # Argument that defines the img resolution
     arg_spot_size = None  # Argument that defines the size of the white spot in the bitmap
-    arg_exp_time = None  # Argument that defines the used exposure time
-    arg_fov = None  # Argument that defines the fov of the camera
-    arg_rgb = None  # Argument that defines the path where the rgb render is located
-    arg_help = "{0} -i <input> -o <output> -t <task> -m <img_resolution> -s <spot_size> -e <exp_time> -f <fov> -r <rgb>".format(argv[0])  # Help string
+    arg_help = "{0} -i <input> -o <output> -t <task> -m <img_resolution> -s <spot_size>".format(argv[0])  # Help string
 
     try:
-        opts, args = getopt.getopt(argv[1:], "hi:o:t:m:s:e:f:r:", ["help", "input=", "output=", "task=", "img_resolution=", "spot_size=", "exp_time=", "fov=", "rgb="])  # Recover the passed options and arguments from the command line (if any)
+        opts, args = getopt.getopt(argv[1:], "hi:o:t:m:s:", ["help", "input=", "output=", "task=", "img_resolution=", "spot_size="])  # Recover the passed options and arguments from the command line (if any)
     except:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -47,12 +42,6 @@ def arg_parser(argv):
             arg_img_size = (int(img_size[0]), int(img_size[1]))  # Set the image size
         elif opt in ("-s", "--spot_size"):
             arg_spot_size = int(arg)  # Set the spot size
-        elif opt in ("-e", "--exp_time"):
-            arg_exp_time = float(arg)  # Set the exposure time
-        elif opt in ("-f", "--fov"):
-            arg_fov = float(arg)  # Set the fov
-        elif opt in ("-r", "--rgb"):
-            arg_rgb = Path(arg)  # Set the rgb image path location
 
     print('Input path: ', arg_in)
     if arg_out != "":
@@ -61,68 +50,15 @@ def arg_parser(argv):
         print('Image size: ', arg_img_size)
     if arg_spot_size is not None:
         print('Spot size: ', arg_spot_size)
-    if arg_exp_time is not None:
-        print('Exposure time: ', arg_exp_time)
-    if arg_fov is not None:
-        print('Field of view: ', arg_fov)
-    if arg_rgb is not None:
-        print('RGB render path: ', arg_rgb)
     print()
 
-    return [arg_in, arg_out, arg_task, arg_img_size, arg_spot_size, arg_exp_time, arg_fov, arg_rgb]
+    return [arg_in, arg_out, arg_task, arg_img_size]
 
 
 if __name__ == '__main__':
-    arg_in, arg_out, arg_task, arg_img_size, arg_spot_size, arg_exp_time, arg_fov, arg_rgb= arg_parser(sys.argv)  # Recover the input and output folder from the console args
+    arg_in, arg_out, arg_task, arg_img_size, arg_spot_size = arg_parser(sys.argv)  # Recover the input and output folder from the console args
 
-    if arg_task == "tr_video":
-        print(f"TASK: {arg_task}")
-        start = time.time()
-
-        ut.create_folder(arg_out, "np_transient.npy")  # Create the output folder if not already present
-        images = tr.transient_loader(img_path=arg_in,
-                                     np_path=arg_out / "np_transient.npy",
-                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-
-        tr.transient_video(images=images,
-                           out_path=arg_out,
-                           normalize=True)  # Generate the video
-
-        end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
-    elif arg_task == "total_img":
-        print(f"TASK: {arg_task}")
-        start = time.time()
-
-        images = tr.transient_loader(img_path=arg_in,
-                                     np_path=arg_out / "np_transient.npy",
-                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        tr.total_img(images=images,
-                     out_path=arg_out / "total_image",
-                     normalization_factor=17290)
-
-        end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
-    elif arg_task == "glb_tr_video":
-        print(f"TASK: {arg_task}")
-        start = time.time()
-
-        images = tr.transient_loader(img_path=arg_in,
-                                     np_path=arg_out / "np_transient.npy",
-                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        glb_images = tr.rmv_first_reflection(images=images,
-                                             file_path=arg_out / "glb_np_transient.npy",
-                                             store=(not exists(arg_out / "glb_np_transient.npy")))
-        tr.transient_video(images=np.copy(glb_images),
-                           out_path=arg_out,
-                           normalize=True)
-        tr.total_img(images=glb_images,
-                     out_path=arg_out / "total_image",
-                     normalization_factor=17290)
-
-        end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
-    elif arg_task == "spot_bitmap":
+    if arg_task == "spot_bitmap":
         print(f"TASK: {arg_task}")
         start = time.time()
 
@@ -132,70 +68,5 @@ if __name__ == '__main__':
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
-    elif arg_task == "hists":
-        print(f"TASK: {arg_task}")
-        start = time.time()
-
-        ut.create_folder(arg_out, "np_transient.npy")
-        images = tr.transient_loader(img_path=arg_in,
-                                     np_path=arg_out / "np_transient.npy",
-                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        tr.histo_plt(radiance=images[:, 80, 60, :],
-                     exp_time=arg_exp_time,
-                     file_path=arg_out / "transient_histograms.svg")
-
-        end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
-    elif arg_task == "cross":
-        print(f"TASK: {arg_task}")
-        start = time.time()
-
-        images = tr.transient_loader(img_path=arg_in,
-                                     np_path=arg_out / "np_transient.npy",
-                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        tot_img = tr.total_img(images=images,
-                               out_path=arg_out / "total_image",
-                               normalization_factor=17290)
-        mt.cross_section_tester(images=images[:, :, :, :-1],
-                                tot_img=tot_img,
-                                exp_time=arg_exp_time,
-                                fov=arg_fov,
-                                output_path=arg_out)
-
-        end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
-    elif arg_task == "distance_plot":
-        print(f"TASK: {arg_task}")
-        start = time.time()
-
-        mt.distance_plot(in_path=arg_in,
-                         out_name=arg_out)
-
-        end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
-    elif arg_task == "mm_distance_plot":
-        print(f"TASK: {arg_task}")
-        start = time.time()
-
-        mt.mm_distance_plot(in_path=arg_in,
-                            step=1,
-                            max_value=30,
-                            out_name=arg_out)
-
-        end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
-    elif arg_task == "tot_img_test":
-        print(f"TASK: {arg_task}")
-        start = time.time()
-
-        images = tr.transient_loader(img_path=arg_in,
-                                     np_path=arg_out / "np_transient.npy",
-                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        tot_img = tr.total_img(images=images,
-                               out_path=arg_out / "total_image",
-                               normalization_factor=17290)
-        mt.tot_img_tester(rgb_img_path=arg_rgb,
-                          total_img=tot_img)
-
-        end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    else:
+        print("Wrong task provided\nPossibilities are: spot_bitmap")
