@@ -1,10 +1,11 @@
-from modules import transient_handler as tr, mitsuba_tests as mt
+from modules import transient_handler as tr, mitsuba_tests as mt, exr_handler as exr
 from pathlib import Path
 import os
 from os.path import exists
 import getopt
 import sys
 import time
+import numpy as np
 
 
 def arg_parser(argv):
@@ -20,12 +21,18 @@ def arg_parser(argv):
     arg_exp_time = None  # Argument that defines the used exposure time
     arg_fov = None  # Argument that defines the fov of the camera
     arg_rgb = None  # Argument that defines the path where the rgb render is located
+    arg_samples = None  # Argument that defines the number of samples used
+                        # For a 320x240px image with 10k samples, 1k beans and 0.01 exp --> norm_factor = 17290
+                        # For a 320x240px image with 5k samples, 1k beans and 0.01 exp --> norm_factor = 8645.888
+                        # For a 320x240px image with 10k samples, 1.5k beans and 0.01 exp --> norm_factor = 17291.414
+                        # For a 320x240px image with 10k samples, 1k beans and 0.02 exp --> norm_factor = 17290.703
+                        # --> norm_factor = n_samples * 1.7291
     arg_diff_limits = None  # Argument that defines the min and max interval of the difference colorbar
     arg_ratio_limits = None  # Argument that defines the min and max interval of the ratio colorbar
-    arg_help = "{0} -i <input> -o <output> -t <task> -e <exp_time> -f <fov> -r <rgb>, -d <diff>, -l <ratio>".format(argv[0])  # Help string
+    arg_help = "{0} -i <input> -o <output> -t <task> -e <exp_time> -f <fov> -r <rgb>, -s <samples>, -d <diff>, -l <ratio>".format(argv[0])  # Help string
 
     try:
-        opts, args = getopt.getopt(argv[1:], "hi:o:t:e:f:r:d:l:", ["help", "input=", "output=", "task=", "exp_time=", "fov=", "rgb=", "diff=", "ratio="])  # Recover the passed options and arguments from the command line (if any)
+        opts, args = getopt.getopt(argv[1:], "hi:o:t:e:f:r:s:d:l:", ["help", "input=", "output=", "task=", "exp_time=", "fov=", "rgb=", "samples=", "diff=", "ratio="])  # Recover the passed options and arguments from the command line (if any)
     except:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -46,6 +53,8 @@ def arg_parser(argv):
             arg_fov = float(arg)  # Set the fov
         elif opt in ("-r", "--rgb"):
             arg_rgb = Path(arg)  # Set the rgb image path location
+        elif opt in ("-s", "--samples"):
+            arg_samples = int(arg)  # Set the normalization factor
         elif opt in ("-d", "--diff"):
             limits = str(arg)  # Read the img size
             limits = limits.split(",")
@@ -64,20 +73,22 @@ def arg_parser(argv):
         print('Field of view: ', arg_fov)
     if arg_rgb is not None:
         print('RGB render path: ', arg_rgb)
+    if arg_samples is not None:
+        print('Number of samples: ', arg_samples)
     if arg_diff_limits is not None:
         print('Difference colorbar interval: ', arg_diff_limits)
     if arg_ratio_limits is not None:
         print('Ratio colorbar interval: ', arg_ratio_limits)
     print()
 
-    return [arg_in, arg_out, arg_task, arg_exp_time, arg_fov, arg_rgb, arg_diff_limits, arg_ratio_limits]
+    return [arg_in, arg_out, arg_task, arg_exp_time, arg_fov, arg_rgb, arg_samples, arg_diff_limits, arg_ratio_limits]
 
 
 if __name__ == '__main__':
-    arg_in, arg_out, arg_task, arg_exp_time, arg_fov, arg_rgb, arg_diff_limits, arg_ratio_limits = arg_parser(sys.argv)  # Recover the input and output folder from the console args
+    arg_in, arg_out, arg_task, arg_exp_time, arg_fov, arg_rgb, arg_samples, arg_diff_limits, arg_ratio_limits = arg_parser(sys.argv)  # Recover the input and output folder from the console args
 
     if arg_task == "cross":
-        print(f"TASK: {arg_task}")
+        print(f"TASK: {arg_task}\n")
         start = time.time()
 
         images = tr.transient_loader(img_path=arg_in,
@@ -85,7 +96,7 @@ if __name__ == '__main__':
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
         tot_img = tr.total_img(images=images,
                                out_path=None,
-                               normalization_factor=17290)
+                               n_samples=arg_samples)
         mt.cross_section_tester(images=images[:, :, :, :-1],
                                 tot_img=tot_img,
                                 exp_time=arg_exp_time,
@@ -95,7 +106,7 @@ if __name__ == '__main__':
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
     elif arg_task == "distance_plot":
-        print(f"TASK: {arg_task}")
+        print(f"TASK: {arg_task}\n")
         start = time.time()
 
         mt.distance_plot(in_path=arg_in,
@@ -104,7 +115,7 @@ if __name__ == '__main__':
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
     elif arg_task == "mm_distance_plot":
-        print(f"TASK: {arg_task}")
+        print(f"TASK: {arg_task}\n")
         start = time.time()
 
         mt.mm_distance_plot(in_path=arg_in,
@@ -115,7 +126,7 @@ if __name__ == '__main__':
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
     elif arg_task == "tot_img_test":
-        print(f"TASK: {arg_task}")
+        print(f"TASK: {arg_task}\n")
         start = time.time()
 
         images = tr.transient_loader(img_path=arg_in,
@@ -123,7 +134,7 @@ if __name__ == '__main__':
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
         tot_img = tr.total_img(images=images,
                                out_path=arg_out / "total_image",
-                               normalization_factor=17290)
+                               n_samples=arg_samples)
         mt.tot_img_tester(rgb_img_path=arg_rgb,
                           total_img=tot_img,
                           out_path=arg_out,
@@ -132,5 +143,30 @@ if __name__ == '__main__':
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    elif arg_task == "norm_factor":
+        print(f"TASK: {arg_task}\n")
+        start = time.time()
+
+        images = tr.transient_loader(img_path=arg_in,
+                                     np_path=arg_out / "np_transient.npy",
+                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
+        tot_img = tr.total_img(images=images)
+
+        original_img = exr.load_exr(str(arg_rgb))  # Load the original image
+        original_img[np.isnan(original_img[:, :, 0])] = 0  # Remove the nan value
+        original_img = original_img[:, :, 1:]  # Remove the alpha channel
+
+        R_div = tot_img[:, :, 0] / original_img[:, :, 0]
+        G_div = tot_img[:, :, 1] / original_img[:, :, 1]
+        B_div = tot_img[:, :, 2] / original_img[:, :, 2]
+
+        mean_r = np.mean(R_div)
+        mean_g = np.mean(G_div)
+        mean_b = np.mean(B_div)
+
+        print("The normalization factor is: %.3f \n" % round(np.mean([mean_r, mean_g, mean_b]), 3))
+
+        end = time.time()
+        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
     else:
-        print("Wrong task provided\nPossibilities are: cross, distance_plot, mm_distance_plot, tot_img_test")
+        print("Wrong task provided\nPossibilities are: cross, distance_plot, mm_distance_plot, tot_img_test, norm_factor")

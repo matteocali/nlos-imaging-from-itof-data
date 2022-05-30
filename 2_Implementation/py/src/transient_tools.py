@@ -19,10 +19,11 @@ def arg_parser(argv):
     arg_out = ""  # Argument containing the output directory
     arg_task = ""  # Argument that defines the function that will be used
     arg_exp_time = None  # Argument that defines the used exposure time
-    arg_help = "{0} -i <input> -o <output> -t <task> -e <exp_time> -f <fov> -r <rgb>".format(argv[0])  # Help string
+    arg_samples = None  # Argument that defines the number of samples used
+    arg_help = "{0} -i <input> -o <output> -t <task> -e <exp_time> -f <fov> -r <rgb>, -s <samples>".format(argv[0])  # Help string
 
     try:
-        opts, args = getopt.getopt(argv[1:], "hi:o:t:e:", ["help", "input=", "output=", "task=", "exp_time=", "fov=", "rgb="])  # Recover the passed options and arguments from the command line (if any)
+        opts, args = getopt.getopt(argv[1:], "hi:o:t:e:s:", ["help", "input=", "output=", "task=", "exp_time=", "fov=", "rgb=", "samples="])  # Recover the passed options and arguments from the command line (if any)
     except:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -39,25 +40,29 @@ def arg_parser(argv):
             arg_task = arg  # Set the task
         elif opt in ("-e", "--exp_time"):
             arg_exp_time = float(arg)  # Set the exposure time
+        elif opt in ("-s", "--samples"):
+            arg_samples = int(arg)  # Set the normalization factor
 
     print('Input path: ', arg_in)
     if arg_out != "":
         print('Output path: ', arg_out)
     if arg_exp_time is not None:
         print('Exposure time: ', arg_exp_time)
+    if arg_samples is not None:
+        print('Number of samples: ', arg_samples)
     print()
 
-    return [arg_in, arg_out, arg_task, arg_exp_time]
+    return [arg_in, arg_out, arg_task, arg_exp_time, arg_samples]
 
 
 if __name__ == '__main__':
-    arg_in, arg_out, arg_task, arg_exp_time = arg_parser(sys.argv)  # Recover the input and output folder from the console args
+    arg_in, arg_out, arg_task, arg_exp_time, arg_samples = arg_parser(sys.argv)  # Recover the input and output folder from the console args
 
     if arg_task == "tr_video":
         print(f"TASK: {arg_task}")
         start = time.time()
 
-        ut.create_folder(arg_out, "np_transient.npy")  # Create the output folder if not already present
+        ut.create_folder(arg_out, "all")  # Create the output folder if not already present
         images = tr.transient_loader(img_path=arg_in,
                                      np_path=arg_out / "np_transient.npy",
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
@@ -77,7 +82,7 @@ if __name__ == '__main__':
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
         tr.total_img(images=images,
                      out_path=arg_out / "total_image",
-                     normalization_factor=17290)
+                     n_samples=arg_samples)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
@@ -96,7 +101,7 @@ if __name__ == '__main__':
                            normalize=True)
         tr.total_img(images=glb_images,
                      out_path=arg_out / "total_image",
-                     normalization_factor=17290)
+                     n_samples=arg_samples)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
@@ -104,11 +109,11 @@ if __name__ == '__main__':
         print(f"TASK: {arg_task}")
         start = time.time()
 
-        ut.create_folder(arg_out, "np_transient.npy")
+        ut.create_folder(arg_out, "all")
         images = tr.transient_loader(img_path=arg_in,
                                      np_path=arg_out / "np_transient.npy",
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        tr.histo_plt(radiance=images[:, 160, 120, :],
+        tr.histo_plt(radiance=images[:, 110, 165, :],
                      exp_time=arg_exp_time,
                      file_path=arg_out / "transient_histograms.svg")
 

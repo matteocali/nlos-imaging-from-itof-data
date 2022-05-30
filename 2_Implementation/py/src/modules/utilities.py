@@ -36,7 +36,7 @@ def create_folder(file_path, ignore=""):
                                 # (code from: https://pynative.com/python-delete-files-and-directories/#h-delete-all-files-from-a-directory)
         for file_name in listdir(file_path):
             file = file_path / file_name  # Construct full file path
-            if path.isfile(file) and file_name != ignore:  # If the file is a file remove it
+            if path.isfile(file) and file_name != ignore and ignore != "all":  # If the file is a file remove it
                 remove(file)
     else:  # Create the required folder if not already present
         makedirs(file_path)

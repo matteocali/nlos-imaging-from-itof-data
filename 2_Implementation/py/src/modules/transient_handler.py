@@ -2,8 +2,8 @@ from tqdm import tqdm
 from time import time, sleep
 from modules import utilities as ut
 from OpenEXR import InputFile
-from cv2 import VideoWriter, VideoWriter_fourcc, destroyAllWindows, cvtColor, COLOR_RGBA2BGRA
-from numpy import empty, shape, where, divide, zeros, copy, save, load, ndarray
+from cv2 import VideoWriter, VideoWriter_fourcc, destroyAllWindows, cvtColor, COLOR_RGB2BGR
+from numpy import empty, shape, where, divide, copy, save, load, ndarray
 from numpy import isnan, nansum, nanargmax
 from numpy import uint8, float32
 from modules import exr_handler as exr
@@ -97,12 +97,12 @@ def img_matrix(channels):
     return images
 
 
-def total_img(images, out_path=None, normalization_factor=None):
+def total_img(images, out_path=None, n_samples=None):
     """
     Function to build the image obtained by sum all the temporal instant of the transient
     :param images: np array containing of all the images
     :param out_path: output path and name
-    :param normalization_factor: Factor to use if we want to normalize the output
+    :param n_samples: number of samples used during rendering, used to compute the normalization factor
     :return: total image as a numpy matrix
     """
 
@@ -116,8 +116,9 @@ def total_img(images, out_path=None, normalization_factor=None):
     else:
         summed_images = nansum(images[:, :, :], axis=0)  # Sum all the produced images over the time dimension ignoring the alpha channel
 
-    if normalization_factor is not None:
-        total_image = divide(summed_images, normalization_factor).astype(float32) # 17290
+    if n_samples is not None:
+        normalization_factor = n_samples * 1.7291  # The normalization factor is defined as n_samples * 1.7291
+        total_image = divide(summed_images, normalization_factor).astype(float32)  # 17290
     else:
         total_image = summed_images
 
@@ -207,27 +208,26 @@ def cv2_transient_video(images, out_path, alpha, normalize):
     mono = len(images.shape) == 3  # Check if the images are Mono or RGBA
 
     if not mono:
-        out = VideoWriter(str(out_path), VideoWriter_fourcc(*"mp4v"), 30, (images[0].shape[1], images[0].shape[0]))  # Create the cv2 video
+        out = VideoWriter(str(out_path), VideoWriter_fourcc(*"DIVX"), 30, (images[0].shape[1], images[0].shape[0]))  # Create the cv2 video
     else:
         out = VideoWriter(str(out_path), VideoWriter_fourcc(*"mp4v"), 30, (images[0].shape[1], images[0].shape[0]), 0)  # Create the cv2 video
 
-    for img in tqdm(images):
-        if normalize and not mono:
-            normalize_img(img[:, :, : -1])
-        if normalize and mono:
-            img = normalize_img(img)
+    for i in tqdm(range(images.shape[0])):
+        if not mono:
+            img = copy(images[i, :, :, :-1])
+        else:
+            img = copy(images[i, :, :])
+
+        normalize_img(img)
 
         # Map img to uint8
         img = (255 * img).astype(uint8)
 
         # Convert the image from RGBA to BGRA
         if not mono:
-            img = cvtColor(img, COLOR_RGBA2BGRA)
+            img = cvtColor(img, COLOR_RGB2BGR)
         
-        if alpha or mono:
-            out.write(img)  # Populate the video
-        elif not alpha and not mono:
-            out.write(img[:, :, :-1])  # Populate the video without the alpha channel
+        out.write(img)  # Populate the video
 
     destroyAllWindows()
     out.release()
@@ -336,36 +336,56 @@ def transient_loader(img_path, np_path=None, store=False):
 
 
 def histo_plt(radiance, exp_time, file_path=None):
+    """
+    Function that plot the transient histogram of a single pixel (for each channel)
+    :param radiance: radiance value (foe each channel) of the given pixel [radiance_values, n_channel]
+    :param exp_time: exposure time used during the rendering
+    :param file_path: file path where to save
+    """
 
-    plt_start_pos = [where(radiance[:, channel] != 0)[0][0] - 10 for channel in range(0, 3)]
-    plt_end_pos = [where(radiance[:, channel] != 0)[0][-1] + 11 for channel in range(0, 3)]
+    try:
+        plt_start_pos = [where(radiance[:, channel] != 0)[0][0] - 10 for channel in range(0, 3)]
+        plt_end_pos = [where(radiance[:, channel] != 0)[0][-1] + 11 for channel in range(0, 3)]
+    except IndexError:
+        plt_start_pos = [0 for channel in range(0, 3)]
+        plt_end_pos = [len(radiance[:, channel]) for channel in range(0, 3)]
 
     radiance[where(radiance < 0)] = 0
 
     mono = len(radiance.shape) == 1
 
-    if len(str(exp_time).split(".")) > 1:
+    # Define the scale on the xaxis
+    if str(exp_time).split(".")[0] == "0":
         unit_of_measure = 1e9  # nano seconds
         unit_of_measure_name = "ns"
     else:
         unit_of_measure = 1e6  # nano seconds
-        unit_of_measure_name = r"$\mu s"
+        unit_of_measure_name = r"$\mu s$"
 
     if not mono:
         colors = ["r", "g", "b"]
         colors_name = ["Red", "Green", "Blu"]
 
+        # Plot hte transient histogram for each channel
         fig, axs = plt.subplots(1, 3, figsize=(24, 6))
         for i in range(radiance.shape[1] - 1):
-            axs[i].plot(radiance[plt_start_pos[i]:plt_end_pos[i], i], colors[i])
+            markers, stemlines, baseline = axs[i].stem(range(0, len(radiance[plt_start_pos[i]:plt_end_pos[i], i])),
+                                                       radiance[plt_start_pos[i]:plt_end_pos[i], i])
+            plt.setp(stemlines, color=colors[i])
+            plt.setp(baseline, linestyle="dashed", color="black", linewidth=1, visible=False)
+            plt.setp(markers, color=colors[i], markersize=1)
             axs[i].set_xticks(range(0, len(radiance[plt_start_pos[i]:plt_end_pos[i], i]) + 1, int(len(radiance[plt_start_pos[i]:plt_end_pos[i], i] + 1) / 13)))
-            axs[i].set_xticklabels([round(value * exp_time / 3e8 * unit_of_measure, 1) for value in range(plt_start_pos[i], plt_end_pos[i] + 1, int(len(radiance[plt_start_pos[i]:plt_end_pos[i], i] + 1) / 13))], rotation=45)
+            axs[i].set_xticklabels(["{:.2f}".format(round(value * exp_time / 3e8 * unit_of_measure, 2)) for value in range(plt_start_pos[i], plt_end_pos[i] + 1, int(len(radiance[plt_start_pos[i]:plt_end_pos[i], i] + 1) / 13))], rotation=45)
             axs[i].set_title(f"{colors_name[i]} channel histogram")
             axs[i].set_xlabel(f"Time instants [{unit_of_measure_name}]")
             axs[i].set_ylabel(r"Radiance value [$W/(m^{2}·sr)$]")
             axs[i].grid()
     else:
-        plt.plot(radiance[plt_start_pos[0]:plt_end_pos[0]])
+        markers, stemlines, baseline = plt.stem(range(0, len(radiance[plt_start_pos[0]:plt_end_pos[0]])),
+                                                radiance[plt_start_pos[0]:plt_end_pos[0]])
+        plt.setp(stemlines, color="black")
+        plt.setp(baseline, linestyle=" ", color="black", linewidth=1, visible=False)
+        plt.setp(markers, color="black", markersize=1)
         plt.xticks([round(value * exp_time / 3e8 * unit_of_measure, 1) for value in range(plt_start_pos, plt_end_pos + 1, 10)], rotation=45)
         plt.xlabel(f"Time instants [{unit_of_measure_name}]")
         plt.ylabel(r"Radiance value [$W/(m^{2}·sr)$]")
