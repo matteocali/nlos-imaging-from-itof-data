@@ -447,10 +447,13 @@ def plot_norm_factor(folder_path, rgb_path, out_path):
     expected = [n_samples * 1.7291 for n_samples in samples]  # Compute the expected value of the normalization factor
 
     plt.plot(samples, expected, '--', label="Expected normalization factor:\n" + r"$<n\_samples> \cdot 1.7291$")  # Plot the expected values of the normalization factor
-    for i, j in zip(samples, expected):
-        plt.annotate(str(j), xy=(i, j))
+    for i, j in zip(samples, expected):  # Add the annotations on the point
+        if j != expected[-1]:
+            plt.annotate(str(format_float_scientific(j, precision=1, exp_digits=1, trim="-")), xy=(i + 3000, j))
+        else:
+            plt.annotate(str(format_float_scientific(j, precision=1, exp_digits=1, trim="-")), xy=(i - 10000, j))
     plt.plot(samples, norm_factors, 'o', label="Computed normalization factor")  # Plot the computed values of the normalization factor
-    plt.xticks(samples, labels=[format_float_scientific(val, precision=1, exp_digits=1, trim="-") for val in samples])  # Modify the xtiks to match the samples number
+    plt.xticks(range(min(samples), max(samples) + 10000, 15000), labels=[format_float_scientific(val, precision=1, exp_digits=1, trim="-") for val in range(min(samples), max(samples) + 10000, 15000)])  # Modify the xtiks to match the samples number
     plt.yticks(range(20000, 160000, 20000), labels=[format_float_scientific(val, precision=1, exp_digits=1, trim="-") for val in range(20000, 160000, 20000)])  # Modify the ytiks to match the expected values
     plt.xlabel("Number of samples")  # Add a label on the x axis
     plt.ylabel("Normalization factor")  # Add a label on the y axis
