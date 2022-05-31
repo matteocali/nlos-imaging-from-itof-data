@@ -3,7 +3,8 @@ from time import time
 from matplotlib import pyplot as plt, cm, colors
 from modules import transient_handler as tr, utilities as ut, exr_handler as exr
 from math import tan, radians, floor, degrees, atan, cos
-from numpy import linspace, min, max, mean, where, isnan
+from numpy import linspace, min, max, mean, where, isnan, format_float_scientific
+from os.path import exists
 
 
 def compute_plane_distances_increment(p_distance, h_len, fov):
@@ -328,7 +329,6 @@ def img_comparison(o_img, t_img, out_path, diff_limits=None, ratio_limits=None):
         min_val = diff_limits[0]
         max_val = diff_limits[1]
 
-
     # Plot the difference between the two images, channel by channel
     fig2, axs2 = plt.subplots(1, 3, figsize=(18, 6))
     axs2[0].matshow(r_diff, cmap=cm.get_cmap("jet"), norm=colors.Normalize(vmin=min_val, vmax=max_val))
@@ -381,3 +381,80 @@ def tot_img_tester(rgb_img_path, total_img, out_path, diff_limits=None, ratio_li
     original_img = original_img[:, :, 1:]  # Remove the alpha channel
 
     img_comparison(original_img, total_img, out_path, diff_limits, ratio_limits)  # Compare the original render with the one obtained by summing up all the transient images
+
+
+def compute_norm_factor(tot_img, o_img_path, out_file=None):
+    """
+    Function that returns the normalization to use in a specific setup
+    :param tot_img: total image (numpy array)
+    :param o_img_path: path of the rgb render
+    :param out_file: path, name and extension of the output file (if nothing does not save it)
+    :return: the normalization factor value
+    """
+    original_img = exr.load_exr(str(o_img_path))  # Load the original image
+    original_img[isnan(original_img[:, :, 0])] = 0  # Remove the nan value
+    original_img = original_img[:, :, 1:]  # Remove the alpha channel
+
+    # Compute the ratio between the total image and the rgb one channel by channel
+    r_div = tot_img[:, :, 0] / original_img[:, :, 0]
+    g_div = tot_img[:, :, 1] / original_img[:, :, 1]
+    b_div = tot_img[:, :, 2] / original_img[:, :, 2]
+
+    # compute the mean value of the ratio channel by channel
+    mean_r = mean(r_div)
+    mean_g = mean(g_div)
+    mean_b = mean(b_div)
+
+    norm_factor = round(float(mean([mean_r, mean_g, mean_b])), 3)  # Compute the norm factor as the overall mena
+
+    print("The normalization factor is: %.3f \n" % norm_factor)  # Print the overall mean as the normalization factor
+
+    # Save the results to a file
+    if out_file is not None:
+        with open(out_file, "w") as f:
+            f.write("The normalization factor is: %.3f \n" % round(mean([mean_r, mean_g, mean_b]), 3))
+
+    return norm_factor
+
+
+def plot_norm_factor(folder_path, rgb_path, out_path):
+    """
+    Function that compute the normalization factor of different transient setups and plot the results
+    :param folder_path: path of the folder containing all the transient information
+    :param rgb_path: path to the folder containing all the rgb images
+    :param out_path: path of the output directory
+    """
+
+    folders = ut.read_folders(folder_path)  # Load all the subdirectory of the folder containing the various transient
+    rgb_images = ut.reed_files(file_path=rgb_path, extension="exr")  # Load all the rgb renders
+
+    norm_factors = []  # Initialize the list that will contain all the norm factors
+    samples = []
+
+    for index, transient in enumerate(folders):
+        samples.append(transient.split("\\")[-1].split("_")[5])  # Extract from the name of the file the number of used samples
+
+        images = tr.transient_loader(img_path=transient,
+                                     np_path=out_path / ("np_transient_" + samples[index] + "_samples.npy"),
+                                     store=(not exists(out_path / ("np_transient_" + samples[index] + "_samples.npy"))))  # Load the transient
+        tot_img = tr.total_img(images=images)  # Generate the total img
+        norm_factors.append(compute_norm_factor(tot_img=tot_img, o_img_path=rgb_images[index]))  # Compute the normalization factor and append to the list of all the normalization factors
+
+        if samples[index][-1] == "k":
+            samples[index] = samples[index][:-1] + "000"  # If the samples is identified using k as thousand replace it with "000"
+        samples[index] = int(samples[index])  # Convert the samples value from string to int
+
+    expected = [n_samples * 1.7291 for n_samples in samples]  # Compute the expected value of the normalization factor
+
+    plt.plot(samples, expected, '--', label="Expected normalization factor:\n" + r"$<n\_samples> \cdot 1.7291$")  # Plot the expected values of the normalization factor
+    for i, j in zip(samples, expected):
+        plt.annotate(str(j), xy=(i, j))
+    plt.plot(samples, norm_factors, 'o', label="Computed normalization factor")  # Plot the computed values of the normalization factor
+    plt.xticks(samples, labels=[format_float_scientific(val, precision=1, exp_digits=1, trim="-") for val in samples])  # Modify the xtiks to match the samples number
+    plt.yticks(range(20000, 160000, 20000), labels=[format_float_scientific(val, precision=1, exp_digits=1, trim="-") for val in range(20000, 160000, 20000)])  # Modify the ytiks to match the expected values
+    plt.xlabel("Number of samples")  # Add a label on the x axis
+    plt.ylabel("Normalization factor")  # Add a label on the y axis
+    plt.grid()  # Add the grid to the plot
+    plt.legend()  # Add the legend to the plot
+    plt.savefig(str(out_path / "norm_factor_plot.svg"))  # Save the plot as a .svg file
+    plt.close()

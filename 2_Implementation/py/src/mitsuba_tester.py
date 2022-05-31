@@ -5,7 +5,6 @@ from os.path import exists
 import getopt
 import sys
 import time
-import numpy as np
 
 
 def arg_parser(argv):
@@ -151,20 +150,18 @@ if __name__ == '__main__':
                                      np_path=arg_out / "np_transient.npy",
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
         tot_img = tr.total_img(images=images)
+        mt.compute_norm_factor(tot_img=tot_img,
+                               o_img_path=arg_rgb)
 
-        original_img = exr.load_exr(str(arg_rgb))  # Load the original image
-        original_img[np.isnan(original_img[:, :, 0])] = 0  # Remove the nan value
-        original_img = original_img[:, :, 1:]  # Remove the alpha channel
+        end = time.time()
+        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    elif arg_task == "plot_norm_factor":
+        print(f"TASK: {arg_task}\n")
+        start = time.time()
 
-        R_div = tot_img[:, :, 0] / original_img[:, :, 0]
-        G_div = tot_img[:, :, 1] / original_img[:, :, 1]
-        B_div = tot_img[:, :, 2] / original_img[:, :, 2]
-
-        mean_r = np.mean(R_div)
-        mean_g = np.mean(G_div)
-        mean_b = np.mean(B_div)
-
-        print("The normalization factor is: %.3f \n" % round(np.mean([mean_r, mean_g, mean_b]), 3))
+        mt.plot_norm_factor(folder_path=arg_in,
+                            rgb_path=arg_rgb,
+                            out_path=arg_out)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))

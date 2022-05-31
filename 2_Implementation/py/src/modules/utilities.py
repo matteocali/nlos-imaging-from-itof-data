@@ -17,11 +17,33 @@ def reed_files(file_path, extension, reorder=True):
     """
 
     files = [file_name for file_name in glob(str(file_path) + "\\*." + extension)]  # Load the path of all the files in the input folder with the target extension
-                                                                                   # (code from: https://www.delftstack.com/howto/python/python-open-all-files-in-directory/)
+                                                                                    # (code from: https://www.delftstack.com/howto/python/python-open-all-files-in-directory/)
     if reorder:
         files = natsorted(files, key=lambda y: y.lower())  # Sort alphanumeric in ascending order
                                                            # (code from: https://studysection.com/blog/how-to-sort-a-list-in-alphanumeric-order-python/)
     return files
+
+
+def read_folders(folder_path, reorder=True):
+    """
+    Function that return the path of all the subdirectories in a given directory
+    :param folder_path: path of the main directory
+    :param reorder: flag to toggle the reorder process (default = true)
+    :return: list of all the subdirectory folder
+    """
+    folders = []
+    # Extract from the main directory only the subdirectories' path avoiding the file ones
+    # (code from: https://www.techiedelight.com/list-all-subdirectories-in-directory-python/)
+    for file in listdir(folder_path):
+        d = path.join(folder_path, file)
+        if path.isdir(d):
+            folders.append(d)
+
+    if reorder:
+        folders = natsorted(folders, key=lambda y: y.lower())  # Sort alphanumeric in ascending order
+                                                               # (code from: https://studysection.com/blog/how-to-sort-a-list-in-alphanumeric-order-python/)
+
+    return folders
 
 
 def create_folder(file_path, ignore=""):
