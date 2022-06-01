@@ -12,7 +12,7 @@ def load_exr(path):
     :return: a numpy matrix containing all the channels ([A, R, G, B] or [R, G, B])
     """
 
-    img = InputFile(path)  # Open the file
+    img = InputFile(str(path))  # Open the file
     n_channels = len(img.header()['channels'])  # Extract the number of channels of the image
     dw = img.header()['dataWindow']  # Extract the data window dimension from the header of the exr file
     size = (dw.max.x - dw.min.x + 1, dw.max.y - dw.min.y + 1)  # Define the actual size of the image

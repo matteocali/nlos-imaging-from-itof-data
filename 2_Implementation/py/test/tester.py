@@ -52,7 +52,7 @@ def arg_parser(argv):
         print('Spot size: ', arg_spot_size)
     print()
 
-    return [arg_in, arg_out, arg_task, arg_img_size]
+    return [arg_in, arg_out, arg_task, arg_img_size, arg_spot_size]
 
 
 if __name__ == '__main__':
@@ -68,5 +68,8 @@ if __name__ == '__main__':
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    elif arg_task == "test":
+        from modules import exr_handler as exr
+        img = exr.load_exr(arg_in)
     else:
         print("Wrong task provided\nPossibilities are: spot_bitmap")
