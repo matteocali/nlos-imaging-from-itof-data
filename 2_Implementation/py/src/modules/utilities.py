@@ -1,10 +1,25 @@
-from numpy import sum, linspace, zeros, where, nanmin, nanmax
-from numpy import uint8
+from numpy import sum, linspace, zeros, where, nanmin, nanmax, array, ndarray, copy
+from numpy import uint8, float32
 from os import path, listdir, remove, makedirs
+from pathlib import Path
 from glob import glob
 from natsort import natsorted
 from cv2 import imwrite, cvtColor, COLOR_RGBA2BGRA, COLOR_RGB2BGR
 from matplotlib import pyplot as plt
+from h5py import File
+
+
+def add_extension(name: str, ext: str) -> str:
+    """
+    Function that checks the name of a file and if not already present adds the given extension
+    :param name: name of the file
+    :param ext: desired extension
+    :return: name of the file with the correct extension attached
+    """
+    if name[-len(ext):] == ext:
+        return name
+    else:
+        return name + ext
 
 
 def reed_files(file_path, extension, reorder=True):
@@ -165,3 +180,45 @@ def spot_bitmap_gen(file_path, img_size, spot_size):
         img[int(img_size[1] / 2), int(img_size[0] / 2)] = 255
 
     imwrite(str(file_path), img)  # Save the image
+
+
+def load_h5(file_path):
+    """
+    Function that load a .h5 file and return its content as a np array. If the .h5 file contains more than one keys it returns a list of np arrays one for each key
+    :param file_path: path of the .h5 file
+    :return: a np array containing the content of the .h5 file or a list of np array each one containing the content of a key of the .h5 file
+    """
+
+    h5_file = File(str(file_path), 'r')  # Open the .h5 file
+    keys = list(h5_file.keys())  # Obtain the list of keys contained in the .h5 file
+
+    # Check if the .h5 file has only one key or more than one
+    if len(keys) == 1:
+        return array(h5_file[keys[0]])  # Load the .h5 content and put it inside a np array
+    else:
+        return [array(h5_file[key]) for key in keys]  # Load the .h5 content (key by key) and put it inside a np array
+
+
+def save_h5(data: ndarray, file_path: Path, name: str = None) -> None:
+    """
+    Function to save a transient image into an .h5 file (also perform reshaping [<n_beans>, <n_row>, <col>] -> [<n_row>, <col>, <n_beans>])
+    :param data: ndarray containing the transient image (only one channel)
+    :param file_path: path (with name) where to save the file
+    :param name: name of the key of the data inside the .h5 file
+    """
+
+    file_path = add_extension(str(file_path), ".h5")  # If not already present add the .h5 extension to the file path
+    data = copy(data)  # Copy the ndarray in order to avoid overriding
+    data = data.reshape([data.shape[1], data.shape[2], data.shape[0]])  # Reshape the array in order to match the required layout
+    h5f = File(file_path, "w")  # Create the .h5 file and open it
+    # Save the ndarray in the just created .h5 file
+    if name:
+        h5f.create_dataset(name=name,
+                           data=data,
+                           shape=data.shape,
+                           dtype=float32)
+    else:
+        h5f.create_dataset(name=file_path.split("\\")[-1][-3:],  # If a key name is not provided use the name of the name of the file as key name
+                           data=data,
+                           shape=data.shape,
+                           dtype=float32)

@@ -1,6 +1,7 @@
-from modules import utilities as ut
+from modules import utilities as ut, transient_handler as tr
 from pathlib import Path
 import os
+from os.path import exists
 import getopt
 import sys
 import time
@@ -68,5 +69,19 @@ if __name__ == '__main__':
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    elif arg_task == "h5":
+        print(f"TASK: {arg_task}")
+        start = time.time()
+
+        ut.create_folder(arg_out, "all")
+        images = tr.transient_loader(img_path=arg_in,
+                                     np_path=arg_out / "np_transient.npy",
+                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
+        #ut.save_h5(data=images[:, :, :, 0],
+        #           file_path=arg_out / "h5_data")
+        h5_file = ut.load_h5(arg_in)
+
+        end = time.time()
+        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
     else:
-        print("Wrong task provided\nPossibilities are: spot_bitmap")
+        print("Wrong task provided\nPossibilities are: spot_bitmap, h5")
