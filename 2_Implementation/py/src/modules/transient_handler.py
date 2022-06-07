@@ -3,13 +3,14 @@ from time import time, sleep
 from modules import utilities as ut
 from OpenEXR import InputFile
 from cv2 import VideoWriter, VideoWriter_fourcc, destroyAllWindows, cvtColor, COLOR_RGB2BGR
-from numpy import empty, shape, where, divide, copy, save, load, ndarray
+from numpy import empty, shape, where, divide, copy, save, load, ndarray, arange, matmul, concatenate, cos, sin
 from numpy import isnan, nansum, nanargmax
 from numpy import uint8, float32
 from modules import exr_handler as exr
 from matplotlib import pyplot as plt
 from matplotlib import animation
 from modules.utilities import normalize_img
+from math import pi
 
 
 def reshape_frame(files):
@@ -195,14 +196,12 @@ def plt_transient_video(images, out_path, alpha, normalize):
     ani.save(out_path)
 
 
-def cv2_transient_video(images, out_path, alpha, normalize):
+def cv2_transient_video(images, out_path):
     """
     Function that generate a video of the transient and save it in the cv2 format
     (code from: https://theailearner.com/2018/10/15/creating-video-from-images-using-opencv-python/)
     :param images: numpy array containing all the images
     :param out_path: path where to save the video
-    :param alpha: define if it has to use the alpha channel or not
-    :param normalize: choose ti perform normalization or not
     """
 
     mono = len(images.shape) == 3  # Check if the images are Mono or RGBA
@@ -406,3 +405,21 @@ def histo_plt(radiance, exp_time, interval=None, stem=True, file_path=None):
     else:
         plt.savefig(str(file_path))
         plt.close()
+
+
+def phi(freqs: ndarray, exp_time: float = 0.01, dim_t: int = 2000) -> ndarray:
+    """
+    Function to convert dToF output (transient) into iToF measurements (phi values for the different frequencies used)
+    :param freqs: target frequency values to be used
+    :param exp_time: exposure time (time bin size * c)
+    :param dim_t: total number of temporal bins
+    :return: matrix phy containing all the phz measurements
+    """
+
+    c = 3e8
+    min_t = 0.1 / c
+    max_t = 2*exp_time / c*dim_t
+    step_t = (max_t - min_t) / dim_t
+    times = arange(dim_t) * step_t
+    phi_arg = 2 * pi * matmul(freqs.reshape(-1, 1), times.reshape(1, -1))
+    return concatenate([cos(phi_arg), sin(phi_arg)], axis=0)
