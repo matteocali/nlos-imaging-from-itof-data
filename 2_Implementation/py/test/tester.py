@@ -42,7 +42,9 @@ def arg_parser(argv):
             img_size = img_size.split(",")
             arg_img_size = (int(img_size[0]), int(img_size[1]))  # Set the image size
         elif opt in ("-s", "--spot_size"):
-            arg_spot_size = int(arg)  # Set the spot size
+            spot_size = str(arg)  # Read the img size
+            spot_size = spot_size.split(",")
+            arg_spot_size = (int(spot_size[0]), int(spot_size[1]))  # Set the spot size
 
     print('Input path: ', arg_in)
     if arg_out != "":
@@ -65,7 +67,8 @@ if __name__ == '__main__':
 
         ut.spot_bitmap_gen(file_path=arg_out / "spot_bitmap.png",
                            img_size=arg_img_size,
-                           spot_size=arg_spot_size)
+                           spot_size=arg_spot_size,
+                           exact=False)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))

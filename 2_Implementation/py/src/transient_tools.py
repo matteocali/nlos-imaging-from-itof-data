@@ -113,11 +113,32 @@ if __name__ == '__main__':
         images = tr.transient_loader(img_path=arg_in,
                                      np_path=arg_out / "np_transient.npy",
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        tr.histo_plt(radiance=images[:, 119, 159, :],  # righe:colonne
+        tr.histo_plt(radiance=images[:, 119, 0, :],  # righe:colonne
                      exp_time=arg_exp_time,
+                     interval=None,#[15.7, 19.7],
+                     stem=True,
+                     file_path=arg_out / "transient_histograms.svg")
+
+        end = time.time()
+        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    elif arg_task == "hists_glb":
+        print(f"TASK: {arg_task}")
+        start = time.time()
+
+        ut.create_folder(arg_out, "all")
+        images = tr.transient_loader(img_path=arg_in,
+                                     np_path=arg_out / "np_transient.npy",
+                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
+        glb_images = tr.rmv_first_reflection(images=images,
+                                             file_path=arg_out / "glb_np_transient.npy",
+                                             store=(not exists(arg_out / "glb_np_transient.npy")))
+        tr.histo_plt(radiance=glb_images[:, 114, 160, :],  # righe:colonne
+                     exp_time=arg_exp_time,
+                     interval=None,
+                     stem=True,
                      file_path=arg_out / "transient_histograms.svg")
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
     else:
-        print("Wrong task provided\nPossibilities are: tr_video, total_img, glb_tr_video, hists")
+        print("Wrong task provided\nPossibilities are: tr_video, total_img, glb_tr_video, hists, hists_glb")

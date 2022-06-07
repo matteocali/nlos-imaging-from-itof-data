@@ -335,20 +335,26 @@ def transient_loader(img_path, np_path=None, store=False):
         return images
 
 
-def histo_plt(radiance, exp_time, file_path=None):
+def histo_plt(radiance, exp_time, interval=None, stem=True, file_path=None):
     """
     Function that plot the transient histogram of a single pixel (for each channel)
     :param radiance: radiance value (foe each channel) of the given pixel [radiance_values, n_channel]
     :param exp_time: exposure time used during the rendering
+    :param interval: list containing the min and max value of x axis
+    :param stem: flag to choose the type of graph
     :param file_path: file path where to save
     """
 
-    try:
-        plt_start_pos = [where(radiance[:, channel] != 0)[0][0] - 10 for channel in range(0, 3)]
-        plt_end_pos = [where(radiance[:, channel] != 0)[0][-1] + 11 for channel in range(0, 3)]
-    except IndexError:
-        plt_start_pos = [0 for channel in range(0, 3)]
-        plt_end_pos = [len(radiance[:, channel]) for channel in range(0, 3)]
+    if interval is not None:
+        plt_start_pos = [int(interval[0] * 3e8 / exp_time*1e-9) for i in range(3)]
+        plt_end_pos = [int(interval[1] * 3e8 / exp_time*1e-9) for i in range(3)]
+    else:
+        try:
+            plt_start_pos = [where(radiance[:, channel] != 0)[0][0] - 10 for channel in range(0, 3)]
+            plt_end_pos = [where(radiance[:, channel] != 0)[0][-1] + 11 for channel in range(0, 3)]
+        except IndexError:
+            plt_start_pos = [0 for channel in range(0, 3)]
+            plt_end_pos = [len(radiance[:, channel]) for channel in range(0, 3)]
 
     radiance[where(radiance < 0)] = 0
 
@@ -369,11 +375,14 @@ def histo_plt(radiance, exp_time, file_path=None):
         # Plot hte transient histogram for each channel
         fig, axs = plt.subplots(1, 3, figsize=(24, 6))
         for i in range(radiance.shape[1] - 1):
-            markers, stemlines, baseline = axs[i].stem(range(0, len(radiance[plt_start_pos[i]:plt_end_pos[i], i])),
-                                                       radiance[plt_start_pos[i]:plt_end_pos[i], i])
-            plt.setp(stemlines, color=colors[i])
-            plt.setp(baseline, linestyle="dashed", color="black", linewidth=1, visible=False)
-            plt.setp(markers, color=colors[i], markersize=1)
+            if stem:
+                markers, stemlines, baseline = axs[i].stem(range(0, len(radiance[plt_start_pos[i]:plt_end_pos[i], i])),
+                                                           radiance[plt_start_pos[i]:plt_end_pos[i], i])
+                plt.setp(stemlines, color=colors[i])
+                plt.setp(baseline, linestyle="dashed", color="black", linewidth=1, visible=False)
+                plt.setp(markers, color=colors[i], markersize=1)
+            else:
+                axs[i].plot(range(0, len(radiance[plt_start_pos[i]:plt_end_pos[i], i])), radiance[plt_start_pos[i]:plt_end_pos[i], i], color=colors[i])
             axs[i].set_xticks(range(0, len(radiance[plt_start_pos[i]:plt_end_pos[i], i]) + 1, int(len(radiance[plt_start_pos[i]:plt_end_pos[i], i] + 1) / 13)))
             axs[i].set_xticklabels(["{:.2f}".format(round(value * exp_time / 3e8 * unit_of_measure, 2)) for value in range(plt_start_pos[i], plt_end_pos[i] + 1, int(len(radiance[plt_start_pos[i]:plt_end_pos[i], i] + 1) / 13))], rotation=45)
             axs[i].set_title(f"{colors_name[i]} channel histogram")

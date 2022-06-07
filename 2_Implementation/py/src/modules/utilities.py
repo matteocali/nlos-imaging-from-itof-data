@@ -61,7 +61,7 @@ def read_folders(folder_path, reorder=True):
     return folders
 
 
-def create_folder(file_path, ignore=""):
+def create_folder(file_path, ignore: str = "") -> None:
     """
     Function to create a new folder if not already present.
     If it already exists, empty it
@@ -79,7 +79,7 @@ def create_folder(file_path, ignore=""):
         makedirs(file_path)
 
 
-def generate_quadratic_model(min_x, max_x, max_y, precision):
+def generate_quadratic_model(min_x: float, max_x: float, max_y: float, precision: int) -> list:
     """
     Function that define the ground truth quadratic model
     :param min_x: minimum measured value of distances
@@ -95,7 +95,7 @@ def generate_quadratic_model(min_x, max_x, max_y, precision):
     return [x, y]
 
 
-def compute_mse(x, y):
+def compute_mse(x: ndarray, y: ndarray) -> float:
     """
     Compute the MSE error between two images
     The 'Mean Squared Error' between the two images is the sum of the squared difference between the two images
@@ -114,7 +114,7 @@ def compute_mse(x, y):
     return round(float(err), 4)
 
 
-def normalize_img(img):
+def normalize_img(img: ndarray) -> ndarray:
     """
     Normalize the image value in the range [0, 1]
     :param img: np aray corresponding to an image
@@ -130,7 +130,7 @@ def normalize_img(img):
     return img
 
 
-def save_png(img, file_path, alpha):
+def save_png(img: ndarray, file_path: Path, alpha: bool) -> None:
     """
     Function to save an image as a png
     :param alpha: define if the output will use or not the alpha channel (True/False)
@@ -144,7 +144,7 @@ def save_png(img, file_path, alpha):
         imwrite(str(file_path), cvtColor(img[:, :, :-1], COLOR_RGB2BGR))  # Save the image
 
 
-def save_plt(img, file_path, alpha):
+def save_plt(img: ndarray, file_path: Path, alpha: bool) -> None:
     """
     Function to save an image as a matplotlib png
     :param alpha: define if the output will use or not the alpha channel (True/False)
@@ -158,31 +158,35 @@ def save_plt(img, file_path, alpha):
         plt.imsave(file_path, img)
 
 
-def spot_bitmap_gen(file_path, img_size, spot_size):
+def spot_bitmap_gen(file_path: Path, img_size: list, spot_size: list, exact: bool = False) -> None:
     """
     Function that generate a black bitmap image of size img_path with a white square in the middle of size (spot_size * spot_size)
     :param file_path: path where to save the generated image
     :param img_size: size of the desired image [columns * rows]
-    :param spot_size: number of pixels of the edge of the inner square (must be even)
+    :param spot_size: size of the desired white spot [columns * rows]
+    :param exact: flag to set white a specific pixel
     """
 
     img = zeros([img_size[1], img_size[0]], dtype=uint8)  # Generate the base black image
-    spot_size = int(spot_size/2)
 
     # Change ve value to white of only the desired center pixels
-    if img_size[0] % 2 == 0 and img_size[1] % 2 == 0:
-        img[(int(img_size[1] / 2) - spot_size):(int(img_size[1] / 2) + spot_size), (int(img_size[0] / 2) - spot_size):(int(img_size[0] / 2) + spot_size)] = 255
-    elif img_size[0] % 2 == 0 and img_size[1] % 2 != 0:
-        img[int(img_size[1] / 2), (int(img_size[0] / 2) - spot_size):(int(img_size[0] / 2) + spot_size)] = 255
-    if img_size[0] % 2 != 0 and img_size[1] % 2 == 0:
-        img[int((img_size[1] / 2) - spot_size):(int(img_size[1] / 2) + spot_size), int(img_size[0] / 2)] = 255
-    if img_size[0] % 2 != 0 and img_size[1] % 2 != 0:
-        img[int(img_size[1] / 2), int(img_size[0] / 2)] = 255
+    if exact:
+        img[spot_size[1], spot_size[0]] = 255
+    else:
+        spot_size = [int(spot_size[0] / 2), int(spot_size[1] / 2)]
+        if img_size[0] % 2 == 0 and img_size[1] % 2 == 0:
+            img[(int(img_size[1] / 2) - spot_size[1]):(int(img_size[1] / 2) + spot_size[1]), (int(img_size[0] / 2) - spot_size[0]):(int(img_size[0] / 2) + spot_size[0])] = 255
+        elif img_size[0] % 2 == 0 and img_size[1] % 2 != 0:
+            img[int(img_size[1] / 2), (int(img_size[0] / 2) - spot_size[0]):(int(img_size[0] / 2) + spot_size[0])] = 255
+        if img_size[0] % 2 != 0 and img_size[1] % 2 == 0:
+            img[int((img_size[1] / 2) - spot_size[1]):(int(img_size[1] / 2) + spot_size[1]), int(img_size[0] / 2)] = 255
+        if img_size[0] % 2 != 0 and img_size[1] % 2 != 0:
+            img[int(img_size[1] / 2), int(img_size[0] / 2)] = 255
 
     imwrite(str(file_path), img)  # Save the image
 
 
-def load_h5(file_path):
+def load_h5(file_path: Path):
     """
     Function that load a .h5 file and return its content as a np array. If the .h5 file contains more than one keys it returns a list of np arrays one for each key
     :param file_path: path of the .h5 file
