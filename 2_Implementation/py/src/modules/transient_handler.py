@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 from matplotlib import animation
 from modules.utilities import normalize_img
 from math import pi
+from pathlib import Path
 
 
 def reshape_frame(files):
@@ -196,18 +197,19 @@ def plt_transient_video(images, out_path, alpha, normalize):
     ani.save(out_path)
 
 
-def cv2_transient_video(images, out_path):
+def cv2_transient_video(images, out_path, normalize):
     """
     Function that generate a video of the transient and save it in the cv2 format
     (code from: https://theailearner.com/2018/10/15/creating-video-from-images-using-opencv-python/)
     :param images: numpy array containing all the images
     :param out_path: path where to save the video
+    :param normalize: flag to set if it is required or not the normalization
     """
 
     mono = len(images.shape) == 3  # Check if the images are Mono or RGBA
 
     if not mono:
-        out = VideoWriter(str(out_path), VideoWriter_fourcc(*"DIVX"), 30, (images[0].shape[1], images[0].shape[0]))  # Create the cv2 video
+        out = VideoWriter(str(out_path), VideoWriter_fourcc(*"mp4v"), 30, (images[0].shape[1], images[0].shape[0]))  # Create the cv2 video
     else:
         out = VideoWriter(str(out_path), VideoWriter_fourcc(*"mp4v"), 30, (images[0].shape[1], images[0].shape[0]), 0)  # Create the cv2 video
 
@@ -217,10 +219,9 @@ def cv2_transient_video(images, out_path):
         else:
             img = copy(images[i, :, :])
 
-        normalize_img(img)
-
-        # Map img to uint8
-        img = (255 * img).astype(uint8)
+        if normalize:
+            normalize_img(img)
+            img = (255 * img).astype(uint8)  # Map img to uint8
 
         # Convert the image from RGBA to BGRA
         if not mono:
@@ -248,12 +249,12 @@ def transient_video(images, out_path, out_type="cv2", alpha=False, normalize=Tru
     if out_type == "plt":
         plt_transient_video(images, out_path / "transient.avi", alpha, normalize)
     elif out_type == "cv2":
-        cv2_transient_video(images, out_path / "transient.avi", alpha, normalize)
+        cv2_transient_video(images, out_path / "transient.avi", normalize)
     elif out_type == "both":
         print("Matplotlib version:")
         plt_transient_video(images, out_path / "transient_plt.avi", alpha, normalize)
         print("Opencv version:")
-        cv2_transient_video(images, out_path / "transient_cv2.avi", alpha, normalize)
+        cv2_transient_video(images, out_path / "transient_cv2.avi", normalize)
 
     end = time()
     print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
@@ -413,7 +414,7 @@ def phi(freqs: ndarray, exp_time: float = 0.01, dim_t: int = 2000) -> ndarray:
     :param freqs: target frequency values to be used
     :param exp_time: exposure time (time bin size * c)
     :param dim_t: total number of temporal bins
-    :return: matrix phy containing all the phz measurements
+    :return: matrix phy containing all the phi measurements
     """
 
     c = 3e8

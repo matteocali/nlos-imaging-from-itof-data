@@ -126,22 +126,22 @@ def normalize_img(img: ndarray) -> ndarray:
     max_val = nanmax(img)
 
     if max_val - min_val != 0:
-        img = (img - min_val) / (max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
+        for i in range(img.shape[2]):
+            img[:, :, i] = (img[:, :, i] - min_val) / (max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
     return img
 
 
-def save_png(img: ndarray, file_path: Path, alpha: bool) -> None:
+def save_png(img: ndarray, file_path: Path) -> None:
     """
     Function to save an image as a png
-    :param alpha: define if the output will use or not the alpha channel (True/False)
     :param img: image to save
     :param file_path: path and name
     """
     img = (255 * img).astype(uint8)  # Rescale the input value from [0, 1] to [0, 255] and convert them to unit8
-    if alpha:
+    if img.shape[2] == 4:
         imwrite(str(file_path), cvtColor(img, COLOR_RGBA2BGRA))  # Save the image
     else:
-        imwrite(str(file_path), cvtColor(img[:, :, :-1], COLOR_RGB2BGR))  # Save the image
+        imwrite(str(file_path), cvtColor(img, COLOR_RGB2BGR))  # Save the image
 
 
 def save_plt(img: ndarray, file_path: Path, alpha: bool) -> None:

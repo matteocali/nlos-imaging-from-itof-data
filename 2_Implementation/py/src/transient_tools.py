@@ -113,7 +113,7 @@ if __name__ == '__main__':
         images = tr.transient_loader(img_path=arg_in,
                                      np_path=arg_out / "np_transient.npy",
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        tr.histo_plt(radiance=images[:, 119, 0, :],  # righe:colonne
+        tr.histo_plt(radiance=images[:, 1, 1, :],  # righe:colonne
                      exp_time=arg_exp_time,
                      interval=None,#[15.7, 19.7],
                      stem=True,
@@ -132,7 +132,7 @@ if __name__ == '__main__':
         glb_images = tr.rmv_first_reflection(images=images,
                                              file_path=arg_out / "glb_np_transient.npy",
                                              store=(not exists(arg_out / "glb_np_transient.npy")))
-        tr.histo_plt(radiance=glb_images[:, 114, 160, :],  # righe:colonne
+        tr.histo_plt(radiance=glb_images[:, 1, 1, :],  # righe:colonne
                      exp_time=arg_exp_time,
                      interval=None,
                      stem=True,
