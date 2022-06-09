@@ -115,7 +115,7 @@ if __name__ == '__main__':
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
         tr.histo_plt(radiance=images[:, 1, 1, :],  # righe:colonne
                      exp_time=arg_exp_time,
-                     interval=None,#[15.7, 19.7],
+                     interval=None,#[15.7, 19.6],
                      stem=True,
                      file_path=arg_out / "transient_histograms.svg")
 
@@ -134,7 +134,7 @@ if __name__ == '__main__':
                                              store=(not exists(arg_out / "glb_np_transient.npy")))
         tr.histo_plt(radiance=glb_images[:, 1, 1, :],  # righe:colonne
                      exp_time=arg_exp_time,
-                     interval=None,
+                     interval=[16.5, 18.8],#None,
                      stem=True,
                      file_path=arg_out / "transient_histograms.svg")
 

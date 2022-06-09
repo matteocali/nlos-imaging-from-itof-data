@@ -57,7 +57,7 @@ def theta_calculator(peak_pos, peak_row_values, peak_col_values, e_time, fov):
     :param fov:
     :return: two vectors containing the theta value of the main row and column and the two distance vector for the main row and column
     """
-    principal_distance = tr.compute_center_distance(peak_pos, e_time)  # Compute the distance from the plane and the camera
+    principal_distance = tr.compute_radial_distance(peak_pos, e_time)  # Compute the distance from the plane and the camera
 
     p_increment = compute_plane_distances_increment(principal_distance, peak_row_values/2, fov)  # Compute the length of a pixel
     plane_row_distance = compute_plane_distance(p_increment, peak_row_values)  # Compute the incremental length vector for the main row

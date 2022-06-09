@@ -3,15 +3,14 @@ from time import time, sleep
 from modules import utilities as ut
 from OpenEXR import InputFile
 from cv2 import VideoWriter, VideoWriter_fourcc, destroyAllWindows, cvtColor, COLOR_RGB2BGR
-from numpy import empty, shape, where, divide, copy, save, load, ndarray, arange, matmul, concatenate, cos, sin
-from numpy import isnan, nansum, nanargmax
+from numpy import empty, shape, where, divide, copy, save, load, ndarray, arange, matmul, concatenate, cos, sin, tan
+from numpy import isnan, nansum, nanargmax, nanmax, nanmin
 from numpy import uint8, float32
 from modules import exr_handler as exr
 from matplotlib import pyplot as plt
 from matplotlib import animation
-from modules.utilities import normalize_img
-from math import pi
-from pathlib import Path
+from math import pi, nan
+from math import isnan as m_isnan
 
 
 def reshape_frame(files):
@@ -133,6 +132,24 @@ def total_img(images, out_path=None, n_samples=None):
     return total_image
 
 
+def extract_peak(transient: ndarray) -> tuple:
+    """
+    Function that provided the transient  values of a pixel, extract the peak value and position
+    :param transient: transient values [values, channels]
+    :return: (peak_position, peak_values) channel by channel
+    """
+
+    peak_pos = []
+    for i in range(transient.shape[1]):
+        if m_isnan(nanmin(transient[:, i])) and m_isnan(nanmax(transient[:, i])):  # Check for all nan case
+            peak_pos.append(nan)  # If all the value is nan the peak does not exist, assign nan
+        else:
+            peak_pos.append(nanargmax(transient[:, i], axis=0))  # Extract the position of the maximum value in the provided transient
+
+    peak_values = [transient[peak_pos[i], i] for i in range(transient.shape[1])]  # Extract the radiance value in the peak position
+    return peak_pos, peak_values
+
+
 def extract_center_peak(images):
     """
     Function that extract the position and the value of the first peak in the middle pixel in each channel alpha excluded
@@ -154,7 +171,7 @@ def extract_center_peak(images):
     return [peak_pos, peak_values]
 
 
-def compute_center_distance(peak_pos, exposure_time):
+def compute_radial_distance(peak_pos: int, exposure_time: float) -> float:
     """
     Function that take the position of the peak and the exposure time and compute the measured distance in the center pixel
     :param peak_pos: position of the peak in the transient of the center pixel
@@ -184,9 +201,9 @@ def plt_transient_video(images, out_path, alpha, normalize):
 
     for img in tqdm(images):
         if normalize and not mono:
-            img = normalize_img(img[:, :, : -1])
+            img = ut.normalize_img(img[:, :, : -1])
         elif normalize and mono:
-            img[:, :, :-1] = normalize_img(img)
+            img[:, :, :-1] = ut.normalize_img(img)
 
         if alpha or mono:
             frames.append([plt.imshow(img, animated=True)])  # Create each frame
@@ -220,7 +237,7 @@ def cv2_transient_video(images, out_path, normalize):
             img = copy(images[i, :, :])
 
         if normalize:
-            normalize_img(img)
+            ut.normalize_img(img)
             img = (255 * img).astype(uint8)  # Map img to uint8
 
         # Convert the image from RGBA to BGRA
@@ -424,3 +441,29 @@ def phi(freqs: ndarray, exp_time: float = 0.01, dim_t: int = 2000) -> ndarray:
     times = arange(dim_t) * step_t
     phi_arg = 2 * pi * matmul(freqs.reshape(-1, 1), times.reshape(1, -1))
     return concatenate([cos(phi_arg), sin(phi_arg)], axis=0)
+
+
+def compute_focal(fov: float, row_pixel: int) -> float:
+    """
+    Function to compute the focal distance
+    :param fov: field of view
+    :param row_pixel: number of pixel (= number of column)
+    :return: focal distance value
+    """
+    return row_pixel / (2 * tan(fov / 2))
+
+
+def compute_distance(transient: ndarray, fov: float, exp_time: float) -> float:
+    """
+    Function to compute the distance of a specific pixel
+    :param transient: transient of the target pixel
+    :param fov: field of view of the used camera
+    :param exp_time: exposure time
+    :return: the distance value
+    """
+
+    peak_pos, peak_value = extract_peak(transient[:, :-1])  # Extract the radiance value of the first peak
+    radial_dist = compute_radial_distance(peak_pos[nanargmax(peak_value)], exp_time)  # Compute the radial distance
+    angle = tan(fov)  # compute the angle from the formula: fov = arctan(distance/2*f)
+
+    return round(radial_dist * cos(angle), 3)  # Convert the radial distance in cartesian distance and return it

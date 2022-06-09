@@ -66,10 +66,12 @@ if __name__ == '__main__':
         print(f"TASK: {arg_task}")
         start = time.time()
 
-        ut.spot_bitmap_gen(file_path=arg_out / "spot_bitmap.png",
+        ut.spot_bitmap_gen(file_path=arg_out / "bitmaps",
                            img_size=arg_img_size,
-                           spot_size=arg_spot_size,
-                           exact=False)
+                           spot_size=None,#arg_spot_size,
+                           exact=False,
+                           pattern=(10, 15),
+                           split=True)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
@@ -101,5 +103,40 @@ if __name__ == '__main__':
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    elif arg_task == "np2mat":
+        print(f"TASK: {arg_task}")
+        start = time.time()
+
+        ut.create_folder(arg_out, "all")
+        images = tr.transient_loader(img_path=arg_in,
+                                     np_path=arg_out / "np_transient.npy",
+                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
+        ut.np2mat(data=[np.array((64, 64), dtype=np.float32), np.zeros([4096, 3]), np.array((), dtype=np.float32), np.zeros([1, 1500], dtype=np.float32), images[:, 1, 1, 1]],
+                  file_path=arg_out / "mat")
+
+        end = time.time()
+        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    elif arg_task == "dist":
+        print(f"TASK: {arg_task}")
+        start = time.time()
+
+        ut.create_folder(arg_out, "all")
+        images = tr.transient_loader(img_path=arg_in,
+                                     np_path=arg_out / "np_transient.npy",
+                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
+
+        mask = ut.spot_bitmap_gen(img_size=images.shape[1:2],
+                                  pattern=(5, 5))
+
+        k = np.array([[276.2621, 0, 159.5],
+                      [0, 276.2621, 119.5],
+                      [0, 0, 1]], dtype=np.float32)
+
+        depthmap = ut.compute_los_points_coordinates(images=images,
+                                                     mask=mask,
+                                                     k_matrix=k)
+
+        end = time.time()
+        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
     else:
-        print("Wrong task provided\nPossibilities are: spot_bitmap, h5")
+        print("Wrong task provided\nPossibilities are: spot_bitmap, h5, itof2dtof, np2mat")
