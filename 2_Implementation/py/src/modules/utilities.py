@@ -1,6 +1,6 @@
 from modules import transient_handler as tr
-from numpy import sum, linspace, zeros, where, nanmin, nanmax, array, ndarray, copy, eye, divide, tile, arange, zeros_like, linalg, dot, asarray, stack, reshape
-from numpy import uint8, float32
+from numpy import sum, linspace, zeros, where, nanmin, nanmax, array, ndarray, copy, eye, divide, tile, arange, zeros_like, linalg, dot, asarray, stack, reshape, flip
+from numpy import uint8, float32, float64
 from os import path, listdir, remove, makedirs
 from pathlib import Path
 from glob import glob
@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 from h5py import File
 from scipy import io
 from math import floor
+from os.path import exists, dirname
 
 
 def add_extension(name: str, ext: str) -> str:
@@ -170,15 +171,15 @@ def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = No
     :param spot_size: size of the desired white spot [columns * rows]
     :param exact: flag to set white a specific pixel
     :param pattern: list made as follows [x, y] where x represent the interval between white pixel on each row and y on each column
+    :param split: if true the grid is splitted dot by dot
     :return generated image
     """
 
     img = zeros([img_size[1], img_size[0]], dtype=uint8)  # Generate the base black image
 
-    # Change ve value to white of only the desired center pixels
-    if exact:
+    if exact:  # Change the value to white of only the desired pixel
         img[spot_size[1], spot_size[0]] = 255
-    elif not exact and spot_size is not None:
+    elif not exact and spot_size is not None:  # Change the value to white of only the desired central pixels
         spot_size = [int(spot_size[0] / 2), int(spot_size[1] / 2)]
         if img_size[0] % 2 == 0 and img_size[1] % 2 == 0:
             img[(int(img_size[1] / 2) - spot_size[1]):(int(img_size[1] / 2) + spot_size[1]), (int(img_size[0] / 2) - spot_size[0]):(int(img_size[0] / 2) + spot_size[0])] = 255
@@ -188,9 +189,9 @@ def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = No
             img[int((img_size[1] / 2) - spot_size[1]):(int(img_size[1] / 2) + spot_size[1]), int(img_size[0] / 2)] = 255
         if img_size[0] % 2 != 0 and img_size[1] % 2 != 0:
             img[int(img_size[1] / 2), int(img_size[0] / 2)] = 255
-    elif not exact and pattern is not None:
-        offset_x = floor(((img_size[0] - 1) - ((int(img_size[0] / pattern[0]) - 1) * pattern[0])) / 2)
-        offset_y = floor(((img_size[1] - 1) - ((int(img_size[1] / pattern[1]) - 1) * pattern[1])) / 2)
+    elif not exact and pattern is not None:  # Generate a grid bitmap and if required save each dot as a single image
+        offset_x = floor(((img_size[0] - 1) - ((int(img_size[0] / pattern[0]) - 1) * pattern[0])) / 2)  # Define the number of black pixel on the left before the first white dot
+        offset_y = floor(((img_size[1] - 1) - ((int(img_size[1] / pattern[1]) - 1) * pattern[1])) / 2)  # Define the number of black pixel on the top before the first white dot
         for i in range(offset_y, img.shape[0], pattern[1]):
             for j in range(offset_x, img.shape[1], pattern[0]):
                 if not split:
@@ -204,7 +205,6 @@ def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = No
     if file_path is not None and not split:
         file_path = add_extension(str(file_path), ".png")
         imwrite(file_path, img)  # Save the image
-
 
     return img
 
@@ -251,22 +251,23 @@ def save_h5(data: ndarray, file_path: Path, name: str = None) -> None:
                            dtype=float32)
 
 
-def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list, pattern_interval: tuple, exp_time: float = 0.01, laser_pos: list = None) -> None:
+def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list, exp_time: float = 0.01, laser_pos: list = None) -> None:
     """
     Function to save a .mat file in the format required from the Fermat flow Matlab script
     :param data: ndarray containing the transient measurements (n*m matrix, n transient measurements with m temporal bins)
     :param file_path: file path and name where to save the .mat file
     :param data_grid_size: [n1, n2], with n1 * n2 = n, grid size of sensing points on the LOS wall (n = number of the transient measurements)
     :param img_shape: size of the image [<n_row>, <n_col>]
-    :param pattern_interval: tuple made as follows [x, y] where x represent the interval between white pixel on each row and y on each column
     :param exp_time: exposure time used, required to compute "temporalBinCenters"
     :param laser_pos: position of the laser, if none it is confocal with the camera (1*3 vector)
     """
 
+    np_file_path = dirname(file_path) + "\\glb_np_transient.npy"
     file_path = add_extension(str(file_path), ".mat")  # If not already present add the .h5 extension to the file path
+    pattern_interval = (int(img_shape[0] / data_grid_size[0]), int(img_shape[1] / data_grid_size[1]))
 
     # Define all the required vectors for the .mat file
-    data_grid_size = array(data_grid_size, dtype=ndarray)  # Convert the data_grid_size from a list to an ndarray
+    data_grid_size = array(data_grid_size, dtype=float64)  # Convert the data_grid_size from a list to an ndarray
 
     mask = spot_bitmap_gen(img_size=img_shape,
                            pattern=pattern_interval)  # Define the mask that identify the location of the illuminated spots
@@ -277,18 +278,27 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
     depthmap = compute_los_points_coordinates(images=transient_image,
                                               mask=mask,
                                               k_matrix=k)[:, :, :-1]  # Compute the mapping of the coordinate of the illuminated spots to the LOS wall (ignor the z coordinate)
-    det_locs = coordinates_matrix_reshape(data=depthmap, shape=(int(img_shape[0] / pattern_interval[0]), int(img_shape[1] / pattern_interval[1])))  # Reshape the coordinate value, putting the coordinate of each row one on the bottom of the previous one
+    det_locs = coordinates_matrix_reshape(data=depthmap, shape=(int(data_grid_size[0]), int(data_grid_size[1])))  # Reshape the coordinate value, putting the coordinate of each row one on the bottom of the previous one
 
     if laser_pos is None:   # If laser_pos is not provided it means that the laser is confocal with the camera
         src_loc = array((), dtype=float32)
     else:
         src_loc = array(laser_pos, dtype=float32)
 
-    temp_bin_centers = [exp_time/2]  # To build the temp_bin_centers it is required to build a vector where each cell contains the center of the correspondent temporal bin, so the first cell contains half the exposure time
-    for i in range(1, data.shape[0]):
+    data = tr.rmv_first_reflection_fermat_transient(transient=data, file_path=np_file_path, store=(not exists(np_file_path)))
+
+    data = reshape_fermat_transient(transient=data[:, :, 1],
+                                    grid_shape=(int(data_grid_size[1]), int(data_grid_size[0])),
+                                    flip_x=True,
+                                    flip_y=True)
+    data = data[2*16:20*16, :]
+    det_locs = det_locs[2*16:20*16, :]
+
+    temp_bin_centers = [exp_time / 2]  # To build the temp_bin_centers it is required to build a vector where each cell contains the center of the correspondent temporal bin, so the first cell contains half the exposure time
+    for i in range(1, data.shape[1]):
         temp_bin_centers.append(temp_bin_centers[i - 1] + exp_time)  # For all the following cell simply add the exposure time to the value stored in the previous cell
 
-    io.savemat(str(file_path), mdict={"detGridSize": data_grid_size, "detLocs": det_locs, "srcLoc": src_loc, "temporalBinCenters": temp_bin_centers, "transients": data})  # Save the actual .mat file
+    io.savemat(str(file_path), mdict={"detGridSize": data_grid_size, "detLocs": det_locs, "srcLoc": src_loc, "temporalBinCenters": temp_bin_centers, "transients": data[:, :]})  # Save the actual .mat file
 
 
 def undistort_depthmap(dph, dm, k_ideal, k_real, d_real):
@@ -340,11 +350,12 @@ def undistort_depthmap(dph, dm, k_ideal, k_real, d_real):
     for x in range(x_matrix.shape[0]):
         for y in range(x_matrix.shape[1]):
             prod = dot(k_1, asarray([x_matrix[x, y], y_matrix[x, y], 1]))
+            prod = prod/linalg.norm(prod)
 
             x_undist_matrix[x, y] = z_matrix[x, y]*prod[0]
             y_undist_matrix[x, y] = z_matrix[x, y]*prod[1]
             z_undist_matrix[x, y] = z_matrix[x, y]*prod[2]
-            radial_dir[x, y, :] = prod/linalg.norm(prod)
+            radial_dir[x, y, :] = prod
 
     depthmap = stack([x_undist_matrix, y_undist_matrix, z_undist_matrix], axis=2)
 
@@ -367,6 +378,7 @@ def compute_los_points_coordinates(images: ndarray, mask: ndarray, k_matrix: nda
             if mask[i, j] != 0:
                 dph[i, j] = tr.compute_radial_distance(peak_pos=tr.extract_peak(images[:, i, j, :])[0][1],
                                                        exposure_time=0.01)
+                #dph[i, j] = tr.compute_distance(transient=images[:, i, j, :], fov=60, exp_time=0.01)
 
     # Compute the depthmap and coordinates
     depthmap, _, _ = undistort_depthmap(dph=dph,
@@ -386,12 +398,12 @@ def build_matrix_from_dot_projection_data(transient: ndarray, mask: ndarray) -> 
     :return: transient image
     """
 
-    matrix = zeros(mask.shape)
+    matrix = zeros([transient.shape[1], mask.shape[0], mask.shape[1], 3])
     t_index = 0
     for i in range(mask.shape[0]):
         for j in range(mask.shape[1]):
             if mask[i, j] != 0:
-                matrix[i, j] = transient[t_index]
+                matrix[:, i, j, :] = transient[t_index]
                 t_index += 1
 
     return matrix
@@ -405,12 +417,28 @@ def coordinates_matrix_reshape(data: ndarray, shape: tuple) -> ndarray:
     :return: reshaped coordinates matrix (z=0)
     """
 
-    data = reshape(data[data != 0], [shape[0], shape[1], 2])  # Remove all the zero values
+    data = reshape(data[data != 0], [shape[1], shape[0], 2])  # Remove all the zero values
     matrix = zeros([data.shape[0]*data.shape[1], 3])  # Create the final matrix (full of zeros)
     m_index = 0
     for i in range(data.shape[1]):
         for j in range(data.shape[0]):
-            matrix[m_index, 0] = data[0, i, 0]  # Load each cell with the right value
-            matrix[m_index, 1] = data[j, 0, 1]
+            #if data[j, i, ]
+            matrix[m_index, 0] = data[j, i, 0]  # Load each cell with the right value
+            matrix[m_index, 1] = data[j, i, 1]
             m_index += 1
     return matrix
+
+
+def reshape_fermat_transient(transient: ndarray, grid_shape: tuple, flip_x: bool = False, flip_y: bool = False) -> ndarray:
+    reshaped_transient = zeros(transient.shape)
+    index = 0
+    for column_index in range(grid_shape[1]):
+        for row_index in range(grid_shape[0]):
+            reshaped_transient[index] = transient[row_index*grid_shape[1] + column_index]
+            index += 1
+    if flip_y:
+        for i in range(0, reshaped_transient.shape[0], grid_shape[0]):
+            reshaped_transient[i:(i + grid_shape[0]), :] = flip(reshaped_transient[i:(i + grid_shape[0]), :], axis=0)
+    if flip_x:
+        reshaped_transient = flip(reshaped_transient, axis=0)
+    return reshaped_transient

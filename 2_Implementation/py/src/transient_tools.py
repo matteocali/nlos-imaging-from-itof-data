@@ -80,9 +80,9 @@ if __name__ == '__main__':
         images = tr.transient_loader(img_path=arg_in,
                                      np_path=arg_out / "np_transient.npy",
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        tr.total_img(images=images,
-                     out_path=arg_out / "total_image",
-                     n_samples=arg_samples)
+        t = tr.total_img(images=images,
+                         out_path=arg_out / "total_image",
+                         n_samples=arg_samples)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
@@ -93,9 +93,9 @@ if __name__ == '__main__':
         images = tr.transient_loader(img_path=arg_in,
                                      np_path=arg_out / "np_transient.npy",
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        glb_images = tr.rmv_first_reflection(images=images,
-                                             file_path=arg_out / "glb_np_transient.npy",
-                                             store=(not exists(arg_out / "glb_np_transient.npy")))
+        glb_images = tr.rmv_first_reflection_img(images=images,
+                                                 file_path=arg_out / "glb_np_transient.npy",
+                                                 store=(not exists(arg_out / "glb_np_transient.npy")))
         tr.transient_video(images=np.copy(glb_images),
                            out_path=arg_out,
                            normalize=True)
@@ -129,12 +129,12 @@ if __name__ == '__main__':
         images = tr.transient_loader(img_path=arg_in,
                                      np_path=arg_out / "np_transient.npy",
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        glb_images = tr.rmv_first_reflection(images=images,
-                                             file_path=arg_out / "glb_np_transient.npy",
-                                             store=(not exists(arg_out / "glb_np_transient.npy")))
-        tr.histo_plt(radiance=glb_images[:, 1, 1, :],  # righe:colonne
+        glb_images = tr.rmv_first_reflection_img(images=images,
+                                                 file_path=arg_out / "glb_np_transient.npy",
+                                                 store=(not exists(arg_out / "glb_np_transient.npy")))
+        tr.histo_plt(radiance=glb_images[:, 0, 0, :],  # righe:colonne
                      exp_time=arg_exp_time,
-                     interval=[16.5, 18.8],#None,
+                     interval=None,#[16.5, 18.8],#None,
                      stem=True,
                      file_path=arg_out / "transient_histograms.svg")
 

@@ -6,6 +6,7 @@ import getopt
 import sys
 import time
 import numpy as np
+from tqdm import trange
 
 
 def arg_parser(argv):
@@ -108,33 +109,28 @@ if __name__ == '__main__':
         start = time.time()
 
         ut.create_folder(arg_out, "all")
-        images = tr.transient_loader(img_path=arg_in,
-                                     np_path=arg_out / "np_transient.npy",
-                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        ut.np2mat(data=[np.array((64, 64), dtype=np.float32), np.zeros([4096, 3]), np.array((), dtype=np.float32), np.zeros([1, 1500], dtype=np.float32), images[:, 1, 1, 1]],
-                  file_path=arg_out / "mat")
+        transient = tr.grid_transient_loader(transient_path=arg_in,
+                                             np_path=arg_out / "np_transient.npy",
+                                             store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
 
-        end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
-    elif arg_task == "dist":
-        print(f"TASK: {arg_task}")
-        start = time.time()
+        for i in range(transient.shape[0]):
+            transient[i, :, :] = tr.clean_transient_tail(transient=transient[i, :, :], n_samples=20)
 
-        ut.create_folder(arg_out, "all")
-        images = tr.transient_loader(img_path=arg_in,
-                                     np_path=arg_out / "np_transient.npy",
-                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
+        #transient = tr.rmv_sparse_fermat_transient(transients=transient, channel=1, threshold=5, remove_data=False)
 
-        mask = ut.spot_bitmap_gen(img_size=images.shape[1:2],
-                                  pattern=(5, 5))
-
-        k = np.array([[276.2621, 0, 159.5],
-                      [0, 276.2621, 119.5],
-                      [0, 0, 1]], dtype=np.float32)
-
-        depthmap = ut.compute_los_points_coordinates(images=images,
-                                                     mask=mask,
-                                                     k_matrix=k)
+        '''
+        for i in trange(transient.shape[0]):
+            tr.histo_plt(radiance=tr.rmv_first_reflection_transient(transient=transient[i, :, :], file_path=arg_out / "hists" / "np" / f"np_transient_{i}.npy", store=(not exists(arg_out / "hists" / "np" / f"np_transient_{i}.npy"))),
+                         exp_time=0.01,
+                         interval=None,  # [15.7, 19.6],
+                         stem=True,
+                         file_path=arg_out / "hists" / f"transient_histograms{i}.svg")
+        '''
+        ut.np2mat(data=transient,
+                  file_path=arg_out / "cube",
+                  data_grid_size=[32, 16],
+                  img_shape=[320, 240],
+                  exp_time=0.01)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))

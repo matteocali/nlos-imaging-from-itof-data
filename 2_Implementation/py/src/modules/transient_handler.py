@@ -3,7 +3,7 @@ from time import time, sleep
 from modules import utilities as ut
 from OpenEXR import InputFile
 from cv2 import VideoWriter, VideoWriter_fourcc, destroyAllWindows, cvtColor, COLOR_RGB2BGR
-from numpy import empty, shape, where, divide, copy, save, load, ndarray, arange, matmul, concatenate, cos, sin, tan
+from numpy import empty, shape, where, divide, copy, save, load, ndarray, arange, matmul, concatenate, cos, sin, tan, delete, zeros
 from numpy import isnan, nansum, nanargmax, nanmax, nanmin
 from numpy import uint8, float32
 from modules import exr_handler as exr
@@ -11,17 +11,20 @@ from matplotlib import pyplot as plt
 from matplotlib import animation
 from math import pi, nan
 from math import isnan as m_isnan
+from pathlib import Path
 
 
-def reshape_frame(files):
+def reshape_frame(files, verbose=False):
     """
     Function that load al the exr file in the input folder and reshape it in order to have three matrices, one for each channel containing all the temporal value
     :param files: list off all the file path to analyze
+    :param verbose: flag to set if the function will print it working status
     :return: list containing the reshaped frames for each channel
     """
 
-    print(f"Reshaping {len(files)} frames:")
-    start = time()  # Compute the execution time
+    if verbose:
+        print(f"Reshaping {len(files)} frames:")
+        start = time()  # Compute the execution time
 
     dw = InputFile(files[0]).header()['dataWindow']  # Extract the data window dimension from the header of the exr file
     size = (dw.max.x - dw.min.x + 1, dw.max.y - dw.min.y + 1)  # Define the actual size of the image
@@ -37,7 +40,7 @@ def reshape_frame(files):
         # Define an empty matrix of size image_height x image_width x temporal_samples for each channel
         frame = empty([len(files), size[1], size[0]], dtype=float32)
 
-    for index, file in enumerate(tqdm(files)):  # For each provided file in the input folder
+    for index, file in enumerate(tqdm(files, position=1, leave=False)):  # For each provided file in the input folder
         img = exr.load_exr(file)
 
         # Perform the reshaping saving the results in frame_i for i in A, R,G , B
@@ -50,9 +53,10 @@ def reshape_frame(files):
             else:
                 frame[index, :, i] = img[:, i]
 
-    sleep(0.05)  # Wait a bit to allow a proper visualization in the console
-    end = time()
-    print("Reshaping concluded in %.2f sec\n" % (round((end - start), 2)))
+    if verbose:
+        sleep(0.05)  # Wait a bit to allow a proper visualization in the console
+        end = time()
+        print("Reshaping concluded in %.2f sec\n" % (round((end - start), 2)))
 
     if not mono:
         return [frame_a, frame_r, frame_g, frame_b]
@@ -60,24 +64,27 @@ def reshape_frame(files):
         return frame
 
 
-def img_matrix(channels):
+def img_matrix(channels, verbose=True):
     """
     Function that from the single channel matrices generate a proper image matrix fusing them
     :param channels: list of the 4 channels (1 if input is mono)
+    :param verbose: flag to set if the function will print it working status
     :return: list of image matrix [R, G, B, A] (Y if mono)
     """
 
-    print("Generating the image files:")
-    start = time()  # Compute the execution time
+    if verbose:
+        print("Generating the image files:")
+        start = time()  # Compute the execution time
 
     mono = type(channels) == ndarray  # verify if the input is RGBA or mono
 
     if not mono:
-        print(f"Build the {shape(channels[0])[2]} image matrices:")
-        sleep(0.02)
+        if verbose:
+            print(f"Build the {shape(channels[0])[2]} image matrices:")
+            sleep(0.02)
         images = empty([shape(channels[0])[2], shape(channels[0])[0], shape(channels[0])[1], len(channels)], dtype=float32)  # Empty array that will contain all the images
         # Fuse the channels together to obtain a proper [A, R, G, B] image
-        for i in tqdm(range(shape(channels[0])[2])):
+        for i in tqdm(range(shape(channels[0])[2]), position=1, leave=False):
             images[i, :, :, 0] = channels[1][:, :, i]
             images[i, :, :, 1] = channels[2][:, :, i]
             images[i, :, :, 2] = channels[3][:, :, i]
@@ -85,15 +92,17 @@ def img_matrix(channels):
 
             images[i, :, :, :][isnan(channels[0][:, :, i])] = 0  # Remove all the nan value following the Alpha matrix
     else:
-        print(f"Build the {shape(channels)[2]} image matrices:")
+        if verbose:
+            print(f"Build the {shape(channels)[2]} image matrices:")
         sleep(0.02)
         images = empty([shape(channels)[2], shape(channels)[0], shape(channels)[1]], dtype=float32)  # Empty array that will contain all the images
         # Fuse the channels together to obtain a proper [A, R, G, B] image
         for i in tqdm(range(shape(channels)[2])):
             images[i, :, :] = channels[:, :, i]
 
-    end = time()
-    print("Images created successfully in %.2f sec\n" % (round((end - start), 2)))
+    if verbose:
+        end = time()
+        print("Images created successfully in %.2f sec\n" % (round((end - start), 2)))
 
     return images
 
@@ -277,7 +286,58 @@ def transient_video(images, out_path, out_type="cv2", alpha=False, normalize=Tru
     print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
 
 
-def rmv_first_reflection(images, file_path=None, store=False):
+def rmv_first_reflection_transient(transient: ndarray, file_path: Path = None, store: bool = False) -> ndarray:
+    """
+    Function that given a transient vector set to zero all the information about the direct reflection
+    :param transient: input transient images
+    :param file_path: path of the np dataset
+    :param store: if you want to save the np dataset (if already saved set it to false in order to load it)
+    :return: Transient images of only the global component as a np array
+    """
+
+    if file_path and not store:  # If already exists a npy file containing all the transient images load it instead of processing everything again
+        return load(str(file_path))
+
+    print("Extracting the first peak (channel by channel):")
+    start = time()
+
+    mono = len(transient.shape) == 1  # Check id=f the images are Mono or RGBA
+
+    if not mono:
+        peaks = [nanargmax(transient[:, channel_i], axis=0) for channel_i in tqdm(range(transient.shape[1]))]  # Find the index of the maximum value in the third dimension
+    else:
+        peaks = nanargmax(transient, axis=0)  # Find the index of the maximum value in the third dimension
+
+    # Extract the position of the first zero after the first peak and remove the first reflection
+    print("Remove the first peak (channel by channel):")
+    sleep(0.1)
+
+    glb_images = copy(transient)
+    if not mono:
+        for channel_i in tqdm(range(transient.shape[1])):
+            zeros_pos = where(transient[:, channel_i] == 0)[0]
+            valid_zero_indexes = zeros_pos[where(zeros_pos > peaks[channel_i])]
+            if valid_zero_indexes.size == 0:
+                glb_images[:, channel_i] = 0
+            else:
+                glb_images[:int(valid_zero_indexes[0]), channel_i] = 0
+    else:
+        zeros_pos = where(transient == 0)[0]
+        valid_zero_indexes = zeros_pos[where(zeros_pos > peaks)]
+        if valid_zero_indexes.size == 0:
+            glb_images = 0
+        else:
+            glb_images[:int(valid_zero_indexes[0])] = 0
+
+    end = time()
+    print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
+
+    if file_path and store:
+        save(str(file_path), glb_images)  # Save the loaded images as a numpy array
+        return glb_images
+
+
+def rmv_first_reflection_img(images, file_path=None, store=False):
     """
     Function that given the transient images remove the first reflection leaving only the global component
     :param images: input transient images
@@ -332,6 +392,77 @@ def rmv_first_reflection(images, file_path=None, store=False):
         return glb_images
 
 
+def rmv_first_reflection_fermat_transient(transient: ndarray, file_path: Path = None, store: bool = False) -> ndarray:
+    """
+    Function that given the transient images in the fermat flow shape remove the first reflection leaving only the global component
+    :param transient: input transient images
+    :param file_path: path of the np dataset
+    :param store: if you want to save the np dataset (if already saved set it to false in order to load it)
+    :return: Transient images of only the global component as a np array
+    """
+
+    if file_path and not store:  # If already exists a npy file containing all the transient images load it instead of processing everything again
+        return load(str(file_path))
+
+    print("Extracting the first peak (channel by channel):")
+    start = time()
+
+    mono = len(transient.shape) == 2  # Check id=f the images are Mono or RGBA
+
+    if not mono:
+        peaks = [nanargmax(transient[:, :, channel_i], axis=1) for channel_i in tqdm(range(transient.shape[2]))]  # Find the index of the maximum value in the third dimension
+    else:
+        peaks = nanargmax(transient, axis=0)  # Find the index of the maximum value in the third dimension
+
+    # Extract the position of the first zero after the first peak and remove the first reflection
+    print("Remove the first peak (channel by channel):")
+    sleep(0.1)
+
+    glb_images = copy(transient)
+    first_direct = transient.shape[1]
+    if not mono:
+        for channel_i in tqdm(range(transient.shape[2])):
+            for pixel in range(transient.shape[0]):
+                zeros_pos = where(transient[pixel, :, channel_i] == 0)[0]
+                valid_zero_indexes = zeros_pos[where(zeros_pos > peaks[channel_i][pixel])]
+                if valid_zero_indexes.size == 0:
+                    glb_images[pixel, :, channel_i] = -2
+                else:
+                    glb_images[pixel, :int(valid_zero_indexes[0]), channel_i] = -1
+                    if valid_zero_indexes[0] < first_direct:
+                        first_direct = valid_zero_indexes[0]
+        print("Shift the transient vector so the global always start at t=0:")
+        sleep(0.1)
+        glb_images_shifted = zeros([transient.shape[0], transient.shape[1] - first_direct, transient.shape[2]])
+        for channel_i in tqdm(range(transient.shape[2])):
+            for pixel in range(transient.shape[0]):
+                if glb_images[pixel, 0, channel_i] != -2:
+                    shifted_transient = delete(glb_images[pixel, :, channel_i], [where(glb_images[pixel, :, channel_i] == -1)])
+                    glb_images_shifted[pixel, :shifted_transient.shape[0], channel_i] = shifted_transient
+    else:
+        for pixel in tqdm(range(transient.shape[1])):
+            zeros_pos = where(transient[pixel, :] == 0)[0]
+            valid_zero_indexes = zeros_pos[where(zeros_pos > peaks[pixel])]
+            if valid_zero_indexes.size == 0:
+                glb_images[pixel, :] = -2
+            else:
+                glb_images[pixel, :int(valid_zero_indexes[0])] = -1
+        print("Shift the transient vector so the global always start at t=0:")
+        sleep(0.1)
+        glb_images_shifted = zeros([transient.shape[0], transient.shape[1] - first_direct])
+        for pixel in range(transient.shape[0]):
+            if glb_images[pixel, 0] != -2:
+                shifted_transient = delete(glb_images[pixel, :], [where(glb_images[pixel, :] == -1)])
+                glb_images_shifted[pixel, :shifted_transient.shape[0]] = shifted_transient
+
+    end = time()
+    print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
+
+    if file_path and store:
+        save(str(file_path), glb_images_shifted)  # Save the loaded images as a numpy array
+        return glb_images_shifted
+
+
 def transient_loader(img_path, np_path=None, store=False):
     """
     Function that starting from the raw mitsuba transient output load the transient and reshape it
@@ -350,6 +481,35 @@ def transient_loader(img_path, np_path=None, store=False):
         if store:
             save(str(np_path), images)  # Save the loaded images as a numpy array
         return images
+
+
+def grid_transient_loader(transient_path: Path, np_path: Path = None, store: bool = False) -> ndarray:
+    """
+    Function that starting from the raw mitsuba transient output load the transient and reshape it
+    :param transient_path: path of the transient images
+    :param np_path: path of the np dataset
+    :param store: boolean value that determines if we want to store the loaded transient in np format
+    :return: a np array containing all the transient
+    """
+
+    if np_path and not store:  # If already exists a npy file containing all the transient images load it instead of processing everything again
+        return load(str(np_path))
+    else:
+        folder_path = ut.read_folders(folder_path=transient_path, reorder=True)
+        dw = InputFile(ut.reed_files(str(folder_path[0]), "exr")[0]).header()['dataWindow']  # Extract the data window dimension from the header of the exr file
+        size = (dw.max.x - dw.min.x + 1, dw.max.y - dw.min.y + 1)  # Define the actual size of the image
+        transient = empty([len(folder_path), size[0], 3])
+        print("Loading all the transient data:\n")
+        for index, img_path in tqdm(enumerate(folder_path)):
+            files = ut.reed_files(str(img_path), "exr")  # Load the path of all the files in the input folder with extension .exr
+            channels = reshape_frame(files, verbose=False)  # Reshape the frame in a standard layout
+            images = img_matrix(channels, verbose=False)  # Create the image files
+            transient[index, :] = images[:, 0, 0, :-1]
+        transient[where(transient < 0)] = 0  # Remove from the transient all the negative data
+        if store:
+            save(str(np_path), transient)  # Save the loaded images as a numpy array
+        print("Loading completed")
+        return transient
 
 
 def histo_plt(radiance, exp_time, interval=None, stem=True, file_path=None):
@@ -412,7 +572,7 @@ def histo_plt(radiance, exp_time, interval=None, stem=True, file_path=None):
         plt.setp(stemlines, color="black")
         plt.setp(baseline, linestyle=" ", color="black", linewidth=1, visible=False)
         plt.setp(markers, color="black", markersize=1)
-        plt.xticks([round(value * exp_time / 3e8 * unit_of_measure, 1) for value in range(plt_start_pos, plt_end_pos + 1, 10)], rotation=45)
+        plt.xticks([round(value * exp_time / 3e8 * unit_of_measure, 1) for value in range(plt_start_pos[0], plt_end_pos[0] + 1, 10)], rotation=45)
         plt.xlabel(f"Time instants [{unit_of_measure_name}]")
         plt.ylabel(r"Radiance value [$W/(m^{2}·sr)$]")
         plt.grid()
@@ -467,3 +627,75 @@ def compute_distance(transient: ndarray, fov: float, exp_time: float) -> float:
     angle = tan(fov)  # compute the angle from the formula: fov = arctan(distance/2*f)
 
     return round(radial_dist * cos(angle), 3)  # Convert the radial distance in cartesian distance and return it
+
+
+def clean_transient_tail(transient: ndarray, n_samples: int) -> ndarray:
+    """
+    Function that clean the tail of a transient measurements removing all the noise data that are located far from the actual data
+    :param transient: single transient vector
+    :param n_samples: number of empty samples after which the transient will be set to zero ( ignoring the gap between drect and global)
+    :return: the transient vector with a cleaned tail
+    """
+
+    mono = len(transient.shape) == 1  # Check if the provided transient is multichannel or not
+    peaks, _ = extract_peak(transient)  # Extract the position of the direct component from all the three channels
+
+    if not mono:  # If the transient is multichannel:
+        for c_index in range(transient.shape[1]):  # Perform the cleanup channel by channel
+            zeros_pos = where(transient[:, c_index] == 0)[0]  # Find all the zeros in the transient
+            first_zero_after_peak = zeros_pos[where(zeros_pos > peaks[c_index])][0]  # Find the position of the first zero after the direct component to identify where the direct ends
+            non_zero_pos = where(transient[:, c_index] != 0)[0]  # Find where the transient is not set to zero
+            non_zero_pos = non_zero_pos[where(non_zero_pos > first_zero_after_peak)]  # Keep only the positions in the global component
+            for i in range(1, len(non_zero_pos)):
+                if n_samples < non_zero_pos[i] - non_zero_pos[i - 1]:  # Check if there is a gap between two non-zero value greater than <n_samples>
+                    transient[non_zero_pos[i]:, c_index] = 0  # If that is the case from that poit on set the transient to zero
+                    break  # Break the cycle and move on
+            pass
+    else:  # If the transient is mono do the same as the multichannel case without the cycle on the channels
+        zeros_pos = where(transient == 0)[0]
+        first_zero_after_peak = zeros_pos[where(zeros_pos > peaks)][0]
+        non_zero_pos = where(transient != 0)[0]
+        non_zero_pos = non_zero_pos[where(non_zero_pos > first_zero_after_peak)]
+        for i in range(1, len(non_zero_pos)):
+            if n_samples < non_zero_pos[i] - non_zero_pos[i - 1] < 200:
+                transient[non_zero_pos[i]:] = 0
+                break
+    return transient
+
+
+def active_beans_percentage(transient: ndarray) -> float:
+    """
+    Function that compute the percentage of active beans given a transient vector (single channel)
+    :param transient: single channel transient vector
+    :return: the percentage value
+    """
+
+    non_zero_beans = where(transient != 0)[0]  # Find all the non-zero bins
+    return len(non_zero_beans) / len(transient) * 100  # Divide the number of active bins (len(non_zero_beans)) by the total number of bins (len(transient)) and multiply by 100 (in order to obtain a percentage)
+
+
+def rmv_sparse_fermat_transient(transients: ndarray, channel: int, threshold: int, remove_data: bool) -> ndarray:
+    """
+    Function that delete or set to zero all the transient that have an active bins percentage lower than <threshold>
+    :param transients: transient vectors (set in the fermat flow setup)
+    :param channel: chose which channel to check (0 = red, 1 = green, 2 = blu)
+    :param threshold: percentage value below which the transient will be discarded
+    :param remove_data: flag that decide if the data will be removed or simply set to zero
+    :return: cleaned transient
+    """
+
+    indexes = []  # List that will contain the indexes of all the transient row that will be discarded
+    for i in range(transients.shape[0]):  # Analyze each transient one by one
+        peaks, _ = extract_peak(transients[i, :, :])  # Extract the position of the direct component in all the three channel
+        peak = peaks[channel]  # Keep only the information about the channel of interest
+        zeros_pos = where(transients[i, :, channel] == 0)[0]  # Find where all the zeros are located
+        first_zero_after_peak = zeros_pos[where(zeros_pos > peak)][0]  # Keep only the first zero after the direct component
+        if active_beans_percentage(transients[i, first_zero_after_peak:, channel]) < threshold:  # If the percentage of active bins in the global component is below th threshold:
+            if remove_data:  # If remove_data is set to True:
+                indexes.append(i)  # Add the considered row index to the indexes list
+            else:  # If remove_data is set to False:
+                transients[i, :, :] = 0  # Set to zero all the row
+    if remove_data:  # If remove_data is set to True:
+        return delete(transients, indexes, axis=0)  # Remove all the row which index is inside the indexes list
+    else:  # If remove_data is set to False:
+        return transients  # Return the transient with the modification applied
