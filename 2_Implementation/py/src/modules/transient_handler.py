@@ -3,7 +3,7 @@ from time import time, sleep
 from modules import utilities as ut
 from OpenEXR import InputFile
 from cv2 import VideoWriter, VideoWriter_fourcc, destroyAllWindows, cvtColor, COLOR_RGB2BGR
-from numpy import empty, shape, where, divide, copy, save, load, ndarray, arange, matmul, concatenate, cos, sin, tan, delete, zeros
+from numpy import empty, shape, where, divide, copy, save, load, ndarray, arange, matmul, concatenate, cos, sin, tan
 from numpy import isnan, nansum, nanargmax, nanmax, nanmin
 from numpy import uint8, float32
 from modules import exr_handler as exr
@@ -392,77 +392,6 @@ def rmv_first_reflection_img(images, file_path=None, store=False):
         return glb_images
 
 
-def rmv_first_reflection_fermat_transient(transient: ndarray, file_path: Path = None, store: bool = False) -> ndarray:
-    """
-    Function that given the transient images in the fermat flow shape remove the first reflection leaving only the global component
-    :param transient: input transient images
-    :param file_path: path of the np dataset
-    :param store: if you want to save the np dataset (if already saved set it to false in order to load it)
-    :return: Transient images of only the global component as a np array
-    """
-
-    if file_path and not store:  # If already exists a npy file containing all the transient images load it instead of processing everything again
-        return load(str(file_path))
-
-    print("Extracting the first peak (channel by channel):")
-    start = time()
-
-    mono = len(transient.shape) == 2  # Check id=f the images are Mono or RGBA
-
-    if not mono:
-        peaks = [nanargmax(transient[:, :, channel_i], axis=1) for channel_i in tqdm(range(transient.shape[2]))]  # Find the index of the maximum value in the third dimension
-    else:
-        peaks = nanargmax(transient, axis=0)  # Find the index of the maximum value in the third dimension
-
-    # Extract the position of the first zero after the first peak and remove the first reflection
-    print("Remove the first peak (channel by channel):")
-    sleep(0.1)
-
-    glb_images = copy(transient)
-    first_direct = transient.shape[1]
-    if not mono:
-        for channel_i in tqdm(range(transient.shape[2])):
-            for pixel in range(transient.shape[0]):
-                zeros_pos = where(transient[pixel, :, channel_i] == 0)[0]
-                valid_zero_indexes = zeros_pos[where(zeros_pos > peaks[channel_i][pixel])]
-                if valid_zero_indexes.size == 0:
-                    glb_images[pixel, :, channel_i] = -2
-                else:
-                    glb_images[pixel, :int(valid_zero_indexes[0]), channel_i] = -1
-                    if valid_zero_indexes[0] < first_direct:
-                        first_direct = valid_zero_indexes[0]
-        print("Shift the transient vector so the global always start at t=0:")
-        sleep(0.1)
-        glb_images_shifted = zeros([transient.shape[0], transient.shape[1] - first_direct, transient.shape[2]])
-        for channel_i in tqdm(range(transient.shape[2])):
-            for pixel in range(transient.shape[0]):
-                if glb_images[pixel, 0, channel_i] != -2:
-                    shifted_transient = delete(glb_images[pixel, :, channel_i], [where(glb_images[pixel, :, channel_i] == -1)])
-                    glb_images_shifted[pixel, :shifted_transient.shape[0], channel_i] = shifted_transient
-    else:
-        for pixel in tqdm(range(transient.shape[1])):
-            zeros_pos = where(transient[pixel, :] == 0)[0]
-            valid_zero_indexes = zeros_pos[where(zeros_pos > peaks[pixel])]
-            if valid_zero_indexes.size == 0:
-                glb_images[pixel, :] = -2
-            else:
-                glb_images[pixel, :int(valid_zero_indexes[0])] = -1
-        print("Shift the transient vector so the global always start at t=0:")
-        sleep(0.1)
-        glb_images_shifted = zeros([transient.shape[0], transient.shape[1] - first_direct])
-        for pixel in range(transient.shape[0]):
-            if glb_images[pixel, 0] != -2:
-                shifted_transient = delete(glb_images[pixel, :], [where(glb_images[pixel, :] == -1)])
-                glb_images_shifted[pixel, :shifted_transient.shape[0]] = shifted_transient
-
-    end = time()
-    print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
-
-    if file_path and store:
-        save(str(file_path), glb_images_shifted)  # Save the loaded images as a numpy array
-        return glb_images_shifted
-
-
 def transient_loader(img_path, np_path=None, store=False):
     """
     Function that starting from the raw mitsuba transient output load the transient and reshape it
@@ -672,30 +601,3 @@ def active_beans_percentage(transient: ndarray) -> float:
 
     non_zero_beans = where(transient != 0)[0]  # Find all the non-zero bins
     return len(non_zero_beans) / len(transient) * 100  # Divide the number of active bins (len(non_zero_beans)) by the total number of bins (len(transient)) and multiply by 100 (in order to obtain a percentage)
-
-
-def rmv_sparse_fermat_transient(transients: ndarray, channel: int, threshold: int, remove_data: bool) -> ndarray:
-    """
-    Function that delete or set to zero all the transient that have an active bins percentage lower than <threshold>
-    :param transients: transient vectors (set in the fermat flow setup)
-    :param channel: chose which channel to check (0 = red, 1 = green, 2 = blu)
-    :param threshold: percentage value below which the transient will be discarded
-    :param remove_data: flag that decide if the data will be removed or simply set to zero
-    :return: cleaned transient
-    """
-
-    indexes = []  # List that will contain the indexes of all the transient row that will be discarded
-    for i in range(transients.shape[0]):  # Analyze each transient one by one
-        peaks, _ = extract_peak(transients[i, :, :])  # Extract the position of the direct component in all the three channel
-        peak = peaks[channel]  # Keep only the information about the channel of interest
-        zeros_pos = where(transients[i, :, channel] == 0)[0]  # Find where all the zeros are located
-        first_zero_after_peak = zeros_pos[where(zeros_pos > peak)][0]  # Keep only the first zero after the direct component
-        if active_beans_percentage(transients[i, first_zero_after_peak:, channel]) < threshold:  # If the percentage of active bins in the global component is below th threshold:
-            if remove_data:  # If remove_data is set to True:
-                indexes.append(i)  # Add the considered row index to the indexes list
-            else:  # If remove_data is set to False:
-                transients[i, :, :] = 0  # Set to zero all the row
-    if remove_data:  # If remove_data is set to True:
-        return delete(transients, indexes, axis=0)  # Remove all the row which index is inside the indexes list
-    else:  # If remove_data is set to False:
-        return transients  # Return the transient with the modification applied

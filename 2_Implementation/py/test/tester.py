@@ -1,3 +1,4 @@
+import modules.fermat_tools
 from modules import utilities as ut, transient_handler as tr
 from pathlib import Path
 import os
@@ -126,11 +127,11 @@ if __name__ == '__main__':
                          stem=True,
                          file_path=arg_out / "hists" / f"transient_histograms{i}.svg")
         '''
-        ut.np2mat(data=transient,
-                  file_path=arg_out / "cube",
-                  data_grid_size=[32, 16],
-                  img_shape=[320, 240],
-                  exp_time=0.01)
+        modules.fermat_tools.np2mat(data=transient,
+                                    file_path=arg_out / "cube",
+                                    data_grid_size=[32, 16],
+                                    img_shape=[320, 240],
+                                    exp_time=0.01)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
