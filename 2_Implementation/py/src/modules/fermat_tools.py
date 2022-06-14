@@ -12,6 +12,8 @@ from modules import transient_handler as tr
 from modules.transient_handler import extract_peak, active_beans_percentage
 from modules.utilities import add_extension, spot_bitmap_gen
 
+from matplotlib import pyplot as plt
+
 
 def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list, exp_time: float = 0.01, laser_pos: list = None) -> None:
     """
@@ -29,17 +31,20 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
     pattern_interval = (int(img_shape[0] / data_grid_size[0]), int(img_shape[1] / data_grid_size[1]))
 
     # Define all the required vectors for the .mat file
-    data_grid_size = array(data_grid_size, dtype=float64)  # Convert the data_grid_size from a list to an ndarray
+    data_grid_size = array(data_grid_size, dtype=float64)  # Convert the data_grid_size from a list to a ndarray
 
     mask = spot_bitmap_gen(img_size=img_shape,
                            pattern=pattern_interval)  # Define the mask that identify the location of the illuminated spots
+
     k = array([[276.2621, 0, 159.5],
                [0, 276.2621, 119.5],
                [0, 0, 1]], dtype=float32)  # Define the intrinsic camera matrix needed to map the dots on the LOS wall
     transient_image = build_matrix_from_dot_projection_data(transient=data, mask=mask)  # Put all the transient data in the right spot following the mask
     depthmap = compute_los_points_coordinates(images=transient_image,
                                               mask=mask,
-                                              k_matrix=k)[:, :, :-1]  # Compute the mapping of the coordinate of the illuminated spots to the LOS wall (ignor the z coordinate)
+                                              k_matrix=k,
+                                              channel=1,
+                                              exp_time=0.01)[:, :, :-1]  # Compute the mapping of the coordinate of the illuminated spots to the LOS wall (ignor the z coordinate)
     det_locs = coordinates_matrix_reshape(data=depthmap, shape=(int(data_grid_size[0]), int(data_grid_size[1])))  # Reshape the coordinate value, putting the coordinate of each row one on the bottom of the previous one
 
     if laser_pos is None:   # If laser_pos is not provided it means that the laser is confocal with the camera
@@ -48,11 +53,11 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
         src_loc = array(laser_pos, dtype=float32)
 
     data = rmv_first_reflection_fermat_transient(transient=data, file_path=np_file_path, store=(not exists(np_file_path)))  # Remove the direct component from all the transient data
-
+    tmp = copy(data)
     data = reshape_fermat_transient(transient=data[:, :, 1],
                                     grid_shape=(int(data_grid_size[1]), int(data_grid_size[0])),
-                                    flip_x=True,
-                                    flip_y=True)  # Reshape the transient data in order to be in the same format used in the Fermat Flow algorithm
+                                    flip_x=False,
+                                    flip_y=False)  # Reshape the transient data in order to be in the same format used in the Fermat Flow algorithm
     data = data[2*16:20*16, :]
     det_locs = det_locs[2*16:20*16, :]
 
@@ -124,12 +129,14 @@ def undistort_depthmap(dph, dm, k_ideal, k_real, d_real):
     return depthmap, mask_valid_positive, radial_dir
 
 
-def compute_los_points_coordinates(images: ndarray, mask: ndarray, k_matrix: ndarray) -> ndarray:
+def compute_los_points_coordinates(images: ndarray, mask: ndarray, k_matrix: ndarray, channel: int, exp_time: float) -> ndarray:
     """
     Function that compute the coordinates of the projected points on the LOS wall
     :param images: transient information
     :param mask: position of the point on the bitmap
     :param k_matrix: intrinsic camera matrix
+    :param channel: integer that identify the channel of interest (0 = red, 1 = green, 2 = blue)
+    :param exp_time: used exposure time
     :return: matrix where the first dimension contains the x coordinates, the second one the y coordinates and the third one the depth information
     """
 
@@ -138,11 +145,11 @@ def compute_los_points_coordinates(images: ndarray, mask: ndarray, k_matrix: nda
     for i in range(mask.shape[0]):
         for j in range(mask.shape[1]):
             if mask[i, j] != 0:
-                dph[i, j] = tr.compute_radial_distance(peak_pos=tr.extract_peak(images[:, i, j, :])[0][1], exposure_time=0.01)
+                dph[i, j] = tr.compute_radial_distance(peak_pos=tr.extract_peak(images[:, i, j, :])[0][channel], exposure_time=exp_time)
 
     # Compute the depthmap and coordinates
     depthmap, _, _ = undistort_depthmap(dph=dph,
-                                        dm="RADIAL",
+                                        dm="STANDARD",
                                         k_ideal=k_matrix,
                                         k_real=k_matrix,
                                         d_real=array([[0, 0, 0, 0, 0]], dtype=float32))
@@ -198,6 +205,10 @@ def reshape_fermat_transient(transient: ndarray, grid_shape: tuple, flip_x: bool
     :return: the transient values rearranged to follow the Fermat Flow requirements
     """
 
+    if flip_x:
+        for i in range(0, transient.shape[0], grid_shape[1]):
+            transient[i:(i + grid_shape[1]), :] = flip(transient[i:(i + grid_shape[1]), :], axis=0)  # If flip_x is True revers the order of the data in the x coordinate
+
     reshaped_transient = zeros(transient.shape)  # Initialize a ndarray full of zeros of the same size of the input transient one
     index = 0  # Initialize to zero the index that will cycle through the original transient vector
     for column_index in range(grid_shape[1]):  # Cycle column by column
@@ -205,11 +216,9 @@ def reshape_fermat_transient(transient: ndarray, grid_shape: tuple, flip_x: bool
             reshaped_transient[index] = transient[row_index*grid_shape[1] + column_index]  # Put the right column value in the new transient vector
             index += 1  # Update the index
 
-    if flip_x:
-        reshaped_transient = flip(reshaped_transient, axis=0)  # If flip_x is True revers the order of the data in the x coordinate
     if flip_y:
         for i in range(0, reshaped_transient.shape[0], grid_shape[0]):
-            reshaped_transient[i:(i + grid_shape[0]), :] = flip(reshaped_transient[i:(i + grid_shape[0]), :], axis=0)  # If flip_x is True revers the order of the data in the x coordinate
+            reshaped_transient[i:(i + grid_shape[0]), :] = flip(reshaped_transient[i:(i + grid_shape[0]), :], axis=0)  # If flip_y is True revers the order of the data in the x coordinate
 
     return reshaped_transient
 
@@ -234,7 +243,7 @@ def rmv_first_reflection_fermat_transient(transient: ndarray, file_path: Path = 
     if not mono:
         peaks = [nanargmax(transient[:, :, channel_i], axis=1) for channel_i in tqdm(range(transient.shape[2]))]  # Find the index of the maximum value in the third dimension
     else:
-        peaks = nanargmax(transient, axis=0)  # Find the index of the maximum value in the third dimension
+        peaks = nanargmax(transient, axis=1)  # Find the index of the maximum value in the third dimension
 
     # Extract the position of the first zero after the first peak and remove the first reflection
     print("Remove the first peak (channel by channel):")
