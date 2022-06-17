@@ -99,9 +99,12 @@ if __name__ == '__main__':
         images = tr.transient_loader(img_path=arg_in,
                                      np_path=arg_out / "np_transient.npy",
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        phz = tr.phi(freqs=np.array((20e06, 50e06, 60e06), dtype=np.float32),
+        freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
+        phi = tr.phi(freqs=freqs,
                      exp_time=0.01,
-                     dim_t=2000)
+                     dim_t=images.shape[0])
+
+        tr.plot_phi(phi_matrix=phi, freq_values=freqs, file_path=arg_out / "phi", exp_time=0.01)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))

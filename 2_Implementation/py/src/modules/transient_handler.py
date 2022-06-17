@@ -1,3 +1,4 @@
+import numpy as np
 from tqdm import tqdm
 from time import time, sleep
 from modules import utilities as ut
@@ -40,7 +41,7 @@ def reshape_frame(files, verbose=False):
         # Define an empty matrix of size image_height x image_width x temporal_samples for each channel
         frame = empty([len(files), size[1], size[0]], dtype=float32)
 
-    for index, file in enumerate(tqdm(files, position=1, leave=False)):  # For each provided file in the input folder
+    for index, file in enumerate(tqdm(files, desc="reshaping frame", leave=None)):  # For each provided file in the input folder
         img = exr.load_exr(file)
 
         # Perform the reshaping saving the results in frame_i for i in A, R,G , B
@@ -84,7 +85,7 @@ def img_matrix(channels, verbose=True):
             sleep(0.02)
         images = empty([shape(channels[0])[2], shape(channels[0])[0], shape(channels[0])[1], len(channels)], dtype=float32)  # Empty array that will contain all the images
         # Fuse the channels together to obtain a proper [A, R, G, B] image
-        for i in tqdm(range(shape(channels[0])[2]), position=1, leave=False):
+        for i in tqdm(range(shape(channels[0])[2]), desc="generating images", leave=None):
             images[i, :, :, 0] = channels[1][:, :, i]
             images[i, :, :, 1] = channels[2][:, :, i]
             images[i, :, :, 2] = channels[3][:, :, i]
@@ -429,7 +430,7 @@ def grid_transient_loader(transient_path: Path, np_path: Path = None, store: boo
         size = (dw.max.x - dw.min.x + 1, dw.max.y - dw.min.y + 1)  # Define the actual size of the image
         transient = empty([len(folder_path), size[0], 3])
         print("Loading all the transient data:\n")
-        for index, img_path in tqdm(enumerate(folder_path)):
+        for index, img_path in enumerate(tqdm(folder_path, desc="loading files")):
             files = ut.reed_files(str(img_path), "exr")  # Load the path of all the files in the input folder with extension .exr
             channels = reshape_frame(files, verbose=False)  # Reshape the frame in a standard layout
             images = img_matrix(channels, verbose=False)  # Create the image files
@@ -601,3 +602,46 @@ def active_beans_percentage(transient: ndarray) -> float:
 
     non_zero_beans = where(transient != 0)[0]  # Find all the non-zero bins
     return len(non_zero_beans) / len(transient) * 100  # Divide the number of active bins (len(non_zero_beans)) by the total number of bins (len(transient)) and multiply by 100 (in order to obtain a percentage)
+
+
+def plot_phi(phi_matrix: ndarray, freq_values: ndarray, file_path: Path = None, exp_time: float = 0.01) -> None:
+    """
+    Function to plot the sine of the phi matrix
+    :param phi_matrix: phi matrix data
+    :param freq_values: used frequencies values
+    :param file_path: file path + name where to save the plot (if not provided the plot will not be saved)
+    :param exp_time: exposure_time
+    """
+
+    file_path = ut.add_extension(str(file_path), ".svg")  # If necessary add the .svg extension to the file name
+
+    # Define the scale on the xaxis based on the exposure time value
+    if str(exp_time).split(".")[0] == "0":
+        unit_of_measure = 1e9  # nano seconds
+        unit_of_measure_name = "ns"
+    else:
+        unit_of_measure = 1e6  # nano seconds
+        unit_of_measure_name = r"$\mu s$"
+
+    fig, axs = plt.subplots(3, 2, figsize=(10, 10))  # Create the figure of the plot
+    index = 0  # Index used to select the right phi value to plot
+    for c in range(2):
+        for r in range(3):
+            axs[r, c].plot(phi_matrix[index, :])  # Plot the phi values
+            axs[r, c].set_xticks(range(0, phi_matrix.shape[1] + 1, 500))  # Put a tick on the x-axis every 500 time bins
+            axs[r, c].set_xticklabels(["{:.2f}".format(round(value * exp_time / 3e8 * unit_of_measure, 2)) for value in range(0, phi_matrix.shape[1] + 1, 500)])  # Change the labels of the x-axis in order to display the time delay in the right unit of measure
+            if c == 0:
+                axs[r, c].title.set_text(f"Cosine at freq.: {np.format_float_scientific(freq_values[r], trim='-', exp_digits=1)} Hz")  # Add a title to each subplot
+            else:
+                axs[r, c].title.set_text(f"Sine at freq.: {np.format_float_scientific(freq_values[r], trim='-', exp_digits=1)} Hz")  # Add a title to each subplot
+            axs[r, c].set_xlabel(f"Time instants [{unit_of_measure_name}]")  # Define the label on the x-axis using the correct unit of measure
+            axs[r, c].grid()  # Add the grid
+            index += 1
+    fig.tight_layout()  # adapt the subplots dimension to the one of the figure
+
+    if file_path is not None:
+        plt.savefig(file_path)  # If a path is provided save the plot
+    else:
+        plt.show()  # Otherwise display it
+
+    plt.close()

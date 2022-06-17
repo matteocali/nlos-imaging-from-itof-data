@@ -4,15 +4,13 @@ from time import time, sleep
 
 from cv2 import fisheye, CV_16SC2, remap, INTER_LINEAR, undistort, initUndistortRectifyMap
 from numpy import ndarray, array, float64, float32, eye, divide, tile, arange, zeros_like, linalg, zeros, dot, asarray, \
-    stack, reshape, flip, load, nanargmax, copy, where, delete, save
+    stack, reshape, flip, load, nanargmax, copy, where, delete, save, nonzero, cross, sqrt, concatenate, matmul, unique, subtract, negative
 from scipy import io
 from tqdm import tqdm
 
 from modules import transient_handler as tr
 from modules.transient_handler import extract_peak, active_beans_percentage
-from modules.utilities import add_extension, spot_bitmap_gen
-
-from matplotlib import pyplot as plt
+from modules.utilities import add_extension, spot_bitmap_gen, plt_3d_surfaces
 
 
 def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list, exp_time: float = 0.01, laser_pos: list = None) -> None:
@@ -44,8 +42,15 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
                                               mask=mask,
                                               k_matrix=k,
                                               channel=1,
-                                              exp_time=0.01)[:, :, :-1]  # Compute the mapping of the coordinate of the illuminated spots to the LOS wall (ignor the z coordinate)
-    det_locs = coordinates_matrix_reshape(data=depthmap, shape=(int(data_grid_size[0]), int(data_grid_size[1])))  # Reshape the coordinate value, putting the coordinate of each row one on the bottom of the previous one
+                                              exp_time=0.01)  # Compute the mapping of the coordinate of the illuminated spots to the LOS wall (ignor the z coordinate)
+    rt_depthmap = roto_transl(coordinates_matrix=copy(depthmap))  # Roto-translate the coordinates point in order to move from the camera coordinates system to the world one and also move the plane to be on the plane z = 0
+    det_locs = coordinates_matrix_reshape(data=rt_depthmap[:, :, :-1],
+                                          mask=mask)  # Reshape the coordinate value, putting the coordinate of each row one on the bottom of the previous one
+    '''
+    plt_3d_surfaces(surfaces=(depthmap, rt_depthmap),
+                    mask=mask,
+                    legends=("Original plane", "Roto-translated plane"))
+    '''
 
     if laser_pos is None:   # If laser_pos is not provided it means that the laser is confocal with the camera
         src_loc = array((), dtype=float32)
@@ -53,7 +58,6 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
         src_loc = array(laser_pos, dtype=float32)
 
     data = rmv_first_reflection_fermat_transient(transient=data, file_path=np_file_path, store=(not exists(np_file_path)))  # Remove the direct component from all the transient data
-    tmp = copy(data)
     data = reshape_fermat_transient(transient=data[:, :, 1],
                                     grid_shape=(int(data_grid_size[1]), int(data_grid_size[0])),
                                     flip_x=False,
@@ -149,12 +153,12 @@ def compute_los_points_coordinates(images: ndarray, mask: ndarray, k_matrix: nda
 
     # Compute the depthmap and coordinates
     depthmap, _, _ = undistort_depthmap(dph=dph,
-                                        dm="STANDARD",
+                                        dm="RADIAL",
                                         k_ideal=k_matrix,
                                         k_real=k_matrix,
                                         d_real=array([[0, 0, 0, 0, 0]], dtype=float32))
 
-    return depthmap
+    return depthmap.astype(float32)
 
 
 def build_matrix_from_dot_projection_data(transient: ndarray, mask: ndarray) -> ndarray:
@@ -176,15 +180,17 @@ def build_matrix_from_dot_projection_data(transient: ndarray, mask: ndarray) -> 
     return matrix
 
 
-def coordinates_matrix_reshape(data: ndarray, shape: tuple) -> ndarray:
+def coordinates_matrix_reshape(data: ndarray, mask: ndarray) -> ndarray:
     """
     Function that remove all the zeros in the coordinates and reshape it in a way that it contains the coordinates of each row one on the bottom of the other
     :param data: coordinates matrix
-    :param shape: shape of the matrix without zeros
+    :param mask: matrix that identify the used grid
     :return: reshaped coordinates matrix (z=0)
     """
 
-    data = reshape(data[data != 0], [shape[1], shape[0], 2])  # Remove all the zero values
+    shape = [len(unique(where(mask != 0)[i])) for i in range(2)]
+    data = reshape(data[mask != 0], [shape[0], shape[1], 2])  # Remove all the zero values
+
     matrix = zeros([data.shape[0]*data.shape[1], 3])  # Create the final matrix (full of zeros)
     m_index = 0
     for i in range(data.shape[1]):
@@ -319,3 +325,70 @@ def rmv_sparse_fermat_transient(transients: ndarray, channel: int, threshold: in
         return delete(transients, indexes, axis=0)  # Remove all the row which index is inside the indexes list
     else:  # If remove_data is set to False:
         return transients  # Return the transient with the modification applied
+
+
+def nearest_nonzero_idx(matrix: ndarray, x: int, y: int) -> tuple:
+    """
+    Function to find the closest non-zero element to the point (x, y)
+    (code from: https://stackoverflow.com/questions/43306291/find-the-nearest-nonzero-element-and-corresponding-index-in-a-2d-numpy-array)
+    :param matrix: 2D data matrix where to search the location
+    :param x: x coordinate of the point of interest
+    :param y: y coordinate of the point of interest
+    :return: the (x, y) coordinate of the nearest non-zero point
+    """
+
+    tmp = matrix[x, y]
+    matrix[x, y] = 0
+    r, c = nonzero(matrix)
+    matrix[x, y] = tmp
+    min_idx = ((r - x)**2 + (c - y)**2).argmin()
+    return r[min_idx], c[min_idx]
+
+
+def roto_transl(coordinates_matrix: ndarray) -> ndarray:
+    """
+    Function that move the given coordinates from the camera coordinates system to the one of the world making sure that the points stays on the plane z=0
+    :param coordinates_matrix: coordinates matrix in the camera system
+    :return: coordinates matrix in te word system
+    """
+
+    center_pos = (int(coordinates_matrix.shape[0] / 2), int(coordinates_matrix.shape[1] / 2))  # Find the center position on the coordinates matrix
+    nearest_center_pos = nearest_nonzero_idx(coordinates_matrix[:, :, 0], center_pos[0], center_pos[1])  # Find the location of the active poit closest to the real center
+    nearest_center_coord = [coordinates_matrix[nearest_center_pos[0], nearest_center_pos[1], i] for i in range(coordinates_matrix.shape[2])]  # Extract from the coordinates' matrix the coordinates of the point closest to the center
+
+    next_x_pos = nonzero(coordinates_matrix[nearest_center_pos[0], :, 0])[0]  # Find the location of the point on the coordinates' matrix located on the same y of the nearest_center but on the extreme right (max x)
+    next_x_pos = (nearest_center_pos[0], next_x_pos[-1])  # Define the indexes where that point is located in the coordinates' matrix (add the row index)
+    next_y_pos = nonzero(coordinates_matrix[:, nearest_center_pos[1], 0])[0]  # Find the location of the point on the coordinates' matrix located on the same x of the nearest_center but on the extreme top (max y)
+    next_y_pos = (next_y_pos[0], nearest_center_pos[1])  # Define the indexes where that point is located in the coordinates' matrix (add the column index)
+    next_x_coord = coordinates_matrix[next_x_pos[0], next_x_pos[1], :]  # Extract from the coordinates' matrix the coordinates of next_x
+    next_y_coord = coordinates_matrix[next_y_pos[0], next_y_pos[1], :]  # Extract from the coordinates' matrix the coordinates of next_y
+
+    normal = cross(subtract(next_x_coord, nearest_center_coord), subtract(next_y_coord, nearest_center_coord))  # Compute the normal of the plane making the cross product of the vector between the center and the far right point and of the vector between the center and the far top point
+    normalized_normal = normal / linalg.norm(normal)  # Normalize the normal vector
+
+    n_x = normalized_normal[0]  # x component of the normal vector
+    n_y = normalized_normal[1]  # y component of the normal vector
+    n_z = normalized_normal[2]  # z component of the normal vector
+    sqrt_squared_sum_nx_ny = sqrt((n_x ** 2) + (n_y ** 2))
+    rot_matrix = array([[n_y / sqrt_squared_sum_nx_ny, -n_x / sqrt_squared_sum_nx_ny, 0],
+                        [(n_x * n_z) / sqrt_squared_sum_nx_ny, (n_y * n_z) / sqrt_squared_sum_nx_ny, -sqrt_squared_sum_nx_ny],
+                        [n_x, n_y, n_z]], dtype=float32)  # Build the rotation matrix (code from: https://math.stackexchange.com/questions/1956699/getting-a-transformation-matrix-from-a-normal-vector)
+    o_rot_matrix = array([[0, 1, 0],
+                          [1, 0, 0],
+                          [0, 0, 1]], dtype=float32)  # Define a second rotation matrix to compensate for the rotation 90° over the y-axis
+    rot_matrix = matmul(o_rot_matrix, rot_matrix)  # define the complete rotation matrix multiplying together the two previously defined ones
+
+    tr_vector = matmul(rot_matrix, reshape(nearest_center_coord, [3, 1]), dtype=float32)  # Define a translation vector that aims to center the plane on the nearest_center point
+
+    # Build the final roto-transl matrix
+    rototransl_matrix = concatenate((rot_matrix, negative(tr_vector)), axis=1)  # Add to the left of the rotation matrix the translation one
+    rototransl_matrix = concatenate((rototransl_matrix, array([[0, 0, 0, 1]], dtype=float32)), axis=0)  # Add to the bottom the vector [0 0 0 1]
+
+    non_zero_pos = nonzero(coordinates_matrix[:, :, 0])  # Find the location where the coordinates' matrix is not zero
+    for r in unique(non_zero_pos[0]):
+        for c in unique(non_zero_pos[1]):
+            coord_vector = concatenate((reshape(coordinates_matrix[r, c, :], (3, 1)), array([[1]], dtype=float32)), axis=0)  # For every non-zero point of the coordinates' matrix concatenate a 1 at the end and reshape it from [3], to [3, 1]
+            coordinates_matrix[r, c, :] = matmul(rototransl_matrix, coord_vector, dtype=float32)[:-1, 0]  # Apply the roto-translation to each non-zero point and remove the final 1
+    coordinates_matrix[where(coordinates_matrix == -0.0)] = 0  # Change all the -0.0 to 0
+
+    return coordinates_matrix

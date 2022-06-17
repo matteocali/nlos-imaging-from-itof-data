@@ -1,7 +1,7 @@
 from os.path import dirname
 
 from numpy import sum, linspace, zeros, where, nanmin, nanmax, array, ndarray, copy
-from numpy import uint8, float32
+from numpy import uint8, float32, reshape, unique
 from os import path, listdir, remove, makedirs
 from pathlib import Path
 from glob import glob
@@ -248,3 +248,50 @@ def save_h5(data: ndarray, file_path: Path, name: str = None) -> None:
                            data=data,
                            shape=data.shape,
                            dtype=float32)
+
+
+def plt_3d_surfaces(surfaces: tuple, mask: ndarray = None, x_ticks: tuple = None, y_ticks: tuple = None, z_ticks: tuple = None, legends: tuple = None) -> None:
+    """
+    Function to plot one or more 3d surfaces given a set of 3D points
+    :param surfaces: list of ndarray each one containing the (x, y, z) coordinates of each point of a surface -> [array(surface1), array(surface2), ...]
+    :param mask: (if necessary) represents the grid shape that the data in surfaces follows
+    :param x_ticks: where to put the ticks on the x-axis
+    :param y_ticks: where to put the ticks on the y-axis
+    :param z_ticks: where to put the ticks on the z-axis
+    :param legends: list containing the label for each surfaces
+    """
+
+    fig = plt.figure()  # Create the matplotlib figure
+    plt3d = fig.gca(projection='3d')  # Create the 3D plot
+    plt3d.set_xlabel("X")  # Ad the label on the x-axis
+    plt3d.set_ylabel("Y")  # Ad the label on the y-axis
+    plt3d.set_zlabel("Z")  # Ad the label on the z-axis
+
+    for index, graph in enumerate(surfaces):  # For each surface in the surfaces list
+        if mask is not None:  # If a mask is provided:
+            shape = [len(unique(where(mask != 0)[i])) for i in range(2)]  # Compute the shape of the grd (number of pixel active on the column and row)
+            x = reshape(graph[:, :, 0][mask != 0], [shape[0], shape[1]])  # Remove all the zero values from the 2D x coordinates matrix
+            y = reshape(graph[:, :, 1][mask != 0], [shape[0], shape[1]])  # Remove all the zero values from the 2D y coordinates matrix
+            z = reshape(graph[:, :, 2][mask != 0], [shape[0], shape[1]])  # Remove all the zero values from the 2D z coordinates matrix
+        else:
+            x = graph[:, :, 0]  # Extract from the surfaces' matrix the 2D x coordinates' matrix
+            y = graph[:, :, 1]  # Extract from the surfaces' matrix the 2D y coordinates' matrix
+            z = graph[:, :, 2]  # Extract from the surfaces' matrix the 2D z coordinates' matrix
+        if legends is not None:  # If a legend is provided
+            surf = plt3d.plot_surface(x, y, z, label=legends[index])  # Plot the surface with its related label
+            surf._facecolors2d = surf._facecolor3d  # Necessary to visualize the legend color
+            surf._edgecolors2d = surf._edgecolor3d
+        else:
+            plt3d.plot_surface(x, y, z)  # Plot the surface
+
+    if legends is not None:  # If a legend is provided
+        plt3d.legend()  # Show the legend
+    if x_ticks is not None:  # if a list of x-ticks is provided:
+        plt3d.set_xticks(x_ticks)  # Set the desired ticks
+    if y_ticks is not None:  # if a list of y-ticks is provided:
+        plt3d.set_yticks(y_ticks)  # Set the desired ticks
+    if z_ticks is not None:  # if a list of y-ticks is provided:
+        plt3d.set_zticks(z_ticks)  # Set the desired ticks
+
+    fig.tight_layout()
+    plt.show(block=True)
