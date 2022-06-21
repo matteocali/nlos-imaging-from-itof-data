@@ -134,8 +134,8 @@ if __name__ == '__main__':
                                                  store=(not exists(arg_out / "glb_np_transient.npy")))
         tr.histo_plt(radiance=glb_images[:, 0, 0, :],  # righe:colonne
                      exp_time=arg_exp_time,
-                     interval=None,#[16.5, 18.8],#None,
-                     stem=True,
+                     interval=None,
+                     stem=False,#True,
                      file_path=arg_out / "transient_histograms.svg")
 
         end = time.time()

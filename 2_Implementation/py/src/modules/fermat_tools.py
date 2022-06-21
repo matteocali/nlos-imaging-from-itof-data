@@ -4,13 +4,15 @@ from time import time, sleep
 
 from cv2 import fisheye, CV_16SC2, remap, INTER_LINEAR, undistort, initUndistortRectifyMap
 from numpy import ndarray, array, float64, float32, eye, divide, tile, arange, zeros_like, linalg, zeros, dot, asarray, \
-    stack, reshape, flip, load, nanargmax, copy, where, delete, save, nonzero, cross, sqrt, concatenate, matmul, unique, subtract, negative
+    stack, reshape, flip, load, nanargmax, copy, where, delete, save, nonzero, cross, sqrt, concatenate, matmul, unique, subtract, negative, max
 from scipy import io
 from tqdm import tqdm
 
 from modules import transient_handler as tr
 from modules.transient_handler import extract_peak, active_beans_percentage
 from modules.utilities import add_extension, spot_bitmap_gen, plt_3d_surfaces
+
+from matplotlib import pyplot as plt
 
 
 def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list, exp_time: float = 0.01, laser_pos: list = None) -> None:
@@ -69,7 +71,7 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
     for i in range(1, data.shape[1]):
         temp_bin_centers.append(temp_bin_centers[i - 1] + exp_time)  # For all the following cell simply add the exposure time to the value stored in the previous cell
 
-    io.savemat(str(file_path), mdict={"detGridSize": data_grid_size, "detLocs": det_locs, "srcLoc": src_loc, "temporalBinCenters": temp_bin_centers, "transients": data[:, :]})  # Save the actual .mat file
+    io.savemat(str(file_path), mdict={"detGridSize": data_grid_size, "detLocs": det_locs, "srcLoc": src_loc, "temporalBinCenters": temp_bin_centers, "transients": data})  # Save the actual .mat file
 
 
 def undistort_depthmap(dph, dm, k_ideal, k_real, d_real):
@@ -291,6 +293,32 @@ def rmv_first_reflection_fermat_transient(transient: ndarray, file_path: Path = 
             if glb_images[pixel, 0] != -2:
                 shifted_transient = delete(glb_images[pixel, :], [where(glb_images[pixel, :] == -1)])
                 glb_images_shifted[pixel, :shifted_transient.shape[0]] = shifted_transient
+    '''
+    for k in range(32):
+        r = 0
+        c = 0
+        index = 0
+        fig, ax = plt.subplots(4, 4, figsize=(30, 20))
+        for i in range(0, 16):
+            glb = glb_images_shifted[index, :]
+            trn = copy(transient[index, :])
+            trn[where(trn > max(glb))] = max(glb) + 100
+            ax[r, c].plot(trn, color="b")
+            ax[r, c].plot(glb, color="g")
+            ax[r, c].grid()
+            if (i + 1) % 4 == 0:
+                index = (32 * int((i + 1) / 4)) + (k * 4)
+            else:
+                index += 1
+            if c == 3:
+                c = 0
+                r += 1
+            else:
+                c += 1
+        fig.tight_layout()
+        plt.savefig(f"C:\\Users\\DECaligM\\Documents\\Scenes\\Basic NLOS scenes\\Mitsuba\\cube\\fermat_fow\\mat_files\\quarter_{k}.svg")
+        plt.close()
+    '''
 
     end = time()
     print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
@@ -374,7 +402,7 @@ def roto_transl(coordinates_matrix: ndarray) -> ndarray:
                         [(n_x * n_z) / sqrt_squared_sum_nx_ny, (n_y * n_z) / sqrt_squared_sum_nx_ny, -sqrt_squared_sum_nx_ny],
                         [n_x, n_y, n_z]], dtype=float32)  # Build the rotation matrix (code from: https://math.stackexchange.com/questions/1956699/getting-a-transformation-matrix-from-a-normal-vector)
     o_rot_matrix = array([[0, 1, 0],
-                          [1, 0, 0],
+                          [-1, 0, 0],
                           [0, 0, 1]], dtype=float32)  # Define a second rotation matrix to compensate for the rotation 90° over the y-axis
     rot_matrix = matmul(o_rot_matrix, rot_matrix)  # define the complete rotation matrix multiplying together the two previously defined ones
 
