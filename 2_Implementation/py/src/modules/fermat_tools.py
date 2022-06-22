@@ -64,11 +64,13 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
                                     grid_shape=(int(data_grid_size[1]), int(data_grid_size[0])),
                                     flip_x=False,
                                     flip_y=False)  # Reshape the transient data in order to be in the same format used in the Fermat Flow algorithm
-    #data = data[2*16:20*16, :]
-    #det_locs = det_locs[2*16:20*16, :]
+    data = data[2*16:20*16, :]
+    det_locs = det_locs[2*16:20*16, :]
 
+    '''
     for i in trange(data.shape[0]):
         tr.histo_plt(data[i, :], 0.01, stem=False, file_path=f"C:\\Users\\DECaligM\\Desktop\\hists\\hist_{i}.svg")
+    '''
 
     temp_bin_centers = [exp_time / 2]  # To build the temp_bin_centers it is required to build a vector where each cell contains the center of the correspondent temporal bin, so the first cell contains half the exposure time
     for i in range(1, data.shape[1]):
