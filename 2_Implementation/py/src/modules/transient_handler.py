@@ -452,20 +452,28 @@ def histo_plt(radiance, exp_time, interval=None, stem=True, file_path=None):
     :param file_path: file path where to save
     """
 
+    mono = len(radiance.shape) == 1
+
     if interval is not None:
         plt_start_pos = [int(interval[0] * 3e8 / exp_time*1e-9) for i in range(3)]
         plt_end_pos = [int(interval[1] * 3e8 / exp_time*1e-9) for i in range(3)]
     else:
         try:
-            plt_start_pos = [where(radiance[:, channel] != 0)[0][0] - 10 for channel in range(0, 3)]
-            plt_end_pos = [where(radiance[:, channel] != 0)[0][-1] + 11 for channel in range(0, 3)]
+            if not mono:
+                plt_start_pos = [where(radiance[:, channel] != 0)[0][0] - 10 for channel in range(0, 3)]
+                plt_end_pos = [where(radiance[:, channel] != 0)[0][-1] + 11 for channel in range(0, 3)]
+            else:
+                plt_start_pos = where(radiance != 0)[0][0] - 10
+                plt_end_pos = where(radiance != 0)[0][-1] + 11
         except IndexError:
-            plt_start_pos = [0 for channel in range(0, 3)]
-            plt_end_pos = [len(radiance[:, channel]) for channel in range(0, 3)]
+            if not mono:
+                plt_start_pos = [0 for channel in range(0, 3)]
+                plt_end_pos = [len(radiance[:, channel]) for channel in range(0, 3)]
+            else:
+                plt_start_pos = 0
+                plt_end_pos = len(radiance)
 
     radiance[where(radiance < 0)] = 0
-
-    mono = len(radiance.shape) == 1
 
     # Define the scale on the xaxis
     if str(exp_time).split(".")[0] == "0":
@@ -496,16 +504,21 @@ def histo_plt(radiance, exp_time, interval=None, stem=True, file_path=None):
             axs[i].set_xlabel(f"Time instants [{unit_of_measure_name}]")
             axs[i].set_ylabel(r"Radiance value [$W/(m^{2}·sr)$]")
             axs[i].grid()
+        fig.tight_layout()
     else:
-        markers, stemlines, baseline = plt.stem(range(0, len(radiance[plt_start_pos[0]:plt_end_pos[0]])),
-                                                radiance[plt_start_pos[0]:plt_end_pos[0]])
-        plt.setp(stemlines, color="black")
-        plt.setp(baseline, linestyle=" ", color="black", linewidth=1, visible=False)
-        plt.setp(markers, color="black", markersize=1)
-        plt.xticks([round(value * exp_time / 3e8 * unit_of_measure, 1) for value in range(plt_start_pos[0], plt_end_pos[0] + 1, 10)], rotation=45)
+        fig = plt.figure()
+        if stem:
+            markers, stemlines, baseline = plt.stem(range(0, len(radiance[plt_start_pos:plt_end_pos])), radiance[plt_start_pos:plt_end_pos])
+            plt.setp(stemlines, color="black")
+            plt.setp(baseline, linestyle=" ", color="black", linewidth=1, visible=False)
+            plt.setp(markers, color="black", markersize=1)
+        else:
+            plt.plot(range(0, len(radiance[plt_start_pos:plt_end_pos])), radiance[plt_start_pos:plt_end_pos], color="black")
+        plt.xticks(range(0, len(radiance[plt_start_pos:plt_end_pos]) + 1, int(len(radiance[plt_start_pos:plt_end_pos] + 1) / 13)), ["{:.2f}".format(round(value * exp_time / 3e8 * unit_of_measure, 2)) for value in range(plt_start_pos, plt_end_pos + 1, int(len(radiance[plt_start_pos:plt_end_pos] + 1) / 13))], rotation=45)
         plt.xlabel(f"Time instants [{unit_of_measure_name}]")
         plt.ylabel(r"Radiance value [$W/(m^{2}·sr)$]")
         plt.grid()
+        fig.tight_layout()
     
     if file_path is None:
         plt.show()
