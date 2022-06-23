@@ -283,6 +283,13 @@ def rmv_first_reflection_fermat_transient(transient: ndarray, file_path: Path = 
                 if glb_images[pixel, 0, channel_i] != -2:
                     shifted_transient = delete(glb_images[pixel, :, channel_i], [where(glb_images[pixel, :, channel_i] == -1)])
                     glb_images_shifted[pixel, :shifted_transient.shape[0], channel_i] = shifted_transient
+                    '''
+                    if channel_i == 1:
+                        trn = transient[pixel, :, channel_i].copy()
+                        trn[where(trn > max(glb_images_shifted[pixel, :, channel_i]))] = max(glb_images_shifted[pixel, :, channel_i]) + 100
+                        tr.histo_plt(trn, 0.01, stem=False, interval=[5, 40], file_path=f"C:\\Users\\DECaligM\\Desktop\\hists_3\\normal_hist_{pixel}.svg")
+                        tr.histo_plt(glb_images_shifted[pixel, :, channel_i], 0.01, stem=False, interval=[5, 40], file_path=f"C:\\Users\\DECaligM\\Desktop\\hists_3\\shifted_hist_{pixel}.svg")
+                    '''
     else:
         for pixel in tqdm(range(transient.shape[1])):
             zeros_pos = where(transient[pixel, :] == 0)[0]
@@ -298,32 +305,6 @@ def rmv_first_reflection_fermat_transient(transient: ndarray, file_path: Path = 
             if glb_images[pixel, 0] != -2:
                 shifted_transient = delete(glb_images[pixel, :], [where(glb_images[pixel, :] == -1)])
                 glb_images_shifted[pixel, :shifted_transient.shape[0]] = shifted_transient
-    '''
-    for k in range(32):
-        r = 0
-        c = 0
-        index = 0
-        fig, ax = plt.subplots(4, 4, figsize=(30, 20))
-        for i in range(0, 16):
-            glb = glb_images_shifted[index, :]
-            trn = copy(transient[index, :])
-            trn[where(trn > max(glb))] = max(glb) + 100
-            ax[r, c].plot(trn, color="b")
-            ax[r, c].plot(glb, color="g")
-            ax[r, c].grid()
-            if (i + 1) % 4 == 0:
-                index = (32 * int((i + 1) / 4)) + (k * 4)
-            else:
-                index += 1
-            if c == 3:
-                c = 0
-                r += 1
-            else:
-                c += 1
-        fig.tight_layout()
-        plt.savefig(f"C:\\Users\\DECaligM\\Documents\\Scenes\\Basic NLOS scenes\\Mitsuba\\cube\\fermat_fow\\mat_files\\quarter_{k}.svg")
-        plt.close()
-    '''
 
     end = time()
     print("Process concluded in %.2f sec\n" % (round((end - start), 2)))

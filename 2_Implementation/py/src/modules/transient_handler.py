@@ -455,8 +455,12 @@ def histo_plt(radiance, exp_time, interval=None, stem=True, file_path=None):
     mono = len(radiance.shape) == 1
 
     if interval is not None:
-        plt_start_pos = [int(interval[0] * 3e8 / exp_time*1e-9) for i in range(3)]
-        plt_end_pos = [int(interval[1] * 3e8 / exp_time*1e-9) for i in range(3)]
+        if not mono:
+            plt_start_pos = [int(interval[0] * 3e8 / exp_time*1e-9) for i in range(3)]
+            plt_end_pos = [int(interval[1] * 3e8 / exp_time*1e-9) for i in range(3)]
+        else:
+            plt_start_pos = int(interval[0] * 3e8 / exp_time * 1e-9)
+            plt_end_pos = int(interval[1] * 3e8 / exp_time * 1e-9)
     else:
         try:
             if not mono:
