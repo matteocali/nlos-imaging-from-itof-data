@@ -64,8 +64,8 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
                                     grid_shape=(int(data_grid_size[1]), int(data_grid_size[0])),
                                     flip_x=False,
                                     flip_y=False)  # Reshape the transient data in order to be in the same format used in the Fermat Flow algorithm
-    data = data[2*16:20*16, :]
-    det_locs = det_locs[2*16:20*16, :]
+    #data = data[2*16:20*16, :]
+    #det_locs = det_locs[2*16:20*16, :]
 
     '''
     for i in trange(data.shape[0]):

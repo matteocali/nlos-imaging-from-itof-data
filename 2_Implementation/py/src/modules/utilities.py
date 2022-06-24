@@ -1,7 +1,6 @@
 from os.path import dirname
-
-from numpy import sum, linspace, zeros, where, nanmin, nanmax, array, ndarray, copy
-from numpy import uint8, float32, reshape, unique
+from numpy import sum, linspace, zeros, where, nanmin, nanmax, array, ndarray, copy, cos, sin, matmul, sqrt, radians, \
+    degrees, arctan2, uint8, float32, reshape, unique, concatenate
 from os import path, listdir, remove, makedirs
 from pathlib import Path
 from glob import glob
@@ -11,6 +10,11 @@ from cv2 import COLOR_RGBA2BGRA, COLOR_RGB2BGR
 from matplotlib import pyplot as plt
 from h5py import File
 from math import floor
+from pickle import dump, load
+from itertools import product
+from random import seed as rnd_seed, shuffle, sample as rnd_sample
+from tqdm import tqdm, trange
+import lxml.etree as et
 
 
 def add_extension(name: str, ext: str) -> str:
@@ -35,11 +39,12 @@ def reed_files(file_path, extension, reorder=True):
     :return: list of file paths
     """
 
-    files = [file_name for file_name in glob(str(file_path) + "\\*." + extension)]  # Load the path of all the files in the input folder with the target extension
-                                                                                    # (code from: https://www.delftstack.com/howto/python/python-open-all-files-in-directory/)
+    files = [file_name for file_name in glob(
+        str(file_path) + "\\*." + extension)]  # Load the path of all the files in the input folder with the target extension
+    # (code from: https://www.delftstack.com/howto/python/python-open-all-files-in-directory/)
     if reorder:
         files = natsorted(files, key=lambda y: y.lower())  # Sort alphanumeric in ascending order
-                                                           # (code from: https://studysection.com/blog/how-to-sort-a-list-in-alphanumeric-order-python/)
+        # (code from: https://studysection.com/blog/how-to-sort-a-list-in-alphanumeric-order-python/)
     return files
 
 
@@ -60,7 +65,7 @@ def read_folders(folder_path, reorder=True):
 
     if reorder:
         folders = natsorted(folders, key=lambda y: y.lower())  # Sort alphanumeric in ascending order
-                                                               # (code from: https://studysection.com/blog/how-to-sort-a-list-in-alphanumeric-order-python/)
+        # (code from: https://studysection.com/blog/how-to-sort-a-list-in-alphanumeric-order-python/)
 
     return folders
 
@@ -74,7 +79,7 @@ def create_folder(file_path, ignore: str = "") -> None:
     """
 
     if path.exists(file_path):  # If the folder is already present remove all its child files
-                                # (code from: https://pynative.com/python-delete-files-and-directories/#h-delete-all-files-from-a-directory)
+        # (code from: https://pynative.com/python-delete-files-and-directories/#h-delete-all-files-from-a-directory)
         for file_name in listdir(file_path):
             file = file_path / file_name  # Construct full file path
             if path.isfile(file) and file_name != ignore and ignore != "all":  # If the file is a file remove it
@@ -111,8 +116,8 @@ def compute_mse(x: ndarray, y: ndarray) -> float:
     """
 
     err = sum((x.astype("float") - y.astype("float")) ** 2)  # Convert the images to floating point
-                                                                # Take the difference between the images by subtracting the pixel intensities
-                                                                # Square these difference and sum them up
+    # Take the difference between the images by subtracting the pixel intensities
+    # Square these difference and sum them up
     err /= float(x.shape[0] * x.shape[1])  # Handles the mean of the MSE
 
     return round(float(err), 4)
@@ -131,7 +136,8 @@ def normalize_img(img: ndarray) -> ndarray:
 
     if max_val - min_val != 0:
         for i in range(img.shape[2]):
-            img[:, :, i] = (img[:, :, i] - min_val) / (max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
+            img[:, :, i] = (img[:, :, i] - min_val) / (
+                    max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
     return img
 
 
@@ -162,7 +168,8 @@ def save_plt(img: ndarray, file_path: Path, alpha: bool) -> None:
         plt.imsave(file_path, img)
 
 
-def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = None, exact: bool = False, pattern: tuple = None, split: bool = False) -> ndarray:
+def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = None, exact: bool = False,
+                    pattern: tuple = None, split: bool = False) -> ndarray:
     """
     Function that generate a black bitmap image of size img_path with a white square in the middle of size (spot_size * spot_size)
     :param file_path: path where to save the generated image
@@ -181,7 +188,8 @@ def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = No
     elif not exact and spot_size is not None:  # Change the value to white of only the desired central pixels
         spot_size = [int(spot_size[0] / 2), int(spot_size[1] / 2)]
         if img_size[0] % 2 == 0 and img_size[1] % 2 == 0:
-            img[(int(img_size[1] / 2) - spot_size[1]):(int(img_size[1] / 2) + spot_size[1]), (int(img_size[0] / 2) - spot_size[0]):(int(img_size[0] / 2) + spot_size[0])] = 255
+            img[(int(img_size[1] / 2) - spot_size[1]):(int(img_size[1] / 2) + spot_size[1]),
+            (int(img_size[0] / 2) - spot_size[0]):(int(img_size[0] / 2) + spot_size[0])] = 255
         elif img_size[0] % 2 == 0 and img_size[1] % 2 != 0:
             img[int(img_size[1] / 2), (int(img_size[0] / 2) - spot_size[0]):(int(img_size[0] / 2) + spot_size[0])] = 255
         if img_size[0] % 2 != 0 and img_size[1] % 2 == 0:
@@ -189,8 +197,10 @@ def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = No
         if img_size[0] % 2 != 0 and img_size[1] % 2 != 0:
             img[int(img_size[1] / 2), int(img_size[0] / 2)] = 255
     elif not exact and pattern is not None:  # Generate a grid bitmap and if required save each dot as a single image
-        offset_x = floor(((img_size[0] - 1) - ((int(img_size[0] / pattern[0]) - 1) * pattern[0])) / 2)  # Define the number of black pixel on the left before the first white dot
-        offset_y = floor(((img_size[1] - 1) - ((int(img_size[1] / pattern[1]) - 1) * pattern[1])) / 2)  # Define the number of black pixel on the top before the first white dot
+        offset_x = floor(((img_size[0] - 1) - ((int(img_size[0] / pattern[0]) - 1) * pattern[
+            0])) / 2)  # Define the number of black pixel on the left before the first white dot
+        offset_y = floor(((img_size[1] - 1) - ((int(img_size[1] / pattern[1]) - 1) * pattern[
+            1])) / 2)  # Define the number of black pixel on the top before the first white dot
         for i in range(offset_y, img.shape[0], pattern[1]):
             for j in range(offset_x, img.shape[1], pattern[0]):
                 if not split:
@@ -235,7 +245,8 @@ def save_h5(data: ndarray, file_path: Path, name: str = None) -> None:
 
     file_path = add_extension(str(file_path), ".h5")  # If not already present add the .h5 extension to the file path
     data = copy(data)  # Copy the ndarray in order to avoid overriding
-    data = data.reshape([data.shape[1], data.shape[2], data.shape[0]])  # Reshape the array in order to match the required layout
+    data = data.reshape(
+        [data.shape[1], data.shape[2], data.shape[0]])  # Reshape the array in order to match the required layout
     h5f = File(file_path, "w")  # Create the .h5 file and open it
     # Save the ndarray in the just created .h5 file
     if name:
@@ -244,13 +255,15 @@ def save_h5(data: ndarray, file_path: Path, name: str = None) -> None:
                            shape=data.shape,
                            dtype=float32)
     else:
-        h5f.create_dataset(name=file_path.split("\\")[-1][-3:],  # If a key name is not provided use the name of the name of the file as key name
+        h5f.create_dataset(name=file_path.split("\\")[-1][-3:],
+                           # If a key name is not provided use the name of the name of the file as key name
                            data=data,
                            shape=data.shape,
                            dtype=float32)
 
 
-def plt_3d_surfaces(surfaces: tuple, mask: ndarray = None, x_ticks: tuple = None, y_ticks: tuple = None, z_ticks: tuple = None, legends: tuple = None) -> None:
+def plt_3d_surfaces(surfaces: tuple, mask: ndarray = None, x_ticks: tuple = None, y_ticks: tuple = None,
+                    z_ticks: tuple = None, legends: tuple = None) -> None:
     """
     Function to plot one or more 3d surfaces given a set of 3D points
     :param surfaces: list of ndarray each one containing the (x, y, z) coordinates of each point of a surface -> [array(surface1), array(surface2), ...]
@@ -269,10 +282,14 @@ def plt_3d_surfaces(surfaces: tuple, mask: ndarray = None, x_ticks: tuple = None
 
     for index, graph in enumerate(surfaces):  # For each surface in the surfaces list
         if mask is not None:  # If a mask is provided:
-            shape = [len(unique(where(mask != 0)[i])) for i in range(2)]  # Compute the shape of the grd (number of pixel active on the column and row)
-            x = reshape(graph[:, :, 0][mask != 0], [shape[0], shape[1]])  # Remove all the zero values from the 2D x coordinates matrix
-            y = reshape(graph[:, :, 1][mask != 0], [shape[0], shape[1]])  # Remove all the zero values from the 2D y coordinates matrix
-            z = reshape(graph[:, :, 2][mask != 0], [shape[0], shape[1]])  # Remove all the zero values from the 2D z coordinates matrix
+            shape = [len(unique(where(mask != 0)[i])) for i in
+                     range(2)]  # Compute the shape of the grd (number of pixel active on the column and row)
+            x = reshape(graph[:, :, 0][mask != 0],
+                        [shape[0], shape[1]])  # Remove all the zero values from the 2D x coordinates matrix
+            y = reshape(graph[:, :, 1][mask != 0],
+                        [shape[0], shape[1]])  # Remove all the zero values from the 2D y coordinates matrix
+            z = reshape(graph[:, :, 2][mask != 0],
+                        [shape[0], shape[1]])  # Remove all the zero values from the 2D z coordinates matrix
         else:
             x = graph[:, :, 0]  # Extract from the surfaces' matrix the 2D x coordinates' matrix
             y = graph[:, :, 1]  # Extract from the surfaces' matrix the 2D y coordinates' matrix
@@ -295,3 +312,216 @@ def plt_3d_surfaces(surfaces: tuple, mask: ndarray = None, x_ticks: tuple = None
 
     fig.tight_layout()
     plt.show(block=True)
+
+
+def blender2mitsuba_coord_mapping(x_pos: float, y_pos: float, z_pos: float, x_angle: float, y_angle: float, z_angle: float) -> [tuple, tuple]:
+    # Compute cosine and sine of each angle (x, y, z)
+    cos_x = cos(radians(x_angle))
+    cos_y = cos(radians(y_angle))
+    cos_z = cos(radians(z_angle))
+    sin_x = sin(radians(x_pos))
+    sin_y = sin(radians(y_pos))
+    sin_z = sin(radians(z_pos))
+
+    # Compute the rotation matrix for each axis
+    rot_x = array([[1, 0, 0], [0, cos_x, sin_x], [0, -sin_x, cos_x]])
+    rot_y = array([[cos_y, 0, -sin_y], [0, 1, 0], [sin_y, 0, cos_y]])
+    roy_z = array([[cos_z, sin_z, 0], [-sin_z, cos_z, 0], [0, 0, 1]])
+
+    # Compute the full rotation matrix multiplying together the "by-axis" rotation matrix
+    rot_matrix = matmul(rot_x, rot_y)
+    rot_matrix = matmul(rot_matrix, roy_z)
+    rot_matrix = rot_matrix.T
+
+    # Generates the roto-transl matrix combining the rotational matrix with the translation vector and making it a 4x4 matrix
+    rototrasl_matrix = concatenate((rot_matrix, array([[x_pos], [y_pos], [z_pos]])), axis=1)
+    rototrasl_matrix = concatenate((rototrasl_matrix, array([[0, 0, 0, 1]])), axis=0)
+
+    # Define to additional matrix to compensate for the different axis rotations of mitsuba wrt blender
+    init_rot = array([[-1.0000, 0.0000, 0.0000, 0.0000],
+                      [0.0000, 1.0000, 0.0000, 0.0000],
+                      [0.0000, 0.0000, -1.0000, 0.0000],
+                      [0.0000, 0.0000, 0.0000, 1.0000]])
+    axis_mat = array([[1, 0, 0, 0],
+                      [0, 0, 1, 0],
+                      [0, -1, 0, 0],
+                      [0, 0, 0, 1]])
+
+    # Compute the final transformation matrix combining al the previous ones
+    matrix = matmul(rototrasl_matrix, init_rot)
+    matrix = matmul(axis_mat, matrix)
+    matrix[where(abs(matrix) < 1e-6)] = 0
+
+    # Extract the rotation angles (the mitsuba ones) from the final transformation matrix
+    sy = sqrt(matrix[0, 0] * matrix[0, 0] + matrix[1, 0] * matrix[1, 0])
+    ax = degrees(arctan2(matrix[2, 1], matrix[2, 2]))
+    ay = degrees(arctan2(-matrix[2, 0], sy))
+    az = degrees(arctan2(matrix[1, 0], matrix[0, 0]))
+
+    # Extract the mitsuba coordinates from the final transformation matrix
+    px = matrix[0, 3]
+    py = matrix[1, 3]
+    pz = matrix[2, 3]
+
+    return (px, py, pz), (ax, ay, az)
+
+
+def permute_list(data: list, s: int = None) -> list:
+    if s is not None:
+        rnd_seed(s)  # If provided define a random seed
+    lst = list(product(*data))  # Permute the list
+    shuffle(lst)  # Shuffle it
+    return lst
+
+
+def save_list(data: list, data_path: Path) -> None:
+    with open(str(data_path), "wb") as fp:
+        dump(data, fp)
+
+
+def load_list(data_path: Path) -> list:
+    with open(str(data_path), "rb") as fp:
+        return load(fp)
+
+
+def generate_dataset_file(tx_rt_list: list, folder_path: Path, obj_names) -> None:
+    if folder_path is not None:
+        create_folder(folder_path, ignore="all")  # Create the output folder if not already present
+
+    with open(str(folder_path / "dataset.txt"), "w") as f:
+        for b_index, batch in enumerate(tx_rt_list):
+            f.write(f"BATCH 0{b_index + 1}:\n")
+            for obj_index, obj in enumerate(batch):
+                f.write(f"{obj_names[obj_index]}:\n")
+                for data in obj:
+                    f.write(f"\t- camera position -> (x: {data[0][0][0]}, y: {data[0][0][1]}, z: {data[0][0][2]})\n")
+                    f.write(f"\t- camera rotation -> (x: {data[0][1][0]}, y: {data[0][1][1]}, z: {data[0][1][2]})\n")
+                    f.write(f"\t- object position -> (x: {data[1][0][0]}, y: {data[1][0][1]}, z: {data[1][0][2]})\n")
+                    f.write(f"\t- object rotation -> (x: {data[1][1][0]}, y: {data[1][1][1]}, z: {data[1][1][2]})\n")
+            f.write("\n")
+
+
+def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partial_rot_list: list, cam_rot_list: list, cam_pos_list: list,
+                          n_batches: int, obj_names: list, def_cam_pos: tuple, def_cam_rot: tuple, n_tr_rot_cam: int, n_tr_obj: list, n_rot_obj: list, n_tr_sphere: list,
+                          folder_path: Path = None, seed: int = None) -> list[list[list]]:
+
+    if folder_path is not None:
+        create_folder(folder_path, ignore="all")  # Create the output folder if not already present
+
+    # Compute all the permutations of the parameter lists
+    obj_tr_list = permute_list(obj_tr_list, seed)
+    obj_full_rot_list = permute_list(obj_full_rot_list, seed)
+    obj_partial_rot_list = permute_list(obj_partial_rot_list, seed)
+    cam_rot_list = permute_list(cam_rot_list, seed)
+    cam_pos_list = permute_list(cam_pos_list, seed)
+
+    rnd_seed(seed)  # Set the random seed
+
+    tr_rot_list = []
+
+    for b_index in trange(n_batches, desc="Batches", leave=True, position=0):
+        tr_rot_batch = []
+
+        # Set the cam translation and rotation parameters
+        # Translation
+        if (b_index + 1) == 1 or (b_index + 1) == 2:
+            cam_tr = [(def_cam_pos[0], def_cam_pos[1], def_cam_pos[2])]
+        else:
+            cam_tr = rnd_sample(cam_pos_list, n_tr_rot_cam)
+        # Rotations
+        if (b_index + 1) == 1 or (b_index + 1) == 3:
+            cam_rot = [(def_cam_rot[0], def_cam_rot[1], def_cam_rot[2])]
+        else:
+            cam_rot = rnd_sample(cam_rot_list, n_tr_rot_cam)
+        # Sample the correct number of rotation and translation couple (at random) of the camera
+        if b_index == 0:
+            cam_tr_rot = [(cam_tr[0], cam_rot[0])]
+        elif b_index == 1:
+            cam_tr_rot = rnd_sample(permute_list([cam_tr, cam_rot], seed), len(cam_rot))
+        elif b_index == 2:
+            cam_tr_rot = rnd_sample(permute_list([cam_tr, cam_rot], seed), len(cam_tr))
+        else:
+            cam_tr_rot = rnd_sample(permute_list([cam_tr, cam_rot], seed), len(cam_tr) + len(cam_rot))
+
+        for name in tqdm(obj_names, desc="Objects", leave=False, position=1):
+            # Set the object translation and rotations parameter
+            if folder_path is not None and (folder_path / f"obj_tr_rot_batch_0{b_index + 1}_{name.lower()}").is_file():
+                obj_tr_rot = load_list(folder_path / f"obj_tr_rot_batch_0{b_index + 1}_{name.lower()}")
+            else:
+                # Translations
+                if name != "Sphere":
+                    obj_tr = rnd_sample(obj_tr_list, n_tr_obj[b_index])
+                else:
+                    obj_tr = rnd_sample(obj_tr_list, n_tr_sphere[b_index])
+                # Rotations
+                if name == "Cube" or name == "Parallelepiped" or name == "Concave plane" or name == "Cube + sphere":
+                    obj_rot = rnd_sample(obj_full_rot_list, n_rot_obj[b_index])
+                elif name == "Cone" or name == "Cylinder" or name == "Cylinder + cone" or name == "Sphere + cone":
+                    obj_rot = rnd_sample(obj_partial_rot_list, n_rot_obj[b_index])
+                else:
+                    obj_rot = [(0, 0, 0)]
+                # Sample the correct number of rotation and translation couple (at random) of the object
+                if name != "Sphere":
+                    obj_tr_rot = rnd_sample(permute_list([obj_tr, obj_rot], seed), len(obj_tr) + len(obj_rot))
+                else:
+                    obj_tr_rot = rnd_sample(permute_list([obj_tr, obj_rot], seed), len(obj_tr))
+
+                if folder_path is not None:
+                    save_list(obj_tr_rot, folder_path / f"obj_tr_rot_batch0{b_index + 1}_{name.lower()}")
+
+            # Sample the correct number of rotation and translation couple (at random) for both the object and the camera
+            if (b_index + 1) == 1:
+                tr_rot_batch.append(rnd_sample(permute_list([cam_tr_rot, obj_tr_rot], seed), len(obj_tr_rot)))
+            else:
+                tr_rot_batch.append(rnd_sample(permute_list([cam_tr_rot, obj_tr_rot], seed), int(len(cam_tr_rot) / len(obj_names)) + len(obj_tr_rot)))
+
+        tr_rot_list.append(tr_rot_batch)
+
+    return tr_rot_list
+
+
+def generate_dataset_xml(tr_rot_list: list, template: Path, folder_path: Path, obj_names: list):
+    create_folder(folder_path)
+
+    for b_index, batch in tqdm(enumerate(tr_rot_list), desc="Batches", leave=True, position=0):
+        create_folder((folder_path / f"batch0{b_index + 1}"))
+
+        for o_index, obj in tqdm(enumerate(batch), desc="Objects", leave=False, position=1):
+            for elm in tqdm(obj, desc="File", leave=False, position=2):
+                name = obj_names[o_index]
+                cam_pos = [elm[0][0][0], elm[0][0][1], elm[0][0][2]]
+                cam_rot = [elm[0][1][0], elm[0][1][1], elm[0][1][2]]
+                obj_tr = [elm[1][0][0], elm[1][0][1], elm[1][0][2]]
+                obj_rot = [elm[1][1][0], elm[1][1][1], elm[1][1][2]]
+
+                obj_file_name = f"name_batch0{b_index + 1}_tr({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_rot({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})"
+                file_name = f"transient_nlos_{name.lower()}_[cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_obj_tr_({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_obj_rot_({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})].xml"
+
+                # Convert camera position and rotation from blender to mitsuba coordinates system
+                cam_pos, cam_rot = blender2mitsuba_coord_mapping(cam_pos[0], cam_pos[1], cam_pos[2], cam_rot[0], cam_rot[1], cam_rot[2])
+
+                # Modify the template inserting the desired data
+                # (code from: https://stackoverflow.com/questions/37868881/how-to-search-and-replace-text-in-an-xml-file-using-python)
+                with open(str(template), encoding="utf8") as f:
+                    tree = et.parse(f)
+                    root = tree.getroot()
+
+                    for elem in root.getiterator():
+                        try:
+                            if elem.attrib["value"] == "obj_name":
+                                elem.attrib["value"] = str(obj_file_name)
+                            elif elem.attrib["value"] == "t_cam_x":
+                                elem.attrib["value"] = str(cam_pos[0])
+                            elif elem.attrib["value"] == "t_cam_y":
+                                elem.attrib["value"] = str(cam_pos[1])
+                            elif elem.attrib["value"] == "t_cam_z":
+                                elem.attrib["value"] = str(cam_pos[2])
+                            elif elem.attrib["value"] == "r_cam_x":
+                                elem.attrib["value"] = str(cam_rot[0])
+                            elif elem.attrib["value"] == "r_cam_y":
+                                elem.attrib["value"] = str(cam_rot[1])
+                            elif elem.attrib["value"] == "r_cam_z":
+                                elem.attrib["value"] = str(cam_rot[2])
+                        except KeyError:
+                            pass
+                tree.write(str(folder_path / f"batch0{b_index + 1}" / file_name), xml_declaration=True, method="xml", encoding="utf8")
