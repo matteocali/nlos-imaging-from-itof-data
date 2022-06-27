@@ -329,9 +329,9 @@ def blender2mitsuba_coord_mapping(x_pos: float, y_pos: float, z_pos: float, x_an
     cos_x = cos(radians(x_angle))
     cos_y = cos(radians(y_angle))
     cos_z = cos(radians(z_angle))
-    sin_x = sin(radians(x_pos))
-    sin_y = sin(radians(y_pos))
-    sin_z = sin(radians(z_pos))
+    sin_x = sin(radians(x_angle))
+    sin_y = sin(radians(y_angle))
+    sin_z = sin(radians(z_angle))
 
     # Compute the rotation matrix for each axis
     rot_x = array([[1, 0, 0], [0, cos_x, sin_x], [0, -sin_x, cos_x]])
@@ -538,7 +538,7 @@ def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partia
     return tr_rot_list
 
 
-def generate_dataset_xml(tr_rot_list: list, template: Path, folder_path: Path, obj_names: list) -> None:
+def generate_dataset_xml(tr_rot_list: list, template: Path, folder_path: Path, objs: dict) -> None:
     """
     Function that given the template.xml file and all the chosen position?translation?rotation combinations generate the correspondent .xml files
     :param tr_rot_list: list of all the final combination of position/translation/rotations of each object and of the camera [batch1[obj1[(camera_pos, camera_rot), (obj_tr, obj_rot)], obj2[(camera_pos, camera_rot), (obj_tr, obj_rot)], ...], batch2[(camera_pos, camera_rot), (obj_tr, obj_rot)], obj2[(camera_pos, camera_rot), (obj_tr, obj_rot)], ...], ...]
@@ -554,14 +554,14 @@ def generate_dataset_xml(tr_rot_list: list, template: Path, folder_path: Path, o
 
         for o_index, obj in tqdm(enumerate(batch), desc="Objects", leave=False, position=1):  # Cycle through each object
             for elm in tqdm(obj, desc="File", leave=False, position=2):  # Cycle through each position/translation/rotation combination
-                name = obj_names[o_index]  # Extract the object name
+                name = list(objs.keys())[o_index]  # Extract the object name
                 cam_pos = [elm[0][0][0], elm[0][0][1], elm[0][0][2]]  # Extract the camera position
                 cam_rot = [elm[0][1][0], elm[0][1][1], elm[0][1][2]]  # Extract the camera rotation
                 obj_tr = [elm[1][0][0], elm[1][0][1], elm[1][0][2]]  # Extract the object translation
                 obj_rot = [elm[1][1][0], elm[1][1][1], elm[1][1][2]]  # Extract the object rotation
 
                 obj_file_name = f"{name}_batch0{b_index + 1}_tr({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_rot({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})".lower()  # Find the correct file name of the object given the translation and rotation value
-                file_name = f"transient_nlos_{name.lower()}_[cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_obj_tr_({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_obj_rot_({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})].xml"  # Set the output file name in a way that contains all the relevant info
+                file_name = f"transient_nlos_{name.lower()}_[cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_obj_pos_({objs[name][0] + obj_tr[0]}_{objs[name][1] + obj_tr[1]}_{objs[name][2] + obj_tr[2]})_obj_rot_({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})].xml"  # Set the output file name in a way that contains all the relevant info
 
                 # Convert camera position and rotation from blender to mitsuba coordinates system
                 cam_pos, cam_rot = blender2mitsuba_coord_mapping(cam_pos[0], cam_pos[1], cam_pos[2], cam_rot[0], cam_rot[1], cam_rot[2])

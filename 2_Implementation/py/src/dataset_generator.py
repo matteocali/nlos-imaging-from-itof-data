@@ -134,4 +134,4 @@ if __name__ == '__main__':
     ut.generate_dataset_xml(tr_rot_list=tr_rot_list,
                             template=arg_template_path,
                             folder_path=arg_batches_path,
-                            obj_names=list(OBJ_POS.keys()))
+                            objs=OBJ_POS)
