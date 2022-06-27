@@ -1,4 +1,3 @@
-from os.path import dirname
 from numpy import sum, linspace, zeros, where, nanmin, nanmax, array, ndarray, copy, cos, sin, matmul, sqrt, radians, \
     degrees, arctan2, uint8, float32, reshape, unique, concatenate
 from os import path, listdir, remove, makedirs
@@ -188,8 +187,7 @@ def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = No
     elif not exact and spot_size is not None:  # Change the value to white of only the desired central pixels
         spot_size = [int(spot_size[0] / 2), int(spot_size[1] / 2)]
         if img_size[0] % 2 == 0 and img_size[1] % 2 == 0:
-            img[(int(img_size[1] / 2) - spot_size[1]):(int(img_size[1] / 2) + spot_size[1]),
-            (int(img_size[0] / 2) - spot_size[0]):(int(img_size[0] / 2) + spot_size[0])] = 255
+            img[(int(img_size[1] / 2) - spot_size[1]):(int(img_size[1] / 2) + spot_size[1]), (int(img_size[0] / 2) - spot_size[0]):(int(img_size[0] / 2) + spot_size[0])] = 255
         elif img_size[0] % 2 == 0 and img_size[1] % 2 != 0:
             img[int(img_size[1] / 2), (int(img_size[0] / 2) - spot_size[0]):(int(img_size[0] / 2) + spot_size[0])] = 255
         if img_size[0] % 2 != 0 and img_size[1] % 2 == 0:
@@ -314,7 +312,19 @@ def plt_3d_surfaces(surfaces: tuple, mask: ndarray = None, x_ticks: tuple = None
     plt.show(block=True)
 
 
-def blender2mitsuba_coord_mapping(x_pos: float, y_pos: float, z_pos: float, x_angle: float, y_angle: float, z_angle: float) -> [tuple, tuple]:
+def blender2mitsuba_coord_mapping(x_pos: float, y_pos: float, z_pos: float, x_angle: float, y_angle: float,
+                                  z_angle: float) -> [tuple[float, float, float], tuple[float, float, float]]:
+    """
+    Function that maps (x, y, z) coordinates and rotations from the blender coordinates system to the mitsuba one
+    :param x_pos: x coordinate
+    :param y_pos: y coordinate
+    :param z_pos: z coordinate
+    :param x_angle: rotation over the x-axis
+    :param y_angle: rotation over the y-axis
+    :param z_angle: rotation over the z-axis
+    :return: [(x, y, z) coordinates, (x, y, z) rotations]
+    """
+
     # Compute cosine and sine of each angle (x, y, z)
     cos_x = cos(radians(x_angle))
     cos_y = cos(radians(y_angle))
@@ -367,6 +377,13 @@ def blender2mitsuba_coord_mapping(x_pos: float, y_pos: float, z_pos: float, x_an
 
 
 def permute_list(data: list, s: int = None) -> list:
+    """
+    Function that given a list of list compute all the possible permutations of the given data
+    :param data: original list
+    :param s: random seed (not mandatory)
+    :return: list of all the possible permutations of the data list
+    """
+
     if s is not None:
         rnd_seed(s)  # If provided define a random seed
     lst = list(product(*data))  # Permute the list
@@ -375,35 +392,74 @@ def permute_list(data: list, s: int = None) -> list:
 
 
 def save_list(data: list, data_path: Path) -> None:
-    with open(str(data_path), "wb") as fp:
-        dump(data, fp)
+    """
+    Function to save a given list to a pickle file
+    :param data: list to save
+    :param data_path: path where to save it
+    """
+
+    with open(str(data_path), "wb") as fp:  # Open the target file
+        dump(data, fp)  # Save the data
 
 
 def load_list(data_path: Path) -> list:
-    with open(str(data_path), "rb") as fp:
-        return load(fp)
+    """
+    Function to load a list from a pickle file
+    :param data_path: path of the file to load
+    :return: the loaded list
+    """
+
+    with open(str(data_path), "rb") as fp:  # Open the target file
+        return load(fp)  # Load the list from the file and return
 
 
-def generate_dataset_file(tx_rt_list: list, folder_path: Path, obj_names) -> None:
+def generate_dataset_file(tx_rt_list: list, folder_path: Path, objs: dict) -> None:
+    """
+    Function that build a .txt file containing all the information about how the dataset has been created
+    :param tx_rt_list: list of all the final combination of position/translation/rotations of each object and of the camera [batch1[obj1[(camera_pos, camera_rot), (obj_tr, obj_rot)], obj2[(camera_pos, camera_rot), (obj_tr, obj_rot)], ...], batch2[(camera_pos, camera_rot), (obj_tr, obj_rot)], obj2[(camera_pos, camera_rot), (obj_tr, obj_rot)], ...], ...]
+    :param folder_path: path of the folder where to save the dataset file
+    :param objs: dict containing all the name of the used objects (keys) with the relatives default positions (values)
+    """
+
     if folder_path is not None:
         create_folder(folder_path, ignore="all")  # Create the output folder if not already present
 
-    with open(str(folder_path / "dataset.txt"), "w") as f:
-        for b_index, batch in enumerate(tx_rt_list):
-            f.write(f"BATCH 0{b_index + 1}:\n")
-            for obj_index, obj in enumerate(batch):
-                f.write(f"{obj_names[obj_index]}:\n")
-                for data in obj:
-                    f.write(f"\t- camera position -> (x: {data[0][0][0]}, y: {data[0][0][1]}, z: {data[0][0][2]})\n")
-                    f.write(f"\t- camera rotation -> (x: {data[0][1][0]}, y: {data[0][1][1]}, z: {data[0][1][2]})\n")
-                    f.write(f"\t- object position -> (x: {data[1][0][0]}, y: {data[1][0][1]}, z: {data[1][0][2]})\n")
-                    f.write(f"\t- object rotation -> (x: {data[1][1][0]}, y: {data[1][1][1]}, z: {data[1][1][2]})\n")
+    with open(str(folder_path / "dataset.txt"), "w") as f:  # Open the target .txt file (in ase create it)
+        for b_index, batch in enumerate(tx_rt_list):  # Cycle through each batches
+            f.write(f"BATCH 0{b_index + 1}:\n")  # Write which batch it is under consideration
+            for obj_index, obj in enumerate(batch):  # Cycle through each object
+                f.write(f"{list(objs.keys())[obj_index]}:\n")  # Write which object is under consideration
+                for data in obj:  # Cycle through each cam_pos/cam_rot/obj_tr_obj_rot combination for the given object
+                    f.write(f"\t- camera position -> (x: {data[0][0][0]}, y: {data[0][0][1]}, z: {data[0][0][2]})\n")  # Write the position of the camera
+                    f.write(f"\t- camera rotation -> (x: {data[0][1][0]}, y: {data[0][1][1]}, z: {data[0][1][2]})\n")  # Write the rotation of the camera
+                    f.write(f"\t- object position -> (x: {list(objs.values())[obj_index][0] + data[1][0][0]}, y: {list(objs.values())[obj_index][1] + data[1][0][1]}, z: {list(objs.values())[obj_index][2] + data[1][0][2]})\n")  # Write the position of the object summing its default position with the applied translation
+                    f.write(f"\t- object rotation -> (x: {data[1][1][0]}, y: {data[1][1][1]}, z: {data[1][1][2]})\n")  # Write the rotation of the object
             f.write("\n")
 
 
-def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partial_rot_list: list, cam_rot_list: list, cam_pos_list: list,
-                          n_batches: int, obj_names: list, def_cam_pos: tuple, def_cam_rot: tuple, n_tr_rot_cam: int, n_tr_obj: list, n_rot_obj: list, n_tr_sphere: list,
+def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partial_rot_list: list, cam_rot_list: list,
+                          cam_pos_list: list, n_batches: int, obj_names: list, def_cam_pos: tuple, def_cam_rot: tuple,
+                          n_tr_rot_cam: int, n_tr_obj: list, n_rot_obj: list, n_tr_sphere: list,
                           folder_path: Path = None, seed: int = None) -> list[list[list]]:
+    """
+    Function that generate the list of list containing all the final combinations of camera and object location/translation/rotations
+    :param obj_tr_list: List that contains all the possible translations that is granted to an object [[possible x translations], [possible y translations], [possible z translations]]
+    :param obj_full_rot_list: List that contains all the possible rotations that is granted to an object [[possible x rotations], [possible y rotations], [possible z rotations]]
+    :param obj_partial_rot_list: List that contains all the possible rotations that is granted to an object with no rotations over the z axis [[possible x rotations], [possible y rotations], 0]
+    :param cam_rot_list: List that contains all the possible rotations that is granted to the camera [[possible x rotations], [possible y rotations], [possible z rotations]]
+    :param cam_pos_list: List that contains all the possible positions that is granted to the camera [[possible x positions], [possible y positions], [possible z positions]]
+    :param n_batches: Number of different batches that will be generated
+    :param obj_names: List that contains the name of every object that will be considered
+    :param def_cam_pos: Default camera position (x, y, z)
+    :param def_cam_rot: Default camera orientation (x, y, z)
+    :param n_tr_rot_cam: Number of different position and/or rotations that I require for the camera
+    :param n_tr_obj: List that contains the number of different translations that I want for each object (sphere excluded) for each batch (len(list) = n_batches)
+    :param n_rot_obj: List that contains the number of different rotations that I want for each object (sphere excluded) for each batch (len(list) = n_batches)
+    :param n_tr_sphere: List that contains the number of different translations that I want for sphere for each batch (len(list) = n_batches)
+    :param folder_path: path of the folder where to store the object translation and rotations permutation needed by blender
+    :param seed: random seed
+    :return: [batch1[obj1[(camera_pos, camera_rot), (obj_tr, obj_rot)], obj2[(camera_pos, camera_rot), (obj_tr, obj_rot)], ...], batch2[(camera_pos, camera_rot), (obj_tr, obj_rot)], obj2[(camera_pos, camera_rot), (obj_tr, obj_rot)], ...], ...]
+    """
 
     if folder_path is not None:
         create_folder(folder_path, ignore="all")  # Create the output folder if not already present
@@ -417,12 +473,12 @@ def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partia
 
     rnd_seed(seed)  # Set the random seed
 
-    tr_rot_list = []
+    tr_rot_list = []  # define the list that will contain all the data
 
-    for b_index in trange(n_batches, desc="Batches", leave=True, position=0):
-        tr_rot_batch = []
+    for b_index in trange(n_batches, desc="Batches", leave=True, position=0):  # Cycle through each batch
+        tr_rot_batch = []  # Define the list that will contain the data of the current batch
 
-        # Set the cam translation and rotation parameters
+        # Set the cam translation and rotation parameters considering that in some batches the camera position and/or rotation is fixed
         # Translation
         if (b_index + 1) == 1 or (b_index + 1) == 2:
             cam_tr = [(def_cam_pos[0], def_cam_pos[1], def_cam_pos[2])]
@@ -433,7 +489,8 @@ def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partia
             cam_rot = [(def_cam_rot[0], def_cam_rot[1], def_cam_rot[2])]
         else:
             cam_rot = rnd_sample(cam_rot_list, n_tr_rot_cam)
-        # Sample the correct number of rotation and translation couple (at random) of the camera
+
+        # Sample the correct number of rotation and translation couple (at random) of the camera considering that in some batches the camera position and/or rotation is fixed
         if b_index == 0:
             cam_tr_rot = [(cam_tr[0], cam_rot[0])]
         elif b_index == 1:
@@ -443,7 +500,7 @@ def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partia
         else:
             cam_tr_rot = rnd_sample(permute_list([cam_tr, cam_rot], seed), len(cam_tr) + len(cam_rot))
 
-        for name in tqdm(obj_names, desc="Objects", leave=False, position=1):
+        for name in tqdm(obj_names, desc="Objects", leave=False, position=1):  # Cycle through all the objects
             # Set the object translation and rotations parameter
             if folder_path is not None and (folder_path / f"obj_tr_rot_batch_0{b_index + 1}_{name.lower()}").is_file():
                 obj_tr_rot = load_list(folder_path / f"obj_tr_rot_batch_0{b_index + 1}_{name.lower()}")
@@ -460,6 +517,7 @@ def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partia
                     obj_rot = rnd_sample(obj_partial_rot_list, n_rot_obj[b_index])
                 else:
                     obj_rot = [(0, 0, 0)]
+
                 # Sample the correct number of rotation and translation couple (at random) of the object
                 if name != "Sphere":
                     obj_tr_rot = rnd_sample(permute_list([obj_tr, obj_rot], seed), len(obj_tr) + len(obj_rot))
@@ -467,7 +525,7 @@ def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partia
                     obj_tr_rot = rnd_sample(permute_list([obj_tr, obj_rot], seed), len(obj_tr))
 
                 if folder_path is not None:
-                    save_list(obj_tr_rot, folder_path / f"obj_tr_rot_batch0{b_index + 1}_{name.lower()}")
+                    save_list(obj_tr_rot, folder_path / f"obj_tr_rot_batch0{b_index + 1}_{name.lower()}")  # Save the list of the object translation and rotations
 
             # Sample the correct number of rotation and translation couple (at random) for both the object and the camera
             if (b_index + 1) == 1:
@@ -480,22 +538,30 @@ def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partia
     return tr_rot_list
 
 
-def generate_dataset_xml(tr_rot_list: list, template: Path, folder_path: Path, obj_names: list):
-    create_folder(folder_path)
+def generate_dataset_xml(tr_rot_list: list, template: Path, folder_path: Path, obj_names: list) -> None:
+    """
+    Function that given the template.xml file and all the chosen position?translation?rotation combinations generate the correspondent .xml files
+    :param tr_rot_list: list of all the final combination of position/translation/rotations of each object and of the camera [batch1[obj1[(camera_pos, camera_rot), (obj_tr, obj_rot)], obj2[(camera_pos, camera_rot), (obj_tr, obj_rot)], ...], batch2[(camera_pos, camera_rot), (obj_tr, obj_rot)], obj2[(camera_pos, camera_rot), (obj_tr, obj_rot)], ...], ...]
+    :param template: template file (.xml)
+    :param folder_path: path of the output folder
+    :param obj_names: List that contains the name of every object that will be considered
+    """
 
-    for b_index, batch in tqdm(enumerate(tr_rot_list), desc="Batches", leave=True, position=0):
-        create_folder((folder_path / f"batch0{b_index + 1}"))
+    create_folder(folder_path)  # Create the output folder if not already present
 
-        for o_index, obj in tqdm(enumerate(batch), desc="Objects", leave=False, position=1):
-            for elm in tqdm(obj, desc="File", leave=False, position=2):
-                name = obj_names[o_index]
-                cam_pos = [elm[0][0][0], elm[0][0][1], elm[0][0][2]]
-                cam_rot = [elm[0][1][0], elm[0][1][1], elm[0][1][2]]
-                obj_tr = [elm[1][0][0], elm[1][0][1], elm[1][0][2]]
-                obj_rot = [elm[1][1][0], elm[1][1][1], elm[1][1][2]]
+    for b_index, batch in tqdm(enumerate(tr_rot_list), desc="Batches", leave=True, position=0):  # Cycle through each batch
+        create_folder((folder_path / f"batch0{b_index + 1}"))  # Create the batch folder if not already present
 
-                obj_file_name = f"{name}_batch0{b_index + 1}_tr({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_rot({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})".lower()
-                file_name = f"transient_nlos_{name.lower()}_[cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_obj_tr_({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_obj_rot_({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})].xml"
+        for o_index, obj in tqdm(enumerate(batch), desc="Objects", leave=False, position=1):  # Cycle through each object
+            for elm in tqdm(obj, desc="File", leave=False, position=2):  # Cycle through each position/translation/rotation combination
+                name = obj_names[o_index]  # Extract the object name
+                cam_pos = [elm[0][0][0], elm[0][0][1], elm[0][0][2]]  # Extract the camera position
+                cam_rot = [elm[0][1][0], elm[0][1][1], elm[0][1][2]]  # Extract the camera rotation
+                obj_tr = [elm[1][0][0], elm[1][0][1], elm[1][0][2]]  # Extract the object translation
+                obj_rot = [elm[1][1][0], elm[1][1][1], elm[1][1][2]]  # Extract the object rotation
+
+                obj_file_name = f"{name}_batch0{b_index + 1}_tr({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_rot({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})".lower()  # Find the correct file name of the object given the translation and rotation value
+                file_name = f"transient_nlos_{name.lower()}_[cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_obj_tr_({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_obj_rot_({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})].xml"  # Set the output file name in a way that contains all the relevant info
 
                 # Convert camera position and rotation from blender to mitsuba coordinates system
                 cam_pos, cam_rot = blender2mitsuba_coord_mapping(cam_pos[0], cam_pos[1], cam_pos[2], cam_rot[0], cam_rot[1], cam_rot[2])
