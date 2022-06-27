@@ -23,7 +23,7 @@ discontDetectionPara.whetherSortDisconts  = true;        % whether sort disconti
 
 % ----- pathlength discontinuties visualization  -----
 whetherVisualizePDSurface       = true;
-whetherVisualizePDIndivisually  = true;
+whetherVisualizePDIndivisually  = false;
 visualizaRange                  = 1:2000;
 
 detectDiscontinuity;

@@ -494,7 +494,7 @@ def generate_dataset_xml(tr_rot_list: list, template: Path, folder_path: Path, o
                 obj_tr = [elm[1][0][0], elm[1][0][1], elm[1][0][2]]
                 obj_rot = [elm[1][1][0], elm[1][1][1], elm[1][1][2]]
 
-                obj_file_name = f"name_batch0{b_index + 1}_tr({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_rot({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})"
+                obj_file_name = f"{name}_batch0{b_index + 1}_tr({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_rot({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})".lower()
                 file_name = f"transient_nlos_{name.lower()}_[cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_obj_tr_({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_obj_rot_({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})].xml"
 
                 # Convert camera position and rotation from blender to mitsuba coordinates system
@@ -524,4 +524,4 @@ def generate_dataset_xml(tr_rot_list: list, template: Path, folder_path: Path, o
                                 elem.attrib["value"] = str(cam_rot[2])
                         except KeyError:
                             pass
-                tree.write(str(folder_path / f"batch0{b_index + 1}" / file_name), xml_declaration=True, method="xml", encoding="utf8")
+                tree.write(str(folder_path / f"batch0{b_index + 1}" / file_name.replace(" ", "_")), xml_declaration=True, method="xml", encoding="utf8")
