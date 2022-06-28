@@ -116,7 +116,7 @@ if __name__ == '__main__':
         tr.histo_plt(radiance=images[:, 1, 1, :],  # righe:colonne
                      exp_time=arg_exp_time,
                      interval=None,#[15.7, 19.6],
-                     stem=True,
+                     stem=None,
                      file_path=arg_out / "transient_histograms.svg")
 
         end = time.time()
@@ -132,7 +132,7 @@ if __name__ == '__main__':
         glb_images = tr.rmv_first_reflection_img(images=images,
                                                  file_path=arg_out / "glb_np_transient.npy",
                                                  store=(not exists(arg_out / "glb_np_transient.npy")))
-        tr.histo_plt(radiance=glb_images[:, 0, 0, :],  # righe:colonne
+        tr.histo_plt(radiance=glb_images[:, 119, 161, :],  # righe:colonne
                      exp_time=arg_exp_time,
                      interval=None,
                      stem=False,#True,

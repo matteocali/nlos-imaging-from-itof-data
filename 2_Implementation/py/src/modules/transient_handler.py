@@ -409,6 +409,7 @@ def transient_loader(img_path, np_path=None, store=False):
         channels = reshape_frame(files)  # Reshape the frame in a standard layout
         images = img_matrix(channels)  # Create the image files
         if store:
+            ut.create_folder(np_path.parent.absolute(), "all")  # Create the output folder if not already present
             save(str(np_path), images)  # Save the loaded images as a numpy array
         return images
 

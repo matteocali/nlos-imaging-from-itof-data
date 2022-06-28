@@ -478,24 +478,34 @@ def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partia
     for b_index in trange(n_batches, desc="Batches", leave=True, position=0):  # Cycle through each batch
         tr_rot_batch = []  # Define the list that will contain the data of the current batch
 
+        # Avoid that two consecutive batches have the same data
+        if b_index % 2 == 0:
+            obj_tr_tmp = obj_tr_list.copy()
+            obj_full_rot_tmp = obj_full_rot_list.copy()
+            obj_partial_rot_tmp = obj_partial_rot_list.copy()
+            cam_rot_tmp = cam_rot_list.copy()
+            cam_pos_tmp = cam_pos_list.copy()
+
         # Set the cam translation and rotation parameters considering that in some batches the camera position and/or rotation is fixed
         # Translation
-        if (b_index + 1) == 1 or (b_index + 1) == 2:
+        if b_index <= 3:
             cam_tr = [(def_cam_pos[0], def_cam_pos[1], def_cam_pos[2])]
         else:
-            cam_tr = rnd_sample(cam_pos_list, n_tr_rot_cam)
+            cam_tr = rnd_sample(cam_pos_tmp, n_tr_rot_cam)
+            cam_pos_tmp = [x for x in cam_pos_tmp if x not in cam_tr]  # Avoid that two consecutive batches have the same data
         # Rotations
-        if (b_index + 1) == 1 or (b_index + 1) == 3:
+        if b_index <= 1 or 4 <= b_index <= 5:
             cam_rot = [(def_cam_rot[0], def_cam_rot[1], def_cam_rot[2])]
         else:
-            cam_rot = rnd_sample(cam_rot_list, n_tr_rot_cam)
+            cam_rot = rnd_sample(cam_rot_tmp, n_tr_rot_cam)
+            cam_rot_tmp = [x for x in cam_rot_tmp if x not in cam_rot]  # Avoid that two consecutive batches have the same data
 
         # Sample the correct number of rotation and translation couple (at random) of the camera considering that in some batches the camera position and/or rotation is fixed
-        if b_index == 0:
+        if b_index <= 1:
             cam_tr_rot = [(cam_tr[0], cam_rot[0])]
-        elif b_index == 1:
+        elif 2 <= b_index <= 3:
             cam_tr_rot = rnd_sample(permute_list([cam_tr, cam_rot], seed), len(cam_rot))
-        elif b_index == 2:
+        elif 4 <= b_index <= 5:
             cam_tr_rot = rnd_sample(permute_list([cam_tr, cam_rot], seed), len(cam_tr))
         else:
             cam_tr_rot = rnd_sample(permute_list([cam_tr, cam_rot], seed), len(cam_tr) + len(cam_rot))
@@ -507,14 +517,22 @@ def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partia
             else:
                 # Translations
                 if name != "Sphere":
-                    obj_tr = rnd_sample(obj_tr_list, n_tr_obj[b_index])
+                    obj_tr = rnd_sample(obj_tr_tmp, n_tr_obj[b_index])
+                    if name == obj_names[-1]:  # Avoid that two consecutive batches have the same data
+                        obj_tr_tmp = [x for x in obj_tr_tmp if x not in obj_tr]
                 else:
-                    obj_tr = rnd_sample(obj_tr_list, n_tr_sphere[b_index])
+                    obj_tr = rnd_sample(obj_tr_tmp, n_tr_sphere[b_index])
+                    if name == obj_names[-1]:  # Avoid that two consecutive batches have the same data
+                        obj_tr_tmp = [x for x in obj_tr_tmp if x not in obj_tr]
                 # Rotations
                 if name == "Cube" or name == "Parallelepiped" or name == "Concave plane" or name == "Cube + sphere":
-                    obj_rot = rnd_sample(obj_full_rot_list, n_rot_obj[b_index])
+                    obj_rot = rnd_sample(obj_full_rot_tmp, n_rot_obj[b_index])
+                    if name == obj_names[-1]:  # Avoid that two consecutive batches have the same data
+                        obj_full_rot_tmp = [x for x in obj_full_rot_tmp if x not in obj_rot]
                 elif name == "Cone" or name == "Cylinder" or name == "Cylinder + cone" or name == "Sphere + cone":
-                    obj_rot = rnd_sample(obj_partial_rot_list, n_rot_obj[b_index])
+                    obj_rot = rnd_sample(obj_partial_rot_tmp, n_rot_obj[b_index])
+                    if name == obj_names[-1]:  # Avoid that two consecutive batches have the same data
+                        obj_partial_rot_tmp = [x for x in obj_partial_rot_tmp if x not in obj_rot]
                 else:
                     obj_rot = [(0, 0, 0)]
 
@@ -561,7 +579,7 @@ def generate_dataset_xml(tr_rot_list: list, template: Path, folder_path: Path, o
                 obj_rot = [elm[1][1][0], elm[1][1][1], elm[1][1][2]]  # Extract the object rotation
 
                 obj_file_name = f"{name}_batch0{b_index + 1}_tr({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_rot({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})".lower()  # Find the correct file name of the object given the translation and rotation value
-                file_name = f"transient_nlos_{name.lower()}_[cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_obj_pos_({objs[name][0] + obj_tr[0]}_{objs[name][1] + obj_tr[1]}_{objs[name][2] + obj_tr[2]})_obj_rot_({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})].xml"  # Set the output file name in a way that contains all the relevant info
+                file_name = f"transient_nlos_{name.lower()}_[cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_obj_pos_({round(objs[name][0] + obj_tr[0], 2)}_{round(objs[name][1] + obj_tr[1], 2)}_{round(objs[name][2] + obj_tr[2], 2)})_obj_rot_({round(obj_rot[0], 2)}_{round(obj_rot[1], 2)}_{round(obj_rot[2], 2)})].xml"  # Set the output file name in a way that contains all the relevant info
 
                 # Convert camera position and rotation from blender to mitsuba coordinates system
                 cam_pos, cam_rot = blender2mitsuba_coord_mapping(cam_pos[0], cam_pos[1], cam_pos[2], cam_rot[0], cam_rot[1], cam_rot[2])

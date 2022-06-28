@@ -58,25 +58,25 @@ if __name__ == '__main__':
         sys.argv)  # Recover the input and output folder from the console args
 
     # CONSTANTS #
-    N_BATCH = 4  # Number of different batches that will be generated
+    N_BATCH = 8  # Number of different batches that will be generated
     DEF_CAM_POS = (1.5, -1, 1.65)  # Default camera position (x, y, z)
     DEF_CAM_ROT = (90, 0, 50)  # Default camera orientation (x, y, z)
-    N_TR_OBJ = [18, 16, 16, 14]  # List that contains the number of different translations that I want for each object
-    # (sphere excluded) for each batch (len(list) = n_batches)
-    N_TR_SPHERE = [32, 27, 27, 22]  # List that contains the number of different translations that I want for sphere
-    # for each batch (len(list) = n_batches)
-    N_ROT_OBJ = [20, 17, 17, 14]  # List that contains the number of different rotations that I want for each object
-    # (sphere excluded) for each batch (len(list) = n_batches)
-    N_TR_ROT_CAM = 45  # Number of different position and/or rotations that I require for the camera
+    N_TR_OBJ = [9, 9, 8, 8, 8, 8, 7, 7]  # List that contains the number of different translations that I want for each
+                                         # object (sphere excluded) for each batch (len(list) = n_batches)
+    N_TR_SPHERE = [16, 16, 14, 14, 14, 14, 12, 12]  # List that contains the number of different translations that I
+                                                    # want for sphere for each batch (len(list) = n_batches)
+    N_ROT_OBJ = [10, 10, 9, 9, 9, 9, 8, 8]  # List that contains the number of different rotations that I want for each
+                                            # object (sphere excluded) for each batch (len(list) = n_batches)
+    N_TR_ROT_CAM = 18  # Number of different position and/or rotations that I require for the camera
     OBJ_POS = {"Cube": [1.5, 1, 1.65],
-               "Cone": [1.5, 1, 1.45],
+               "Cone": [1.5, 1, 1.55],
                "Cylinder": [1.5, 1, 1.65],
                "Parallelepiped": [1.5, 1, 1.65],
                "Sphere": [1.5, 1, 1.65],
                "Concave plane": [1.5, 1, 1.65],
                "Cube + sphere": [1.5, 1, 1.65],
-               "Cylinder + cone": [1.5, 1, 1.55],
-               "Sphere + cone": [1.5, 1, 1.55]}  # Dictionary that contains all the default position of the objects
+               "Cylinder + cone": [1.5, 1, 1.65],
+               "Sphere + cone": [1.5, 1, 1.65]}  # Dictionary that contains all the default position of the objects
 
     # PARAMETERS LIST #
     # List that contains all the possible translations that is granted to an object
