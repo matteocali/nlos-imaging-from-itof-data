@@ -1,7 +1,8 @@
 import getopt
 import sys
 from pathlib import Path
-from modules import utilities as ut
+
+import modules.dataset_func as dat
 
 
 def arg_parser(argv):
@@ -17,13 +18,14 @@ def arg_parser(argv):
     arg_batches_path = None  # Argument containing the batches (final xml files) directory
     arg_template_path = None  # Argument containing the xml template file directory
     arg_rnd_seed = None  # Argument containing the random seed value
-    arg_help = "{0} -p <perm> -d <dataset> -b <batch> -t <template> -s <seed>".format(argv[0])  # Help string
+    arg_rnd = None  # Argument that define if use or not the random database
+    arg_help = "{0} -p <perm> -d <dataset> -b <batch> -t <template> -s <seed> -r <random>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(argv[1:],
-                                   "hp:d:b:t:s:",
-                                   ["help", "perm=", "dataset=", "batch=", "template=", "seed="])
+                                   "hp:d:b:t:s:r:",
+                                   ["help", "perm=", "dataset=", "batch=", "template=", "seed=", "random="])
     except:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -42,20 +44,22 @@ def arg_parser(argv):
             arg_template_path = Path(arg)  # Set the template file directory
         elif opt in ("-s", "--seed"):
             arg_rnd_seed = int(arg)  # Set the template file directory
+        elif opt in ("-r", "--random"):
+            arg_rnd = bool(arg)  # Set the template file directory
 
     print("Permutation list path: ", arg_permutation_list_path)
     print("Dataset path: ", arg_dataset_file_path)
     print("Batches path: ", arg_batches_path)
     print("Template path: ", arg_template_path)
     print("Random seed: ", arg_rnd_seed)
+    print("Random database: ", arg_rnd)
     print()
 
-    return [arg_permutation_list_path, arg_dataset_file_path, arg_batches_path, arg_template_path, arg_rnd_seed]
+    return [arg_permutation_list_path, arg_dataset_file_path, arg_batches_path, arg_template_path, arg_rnd_seed, arg_rnd]
 
 
 if __name__ == '__main__':
-    arg_permutation_list_path, arg_dataset_file_path, arg_batches_path, arg_template_path, arg_rnd_seed = arg_parser(
-        sys.argv)  # Recover the input and output folder from the console args
+    arg_permutation_list_path, arg_dataset_file_path, arg_batches_path, arg_template_path, arg_rnd_seed, arg_rnd = arg_parser(sys.argv)  # Recover the input and output folder from the console args
 
     # CONSTANTS #
     N_BATCH = 8  # Number of different batches that will be generated
@@ -77,6 +81,22 @@ if __name__ == '__main__':
                "Cube + sphere": [1.5, 1, 1.65],
                "Cylinder + cone": [1.5, 1, 1.65],
                "Sphere + cone": [1.5, 1, 1.65]}  # Dictionary that contains all the default position of the objects
+
+    N_TR_OBJ_2 = [9, 9, 8, 8, 8, 8, 8, 8]
+    N_TR_SPHERE_RND = [16, 16, 17, 17, 17, 17, 14, 14]  # List that contains the number of different translations that I
+                                                        # want for sphere for each batch (len(list) = n_batches) (rnd)
+    N_TR_OBJ_RND = [28, 28, 26, 26, 26, 26, 23, 23]  # List that contains the number of different translations that I
+                                                     # want for the random composed object for each batch
+    N_ROT_OBJ_RND = [29, 29, 26, 26, 26, 26, 23, 23]  # List that contains the number of different rotations that I
+                                                      # want for the random composed object for each batch
+    N_TR_ROT_CAM_RND = 14  # Number of different position and/or rotations that I require for the camera in the rand dat
+    OBJ_POS_RND = {"Cube": [1.5, 1, 1.65],
+                   "Cone": [1.5, 1, 1.55],
+                   "Cylinder": [1.5, 1, 1.65],
+                   "Parallelepiped": [1.5, 1, 1.65],
+                   "Sphere": [1.5, 1, 1.65],
+                   "Concave plane": [1.5, 1, 1.65],
+                   "Random": [1.5, 1, 1.65]}  # Dictionary that contains all the default position of the objects
 
     # PARAMETERS LIST #
     # List that contains all the possible translations that is granted to an object
@@ -103,35 +123,89 @@ if __name__ == '__main__':
     # [[possible x positions], [possible y positions], [possible z positions]]
     cam_pos_list = [[i / 10 for i in range(10, 31, 5)],
                     [i / 10 for i in range(-30, -11, 5)],
-                    [i / 10 for i in
-                     range(10, 31, 5)]]
+                    [i / 10 for i in range(10, 31, 5)]]
+    # List that contains all the possible translations that is granted to an object
+    # [[possible x translations], [possible y translations], [possible z translations]]
+    obj_tr_list_rnd = [[i / 10 for i in range(0, 11)],
+                       [i / 10 for i in range(0, 6)],
+                       [i / 10 for i in range(-5, 5)]]
+    # List that contains all the possible rotations that is granted to an object
+    # [[possible x rotations], [possible y rotations], [possible z rotations]]
+    obj_full_rot_list_rnd = [[i for i in range(-90, 91)],
+                             [i for i in range(-90, 91)],
+                             [i for i in range(-90, 91)]]
+    # List that contains all the possible rotations that is granted to an object with no
+    # rotations over the z axis [[possible x rotations], [possible y rotations], 0]
+    obj_partial_rot_list_rnd = [[i for i in range(-90, 91)],
+                                [i for i in range(-90, 91)],
+                                [0]]
+    # List that contains all the possible rotations that is granted to the camera
+    # [[possible x rotations], [possible y rotations], [possible z rotations]]
+    cam_rot_list_rnd = [[i for i in range(-95, 96)],
+                        [i for i in range(-5, 6)],
+                        [i for i in range(50, 91)]]
+    # List that contains all the possible positions that is granted to the camera
+    # [[possible x positions], [possible y positions], [possible z positions]]
+    cam_pos_list_rnd = [[i / 10 for i in range(10, 16)],
+                        [i / 10 for i in range(-15, -9)],
+                        [i / 10 for i in range(12, 21, 5)]]
 
     # BUILD THE FINAL SET OF ROTATIONS/TRANSLATIONS/POSITIONS #
     print("Compute all the permutations of the camera and objects locations and rotations (batch by batch):")
-    tr_rot_list = ut.generate_dataset_list(obj_tr_list=obj_tr_list,
-                                           obj_full_rot_list=obj_full_rot_list,
-                                           obj_partial_rot_list=obj_partial_rot_list,
-                                           cam_rot_list=cam_rot_list,
-                                           cam_pos_list=cam_pos_list,
-                                           def_cam_pos=DEF_CAM_POS,
-                                           def_cam_rot=DEF_CAM_ROT,
-                                           n_batches=N_BATCH,
-                                           obj_names=list(OBJ_POS.keys()),
-                                           n_tr_rot_cam=N_TR_ROT_CAM,
-                                           n_tr_obj=N_TR_OBJ,
-                                           n_rot_obj=N_ROT_OBJ,
-                                           n_tr_sphere=N_TR_SPHERE,
-                                           folder_path=arg_permutation_list_path,
-                                           seed=arg_rnd_seed)
+    if not arg_rnd:
+        tr_rot_list = dat.generate_dataset_list(obj_tr_list=obj_tr_list,
+                                                obj_full_rot_list=obj_full_rot_list,
+                                                obj_partial_rot_list=obj_partial_rot_list,
+                                                cam_rot_list=cam_rot_list,
+                                                cam_pos_list=cam_pos_list,
+                                                def_cam_pos=DEF_CAM_POS,
+                                                def_cam_rot=DEF_CAM_ROT,
+                                                n_batches=N_BATCH,
+                                                obj_names=list(OBJ_POS.keys()),
+                                                n_tr_rot_cam=N_TR_ROT_CAM,
+                                                n_tr_obj=N_TR_OBJ,
+                                                n_rot_obj=N_ROT_OBJ,
+                                                n_tr_sphere=N_TR_SPHERE,
+                                                folder_path=arg_permutation_list_path,
+                                                seed=arg_rnd_seed)
+        dat.generate_dataset_file(tx_rt_list=tr_rot_list,
+                                  folder_path=arg_dataset_file_path,
+                                  objs=OBJ_POS)  # Export a .txt file containing the information of the dataset
+                                                 # actually used after all the random permutations
 
-    ut.generate_dataset_file(tx_rt_list=tr_rot_list,
-                             folder_path=arg_dataset_file_path,
-                             objs=OBJ_POS)  # Export a .txt file containing the information of the dataset
-    # actually used after all the random permutations
+        # BUILD THE XML FILE FOR EACH SCENE #
+        print("\nGenerate all the .xml files:")
+        dat.generate_dataset_xml(tr_rot_list=tr_rot_list,
+                                 template=arg_template_path,
+                                 folder_path=arg_batches_path,
+                                 objs=OBJ_POS)
+    else:
+        tr_rot_list = dat.generate_dataset_list(obj_tr_list=obj_tr_list_rnd,
+                                                obj_full_rot_list=obj_full_rot_list_rnd,
+                                                obj_partial_rot_list=obj_partial_rot_list_rnd,
+                                                cam_rot_list=cam_rot_list_rnd,
+                                                cam_pos_list=cam_pos_list_rnd,
+                                                def_cam_pos=DEF_CAM_POS,
+                                                def_cam_rot=DEF_CAM_ROT,
+                                                n_batches=N_BATCH,
+                                                obj_names=list(OBJ_POS_RND.keys()),
+                                                n_tr_rot_cam=N_TR_ROT_CAM_RND,
+                                                n_tr_obj=N_TR_OBJ_2,
+                                                n_rot_obj=N_ROT_OBJ,
+                                                n_tr_sphere=N_TR_SPHERE_RND,
+                                                n_tr_obj_rnd=N_TR_OBJ_RND,
+                                                n_rot_obj_rnd=N_ROT_OBJ_RND,
+                                                folder_path=arg_permutation_list_path,
+                                                seed=arg_rnd_seed,
+                                                rnd=arg_rnd)
+        dat.generate_dataset_file(tx_rt_list=tr_rot_list,
+                                  folder_path=arg_dataset_file_path,
+                                  objs=OBJ_POS_RND)  # Export a .txt file containing the information of the dataset
+                                                # actually used after all the random permutations
 
-    # BUILD THE XML FILE FOR EACH SCENE #
-    print("\nGenerate all the .xml files:")
-    ut.generate_dataset_xml(tr_rot_list=tr_rot_list,
-                            template=arg_template_path,
-                            folder_path=arg_batches_path,
-                            objs=OBJ_POS)
+        # BUILD THE XML FILE FOR EACH SCENE #
+        print("\nGenerate all the .xml files:")
+        dat.generate_dataset_xml(tr_rot_list=tr_rot_list,
+                                 template=arg_template_path,
+                                 folder_path=arg_batches_path,
+                                 objs=OBJ_POS_RND)
