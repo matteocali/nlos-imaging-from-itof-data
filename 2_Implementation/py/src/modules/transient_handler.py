@@ -260,7 +260,7 @@ def cv2_transient_video(images, out_path, normalize):
     out.release()
 
 
-def transient_video(images, out_path, out_type="cv2", alpha=False, normalize=True):
+def transient_video(images, out_path, out_type="cv2", alpha=False, normalize=True, name="transient"):
     """
     Function that generate and save the transient video
     :param images: np.array containing all the images [<n_of_images>, <n_of_rows>, <n_of_columns>, <n_of_channels>]
@@ -268,15 +268,16 @@ def transient_video(images, out_path, out_type="cv2", alpha=False, normalize=Tru
     :param out_type: format of the video output, cv2 or plt
     :param alpha: boolean value that determines if the output video will consider or not the alpha map
     :param normalize: choose ti perform normalization or not
+    :param name: name of the file with no extension
     """
 
     print("Generating the final video:")
     start = time()  # Compute the execution time
 
     if out_type == "plt":
-        plt_transient_video(images, out_path / "transient.avi", alpha, normalize)
+        plt_transient_video(images, out_path / f"{name}.avi", alpha, normalize)
     elif out_type == "cv2":
-        cv2_transient_video(images, out_path / "transient.avi", normalize)
+        cv2_transient_video(images, out_path / f"{name}.avi", normalize)
     elif out_type == "both":
         print("Matplotlib version:")
         plt_transient_video(images, out_path / "transient_plt.avi", alpha, normalize)

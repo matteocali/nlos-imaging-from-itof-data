@@ -4,7 +4,7 @@ from time import time, sleep
 
 from cv2 import fisheye, CV_16SC2, remap, INTER_LINEAR, undistort, initUndistortRectifyMap
 from numpy import ndarray, array, float64, float32, eye, divide, tile, arange, zeros_like, linalg, zeros, dot, asarray, \
-    stack, reshape, flip, load, nanargmax, copy, where, delete, save, nonzero, cross, sqrt, concatenate, matmul, unique, subtract, negative, max
+    stack, reshape, flip, load, nanargmax, copy, where, delete, save, nonzero, cross, sqrt, concatenate, matmul, unique, subtract, negative, max, roll
 from scipy import io
 from tqdm import tqdm, trange
 
@@ -46,12 +46,19 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
                                               channel=1,
                                               exp_time=0.01)  # Compute the mapping of the coordinate of the illuminated spots to the LOS wall (ignor the z coordinate)
     rt_depthmap = roto_transl(coordinates_matrix=copy(depthmap))  # Roto-translate the coordinates point in order to move from the camera coordinates system to the world one and also move the plane to be on the plane z = 0
-    det_locs = coordinates_matrix_reshape(data=rt_depthmap[:, :, :-1],
+
+    flip_x_rt_depthmap = copy(rt_depthmap)
+    for i in range(flip_x_rt_depthmap.shape[2]):
+        flip_x_rt_depthmap[:, :, i] = flip(flip_x_rt_depthmap[:, :, i], axis=1)
+        flip_x_rt_depthmap[:, :, i] = roll(flip_x_rt_depthmap[:, :, i], -1, axis=1)
+
+    det_locs = coordinates_matrix_reshape(data=flip_x_rt_depthmap[:, :, :-1],
                                           mask=mask)  # Reshape the coordinate value, putting the coordinate of each row one on the bottom of the previous one
+
     '''
-    plt_3d_surfaces(surfaces=(depthmap, rt_depthmap),
+    plt_3d_surfaces(surfaces=[depthmap, rt_depthmap, flip_x_rt_depthmap],
                     mask=mask,
-                    legends=("Original plane", "Roto-translated plane"))
+                    legends=["Original plane", "Roto-translated plane", "Flipped roto-translated plane"])
     '''
 
     if laser_pos is None:   # If laser_pos is not provided it means that the laser is confocal with the camera
@@ -64,6 +71,10 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
                                     grid_shape=(int(data_grid_size[1]), int(data_grid_size[0])),
                                     flip_x=False,
                                     flip_y=False)  # Reshape the transient data in order to be in the same format used in the Fermat Flow algorithm
+
+    for i in range(data.shape[0]):  # Clean the outliers
+        if max(data[i, :]) < max(data)*0.1:
+            data[i, :] = zeros([1, data.shape[1]])
     #data = data[2*16:20*16, :]
     #det_locs = det_locs[2*16:20*16, :]
 

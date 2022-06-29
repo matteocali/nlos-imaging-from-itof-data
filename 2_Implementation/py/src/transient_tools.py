@@ -140,5 +140,54 @@ if __name__ == '__main__':
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    elif arg_task == "test":
+        print(f"TASK: {arg_task}")
+        start = time.time()
+
+        dirs = ut.read_folders(arg_in, reorder=True)
+
+        for i, dir_path in enumerate(dirs):
+            folder_name = dir_path.split("\\")[-1]
+            out_folder = arg_out / f"TEST_{folder_name}"
+
+            print(f"Working on folder {(i + 1)}/{len(dirs)}:")
+            print("Build the global transient video and the global total image:")
+            images = tr.transient_loader(img_path=Path(dir_path),
+                                         np_path=out_folder / "np_transient.npy",
+                                         store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
+            glb_images = tr.rmv_first_reflection_img(images=np.copy(images),
+                                                     file_path=out_folder / "glb_np_transient.npy",
+                                                     store=(not exists(out_folder / "glb_np_transient.npy")))
+            tr.transient_video(images=np.copy(glb_images),
+                               out_path=out_folder,
+                               normalize=True,
+                               name="transient_glb")
+            tr.total_img(images=glb_images,
+                         out_path=out_folder / "total_image_glb",
+                         n_samples=arg_samples)
+            print("Build the transient video and the total image:")
+            tr.transient_video(images=images,
+                               out_path=out_folder,
+                               normalize=True,
+                               name="transient")
+            tr.total_img(images=images,
+                         out_path=out_folder / "total_image",
+                         n_samples=arg_samples)
+            print("Build the global histogram of the central pixel:")
+            tr.histo_plt(radiance=glb_images[:, 119, 161, :],  # righe:colonne
+                         exp_time=arg_exp_time,
+                         interval=None,
+                         stem=False,
+                         file_path=out_folder / "transient_histograms_glb.svg")
+            print("Build the histogram of the central pixel:")
+            tr.histo_plt(radiance=images[:, 119, 161, :],  # righe:colonne
+                         exp_time=arg_exp_time,
+                         interval=None,
+                         stem=False,
+                         file_path=out_folder / "transient_histograms.svg")
+            print()
+
+        end = time.time()
+        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
     else:
         print("Wrong task provided\nPossibilities are: tr_video, total_img, glb_tr_video, hists, hists_glb")
