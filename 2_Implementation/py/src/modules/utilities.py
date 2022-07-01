@@ -172,7 +172,7 @@ def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = No
     :param img_size: size of the desired image [columns * rows]
     :param spot_size: size of the desired white spot [columns * rows]
     :param exact: flag to set white a specific pixel
-    :param pattern: list made as follows [x, y] where x represent the interval between white pixel on each row and y on each column
+    :param pattern: list made as follows [x, y] where x represent the number of white pixel in each row and y the number of white pixels in each column
     :param split: if true the grid is splitted dot by dot
     :return generated image
     """
@@ -192,12 +192,12 @@ def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = No
         if img_size[0] % 2 != 0 and img_size[1] % 2 != 0:
             img[int(img_size[1] / 2), int(img_size[0] / 2)] = 255
     elif not exact and pattern is not None:  # Generate a grid bitmap and if required save each dot as a single image
-        offset_x = floor(((img_size[0] - 1) - ((int(img_size[0] / pattern[0]) - 1) * pattern[
-            0])) / 2)  # Define the number of black pixel on the left before the first white dot
-        offset_y = floor(((img_size[1] - 1) - ((int(img_size[1] / pattern[1]) - 1) * pattern[
-            1])) / 2)  # Define the number of black pixel on the top before the first white dot
-        for i in range(offset_y, img.shape[0], pattern[1]):
-            for j in range(offset_x, img.shape[1], pattern[0]):
+        increase_x = floor((img_size[0] - pattern[0]) / (pattern[0] + 1))  # Define the number of black pixels between two white one on each row
+        offset_x = floor((img_size[0] - ((increase_x * (pattern[0] + 1)) + pattern[0])) / 2) + increase_x  # Define the number of black pixel on the left before the first white dot
+        increase_y = floor((img_size[1] - pattern[1]) / (pattern[1] + 1))  # Define the number of black pixels between two white one on each column
+        offset_y = floor((img_size[1] - ((increase_y * (pattern[1] + 1)) + pattern[1])) / 2) + increase_y  # Define the number of black pixel on the top before the first white dot
+        for i in range(offset_y, img.shape[0] - offset_y, increase_y + 1):
+            for j in range(offset_x, img.shape[1] - offset_x, increase_x + 1):
                 if not split:
                     img[i, j] = 255
                 else:

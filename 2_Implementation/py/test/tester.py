@@ -72,7 +72,7 @@ if __name__ == '__main__':
                            img_size=arg_img_size,
                            spot_size=None,#arg_spot_size,
                            exact=False,
-                           pattern=(10, 15),
+                           pattern=(32, 16),
                            split=True)
 
         end = time.time()

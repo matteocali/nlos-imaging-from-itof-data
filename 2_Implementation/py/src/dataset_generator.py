@@ -126,9 +126,9 @@ if __name__ == '__main__':
                     [i / 10 for i in range(10, 31, 5)]]
     # List that contains all the possible translations that is granted to an object
     # [[possible x translations], [possible y translations], [possible z translations]]
-    obj_tr_list_rnd = [[i / 10 for i in range(0, 11)],
+    obj_tr_list_rnd = [[i / 10 for i in range(0, 6)],
                        [i / 10 for i in range(0, 6)],
-                       [i / 10 for i in range(-5, 5)]]
+                       [i / 10 for i in range(-5, 6)]]
     # List that contains all the possible rotations that is granted to an object
     # [[possible x rotations], [possible y rotations], [possible z rotations]]
     obj_full_rot_list_rnd = [[i for i in range(-90, 91)],
@@ -141,7 +141,7 @@ if __name__ == '__main__':
                                 [0]]
     # List that contains all the possible rotations that is granted to the camera
     # [[possible x rotations], [possible y rotations], [possible z rotations]]
-    cam_rot_list_rnd = [[i for i in range(-95, 96)],
+    cam_rot_list_rnd = [[i for i in range(-5, 6)],
                         [i for i in range(-5, 6)],
                         [i for i in range(50, 91)]]
     # List that contains all the possible positions that is granted to the camera

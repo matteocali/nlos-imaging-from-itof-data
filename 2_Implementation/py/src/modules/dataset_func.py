@@ -217,7 +217,6 @@ def generate_dataset_xml(tr_rot_list: list, template: Path, folder_path: Path, o
 
     for b_index, batch in tqdm(enumerate(tr_rot_list), desc="Batches", leave=True, position=0):  # Cycle through each batch
         create_folder((folder_path / f"batch0{b_index + 1}"))  # Create the batch folder if not already present
-
         for o_index, obj in tqdm(enumerate(batch), desc="Objects", leave=False, position=1):  # Cycle through each object
             name = list(objs.keys())[o_index]  # Extract the object name
             for elm in tqdm(obj, desc="File", leave=False, position=2):  # Cycle through each position/translation/rotation combination
