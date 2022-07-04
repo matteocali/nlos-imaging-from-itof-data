@@ -1,5 +1,5 @@
 from numpy import sum, linspace, zeros, where, nanmin, nanmax, array, ndarray, copy, cos, sin, matmul, sqrt, radians, \
-    degrees, arctan2, uint8, float32, reshape, unique, concatenate
+    degrees, arctan2, uint8, float32, reshape, unique, concatenate, arctan, tan
 from os import path, listdir, remove, makedirs
 from pathlib import Path
 from glob import glob
@@ -192,9 +192,9 @@ def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = No
         if img_size[0] % 2 != 0 and img_size[1] % 2 != 0:
             img[int(img_size[1] / 2), int(img_size[0] / 2)] = 255
     elif not exact and pattern is not None:  # Generate a grid bitmap and if required save each dot as a single image
-        increase_x = floor((img_size[0] - pattern[0]) / (pattern[0] + 1))  # Define the number of black pixels between two white one on each row
+        increase_x = floor((img_size[0] - pattern[0]) / (pattern[0] - 1))  # Define the number of black pixels between two white one on each row
         offset_x = floor((img_size[0] - ((increase_x * (pattern[0] + 1)) + pattern[0])) / 2) + increase_x  # Define the number of black pixel on the left before the first white dot
-        increase_y = floor((img_size[1] - pattern[1]) / (pattern[1] + 1))  # Define the number of black pixels between two white one on each column
+        increase_y = floor((img_size[1] - pattern[1]) / (pattern[1] - 1))  # Define the number of black pixels between two white one on each column
         offset_y = floor((img_size[1] - ((increase_y * (pattern[1] + 1)) + pattern[1])) / 2) + increase_y  # Define the number of black pixel on the top before the first white dot
         for i in range(offset_y, img.shape[0] - offset_y, increase_y + 1):
             for j in range(offset_x, img.shape[1] - offset_x, increase_x + 1):
@@ -240,8 +240,7 @@ def save_h5(data: ndarray, file_path: Path, name: str = None) -> None:
 
     file_path = add_extension(str(file_path), ".h5")  # If not already present add the .h5 extension to the file path
     data = copy(data)  # Copy the ndarray in order to avoid overriding
-    data = data.reshape(
-        [data.shape[1], data.shape[2], data.shape[0]])  # Reshape the array in order to match the required layout
+    data = data.reshape([data.shape[1], data.shape[2], data.shape[0]])  # Reshape the array in order to match the required layout
     h5f = File(file_path, "w")  # Create the .h5 file and open it
     # Save the ndarray in the just created .h5 file
     if name:
@@ -408,3 +407,28 @@ def load_list(data_path: Path) -> list:
 
     with open(str(data_path), "rb") as fp:  # Open the target file
         return load(fp)  # Load the list from the file and return
+
+
+def k_matrix_calculator(h_fov: float, img_shape: list) -> ndarray:
+    """
+    Function that compute the k matrix of a camera (matrix of the intrinsic parameters)
+    :param h_fov: horizontal FOV (filed of view) of the camera (in degrees)
+    :param img_shape: image size in pixel [n_pixel_row, n_pixel_col]
+    :return: k matrix
+    """
+
+    v_fov = 2 * degrees(arctan((img_shape[1] / img_shape[0]) * tan(radians(h_fov / 2))))
+    f_x = (img_shape[0] / 2) / tan(radians(h_fov / 2))
+    f_y = (img_shape[1] / 2) / tan(radians(v_fov / 2))
+    if img_shape[0] % 2 == 0:
+        x = (img_shape[0] - 1) / 2
+    else:
+        x = img_shape[0] / 2
+    if img_shape[1] % 2 == 0:
+        y = (img_shape[1] - 1) / 2
+    else:
+        y = img_shape[1]/2
+
+    return array([[f_x, 0, x],
+                  [0, f_y, y],
+                  [0, 0, 1]], dtype=float32)

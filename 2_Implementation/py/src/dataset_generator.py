@@ -90,13 +90,13 @@ if __name__ == '__main__':
     N_ROT_OBJ_RND = [29, 29, 26, 26, 26, 26, 23, 23]  # List that contains the number of different rotations that I
                                                       # want for the random composed object for each batch
     N_TR_ROT_CAM_RND = 14  # Number of different position and/or rotations that I require for the camera in the rand dat
-    OBJ_POS_RND = {"Cube": [1.5, 1, 1.65],
-                   "Cone": [1.5, 1, 1.55],
-                   "Cylinder": [1.5, 1, 1.65],
-                   "Parallelepiped": [1.5, 1, 1.65],
-                   "Sphere": [1.5, 1, 1.65],
-                   "Concave plane": [1.5, 1, 1.65],
-                   "Random": [1.5, 1, 1.65]}  # Dictionary that contains all the default position of the objects
+    OBJ_POS_RND = {"Cube": [1, 1, 1.65],
+                   "Cone": [1, 1, 1.55],
+                   "Cylinder": [1, 1, 1.65],
+                   "Parallelepiped": [1, 1, 1.65],
+                   "Sphere": [1, 1, 1.65],
+                   "Concave plane": [1, 1, 1.65],
+                   "Random": [1, 1, 1.65]}  # Dictionary that contains all the default position of the objects
 
     # PARAMETERS LIST #
     # List that contains all the possible translations that is granted to an object

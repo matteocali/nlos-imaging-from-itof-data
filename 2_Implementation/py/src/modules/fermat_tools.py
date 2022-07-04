@@ -10,35 +10,33 @@ from tqdm import tqdm, trange
 
 from modules import transient_handler as tr
 from modules.transient_handler import extract_peak, active_beans_percentage
-from modules.utilities import add_extension, spot_bitmap_gen, plt_3d_surfaces
+from modules.utilities import add_extension, spot_bitmap_gen, k_matrix_calculator, plt_3d_surfaces
 
 from matplotlib import pyplot as plt
 
 
-def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list, exp_time: float = 0.01, laser_pos: list = None) -> None:
+def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list, fov: float, exp_time: float = 0.01, laser_pos: list = None) -> None:
     """
     Function to save a .mat file in the format required from the Fermat flow Matlab script
     :param data: ndarray containing the transient measurements (n*m matrix, n transient measurements with m temporal bins)
     :param file_path: file path and name where to save the .mat file
     :param data_grid_size: [n1, n2], with n1 * n2 = n, grid size of sensing points on the LOS wall (n = number of the transient measurements)
     :param img_shape: size of the image [<n_row>, <n_col>]
+    :param fov: horizontal field of view of the camera
     :param exp_time: exposure time used, required to compute "temporalBinCenters"
     :param laser_pos: position of the laser, if none it is confocal with the camera (1*3 vector)
     """
 
     np_file_path = dirname(file_path) + "\\glb_np_transient.npy"
     file_path = add_extension(str(file_path), ".mat")  # If not already present add the .h5 extension to the file path
-    pattern_interval = (int(img_shape[0] / data_grid_size[0]), int(img_shape[1] / data_grid_size[1]))
 
     # Define all the required vectors for the .mat file
     data_grid_size = array(data_grid_size, dtype=float64)  # Convert the data_grid_size from a list to a ndarray
 
     mask = spot_bitmap_gen(img_size=img_shape,
-                           pattern=pattern_interval)  # Define the mask that identify the location of the illuminated spots
+                           pattern=tuple(data_grid_size))  # Define the mask that identify the location of the illuminated spots
 
-    k = array([[276.2621, 0, 159.5],
-               [0, 276.2621, 119.5],
-               [0, 0, 1]], dtype=float32)  # Define the intrinsic camera matrix needed to map the dots on the LOS wall
+    k = k_matrix_calculator(h_fov=fov, img_shape=img_shape)  # Define the intrinsic camera matrix needed to map the dots on the LOS wall
     transient_image = build_matrix_from_dot_projection_data(transient=data, mask=mask)  # Put all the transient data in the right spot following the mask
     depthmap = compute_los_points_coordinates(images=transient_image,
                                               mask=mask,
@@ -72,9 +70,10 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
                                     flip_x=False,
                                     flip_y=False)  # Reshape the transient data in order to be in the same format used in the Fermat Flow algorithm
 
-    for i in range(data.shape[0]):  # Clean the outliers
-        if max(data[i, :]) < max(data)*0.1:
-            data[i, :] = zeros([1, data.shape[1]])
+    #for i in range(data.shape[0]):  # Clean the outliers
+    #    if max(data[i, :]) < max(data)*0.1:
+    #        data[i, :] = zeros([1, data.shape[1]])
+
     #data = data[2*16:20*16, :]
     #det_locs = det_locs[2*16:20*16, :]
 

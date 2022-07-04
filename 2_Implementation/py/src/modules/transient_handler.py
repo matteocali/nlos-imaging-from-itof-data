@@ -41,7 +41,7 @@ def reshape_frame(files, verbose=False):
         # Define an empty matrix of size image_height x image_width x temporal_samples for each channel
         frame = empty([len(files), size[1], size[0]], dtype=float32)
 
-    for index, file in enumerate(tqdm(files, desc="reshaping frame", leave=None)):  # For each provided file in the input folder
+    for index, file in enumerate(tqdm(files, desc="reshaping frame", leave=False)):  # For each provided file in the input folder
         img = exr.load_exr(file)
 
         # Perform the reshaping saving the results in frame_i for i in A, R,G , B
@@ -85,13 +85,14 @@ def img_matrix(channels, verbose=True):
             sleep(0.02)
         images = empty([shape(channels[0])[2], shape(channels[0])[0], shape(channels[0])[1], len(channels)], dtype=float32)  # Empty array that will contain all the images
         # Fuse the channels together to obtain a proper [A, R, G, B] image
-        for i in tqdm(range(shape(channels[0])[2]), desc="generating images", leave=None):
+        for i in tqdm(range(shape(channels[0])[2]), desc="generating images", leave=False):
             images[i, :, :, 0] = channels[1][:, :, i]
             images[i, :, :, 1] = channels[2][:, :, i]
             images[i, :, :, 2] = channels[3][:, :, i]
             images[i, :, :, 3] = channels[0][:, :, i]
 
             images[i, :, :, :][isnan(channels[0][:, :, i])] = 0  # Remove all the nan value following the Alpha matrix
+            images[i, :, :, :][where(images[i, :, :, :] < 0)] = 0  # Remove all the negative value and set them to 0
     else:
         if verbose:
             print(f"Build the {shape(channels)[2]} image matrices:")

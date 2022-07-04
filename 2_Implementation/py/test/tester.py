@@ -85,9 +85,8 @@ if __name__ == '__main__':
         images = tr.transient_loader(img_path=arg_in,
                                      np_path=arg_out / "np_transient.npy",
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        #ut.save_h5(data=images[:, :, :, 0],
-        #           file_path=arg_out / "h5_data")
-        h5_file = ut.load_h5(arg_in)
+        ut.save_h5(data=images[:, :, :, 1], file_path=arg_out / "h5_data")
+        #h5_file = ut.load_h5(arg_in)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
@@ -133,7 +132,8 @@ if __name__ == '__main__':
         modules.fermat_tools.np2mat(data=transient,
                                     file_path=arg_out / "cube",
                                     data_grid_size=[32, 16],
-                                    img_shape=[320, 240],
+                                    img_shape=[80, 60],
+                                    fov=60,
                                     exp_time=0.01)
 
         end = time.time()
