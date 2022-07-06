@@ -150,14 +150,23 @@ def extract_peak(transient: ndarray) -> tuple:
     :return: (peak_position, peak_values) channel by channel
     """
 
-    peak_pos = []
-    for i in range(transient.shape[1]):
-        if m_isnan(nanmin(transient[:, i])) and m_isnan(nanmax(transient[:, i])):  # Check for all nan case
-            peak_pos.append(nan)  # If all the value is nan the peak does not exist, assign nan
-        else:
-            peak_pos.append(nanargmax(transient[:, i], axis=0))  # Extract the position of the maximum value in the provided transient
+    mono = len(transient.shape) == 1
 
-    peak_values = [transient[peak_pos[i], i] for i in range(transient.shape[1])]  # Extract the radiance value in the peak position
+    if not mono:
+        peak_pos = []
+        for i in range(transient.shape[1]):
+            if m_isnan(nanmin(transient[:, i])) and m_isnan(nanmax(transient[:, i])):  # Check for all nan case
+                peak_pos.append(nan)  # If all the value is nan the peak does not exist, assign nan
+            else:
+                peak_pos.append(nanargmax(transient[:, i], axis=0))  # Extract the position of the maximum value in the provided transient
+        peak_values = [transient[peak_pos[i], i] for i in range(transient.shape[1])]  # Extract the radiance value in the peak position
+    else:
+        if m_isnan(nanmin(transient)) and m_isnan(nanmax(transient)):  # Check for all nan case
+            peak_pos = nan  # If all the value is nan the peak does not exist, assign nan
+        else:
+            peak_pos = nanargmax(transient, axis=0)  # Extract the position of the maximum value in the provided transient
+        peak_values = transient[peak_pos]  # Extract the radiance value in the peak position
+
     return peak_pos, peak_values
 
 
@@ -289,7 +298,7 @@ def transient_video(images, out_path, out_type="cv2", alpha=False, normalize=Tru
     print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
 
 
-def rmv_first_reflection_transient(transient: ndarray, file_path: Path = None, store: bool = False) -> ndarray:
+def rmv_first_reflection_transient(transient: ndarray, file_path: Path = None, store: bool = False, verbose: bool = True) -> ndarray:
     """
     Function that given a transient vector set to zero all the information about the direct reflection
     :param transient: input transient images
@@ -301,8 +310,9 @@ def rmv_first_reflection_transient(transient: ndarray, file_path: Path = None, s
     if file_path and not store:  # If already exists a npy file containing all the transient images load it instead of processing everything again
         return load(str(file_path))
 
-    print("Extracting the first peak (channel by channel):")
-    start = time()
+    if verbose:
+        print("Extracting the first peak (channel by channel):")
+        start = time()
 
     mono = len(transient.shape) == 1  # Check id=f the images are Mono or RGBA
 
@@ -312,8 +322,9 @@ def rmv_first_reflection_transient(transient: ndarray, file_path: Path = None, s
         peaks = nanargmax(transient, axis=0)  # Find the index of the maximum value in the third dimension
 
     # Extract the position of the first zero after the first peak and remove the first reflection
-    print("Remove the first peak (channel by channel):")
-    sleep(0.1)
+    if verbose:
+        print("Remove the first peak (channel by channel):")
+        sleep(0.1)
 
     glb_images = copy(transient)
     if not mono:
@@ -332,8 +343,9 @@ def rmv_first_reflection_transient(transient: ndarray, file_path: Path = None, s
         else:
             glb_images[:int(valid_zero_indexes[0])] = 0
 
-    end = time()
-    print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
+    if verbose:
+        end = time()
+        print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
 
     if file_path and store:
         save(str(file_path), glb_images)  # Save the loaded images as a numpy array

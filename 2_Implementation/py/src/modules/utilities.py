@@ -240,7 +240,7 @@ def save_h5(data: ndarray, file_path: Path, name: str = None) -> None:
 
     file_path = add_extension(str(file_path), ".h5")  # If not already present add the .h5 extension to the file path
     data = copy(data)  # Copy the ndarray in order to avoid overriding
-    data = moveaxis(data, 0, -1)
+    data = moveaxis(data, 0, -1)  # Move the transient length from index 0 to the last one in the ndarray
     data = data.reshape([data.shape[1], data.shape[0], data.shape[2]])
     #data = data.reshape([data.shape[2], data.shape[1], data.shape[0]])  # Reshape the array in order to match the required layout
     h5f = File(file_path, "w")  # Create the .h5 file and open it
