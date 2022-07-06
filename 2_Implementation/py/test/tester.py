@@ -87,8 +87,8 @@ if __name__ == '__main__':
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
         ut.save_h5(data=images[:, :, :, 1], file_path=arg_out / "cube")
         h5_file = ut.load_h5(arg_out / "cube.h5")
-        tr.histo_plt(tr.rmv_first_reflection_transient(images[:, 121, 160]), exp_time=0.01, stem=False, file_path=Path("C:\\Users\\DECaligM\\Documents\\test_pre.svg"))
-        tr.histo_plt(tr.rmv_first_reflection_transient(h5_file[121, 160, :]), exp_time=0.01, stem=False, file_path=Path("C:\\Users\\DECaligM\\Documents\\test_post.svg"))
+        tr.histo_plt(tr.rmv_first_reflection_transient(images[:, 121, 160, 1]), exp_time=0.01, stem=False, file_path=Path("C:\\Users\\DECaligM\\Documents\\test_pre.svg"))
+        tr.histo_plt(tr.rmv_first_reflection_transient(h5_file[160, 121, :]), exp_time=0.01, stem=False, file_path=Path("C:\\Users\\DECaligM\\Documents\\test_post.svg"))
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
