@@ -1,5 +1,5 @@
 from numpy import sum, linspace, zeros, where, nanmin, nanmax, array, ndarray, copy, cos, sin, matmul, sqrt, radians, \
-    degrees, arctan2, uint8, float32, reshape, unique, concatenate, arctan, tan
+    degrees, arctan2, uint8, float32, reshape, unique, concatenate, arctan, tan, moveaxis
 from os import path, listdir, remove, makedirs
 from pathlib import Path
 from glob import glob
@@ -240,7 +240,9 @@ def save_h5(data: ndarray, file_path: Path, name: str = None) -> None:
 
     file_path = add_extension(str(file_path), ".h5")  # If not already present add the .h5 extension to the file path
     data = copy(data)  # Copy the ndarray in order to avoid overriding
-    data = data.reshape([data.shape[2], data.shape[1], data.shape[0]])  # Reshape the array in order to match the required layout
+    data = moveaxis(data, 0, -1)
+    data = data.reshape([data.shape[1], data.shape[0], data.shape[2]])
+    #data = data.reshape([data.shape[2], data.shape[1], data.shape[0]])  # Reshape the array in order to match the required layout
     h5f = File(file_path, "w")  # Create the .h5 file and open it
     # Save the ndarray in the just created .h5 file
     if name:
