@@ -82,11 +82,12 @@ if __name__ == '__main__':
         start = time.time()
 
         ut.create_folder(arg_out, "all")
-        images = tr.transient_loader(img_path=arg_in,
-                                     np_path=arg_out / "np_transient.npy",
-                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        ut.save_h5(data=images[:, :, :, 1], file_path=arg_out / "h5_data")
-        #h5_file = ut.load_h5(arg_in)
+        #images = tr.transient_loader(img_path=arg_in,
+        #                             np_path=arg_out / "np_transient.npy",
+        #                             store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
+        #ut.save_h5(data=images[:, :, :, 1], file_path=arg_out / "cube")
+        h5_file = ut.load_h5(arg_out / "3walls_1_TOF_229_rec.h5")
+        h5_file2 = ut.load_h5(arg_out / "cube.h5")
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
