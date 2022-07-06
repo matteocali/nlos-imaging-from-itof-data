@@ -337,7 +337,8 @@ def rmv_first_reflection_transient(transient: ndarray, file_path: Path = None, s
 
     if file_path and store:
         save(str(file_path), glb_images)  # Save the loaded images as a numpy array
-        return glb_images
+
+    return glb_images
 
 
 def rmv_first_reflection_img(images, file_path=None, store=False):
@@ -445,7 +446,7 @@ def grid_transient_loader(transient_path: Path, np_path: Path = None, store: boo
         return transient
 
 
-def histo_plt(radiance, exp_time, interval=None, stem=True, file_path=None):
+def histo_plt(radiance: ndarray, exp_time: float, interval: list = None, stem: bool = True, file_path: Path = None):
     """
     Function that plot the transient histogram of a single pixel (for each channel)
     :param radiance: radiance value (foe each channel) of the given pixel [radiance_values, n_channel]
