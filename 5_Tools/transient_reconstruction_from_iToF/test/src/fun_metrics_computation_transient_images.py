@@ -331,22 +331,21 @@ def metrics_computation_transient_images(trans, trans_nod, pred_trans_nod, pred_
         plt.clim(-0.5, 0.5)
         # if np.mean(err_start>0.5):
 
-        posy = [160, 160, 160, 160]
-        posx = [121, 125, 128, 130]
+        posy = [160, 17, 160, 160]
+        posx = [121, 5, 128, 130]
         #xsteps = np.arange(0, 5, 5 / 2000)
         xsteps = range(0, trans_nod.shape[2])
         for ix, iy in zip(posx, posy):
             fig = plt.figure()
-            plt_start_pos = np.where(trans_nod[ix, iy] != 0)[0][0] - 10
-            plt_end_pos = np.where(trans_nod[ix, iy] != 0)[0][-1] + 11
+            plt_start_pos = 0
+            plt_end_pos = trans_nod.shape[2]
+            #plt_start_pos = np.where(trans_nod[ix, iy] != 0)[0][0] - 10
+            #plt_end_pos = np.where(trans_nod[ix, iy] != 0)[0][-1] + 11
             xsteps = range(0, trans_nod[ix, iy, plt_start_pos:plt_end_pos].shape[0])
             plt.plot(xsteps, trans_nod[ix, iy, plt_start_pos:plt_end_pos], "g", label="Original global component")
             plt.plot(xsteps, pred_trans_nod[ix, iy, plt_start_pos:plt_end_pos], "b", label="Estimated global component")
-            plt.xticks(range(0, trans_nod[ix, iy, plt_start_pos:plt_end_pos].shape[0],
-                             int(trans_nod[ix, iy, plt_start_pos:plt_end_pos].shape[0] / 13)),
-                       ["{:.2f}".format(round(value * 0.01 / 3e8 * 1e9, 2)) for value in
-                        range(plt_start_pos, plt_end_pos + 1,
-                              int(trans_nod[ix, iy, plt_start_pos:plt_end_pos].shape[0] / 13))], rotation=45)
+            plt.xticks(range(0, trans_nod[ix, iy, plt_start_pos:plt_end_pos].shape[0], int(trans_nod[ix, iy, plt_start_pos:plt_end_pos].shape[0] / 13)),
+                       ["{:.2f}".format(round(value * 0.01 / 3e8 * 1e9, 2)) for value in range(plt_start_pos, plt_end_pos, int(trans_nod[ix, iy, plt_start_pos:plt_end_pos].shape[0] / 13))], rotation=45)
             plt.xlabel(f"Time instants [ns]")
             plt.ylabel(r"Radiance value [$W/(m^{2}·sr)$]")
             plt.grid()

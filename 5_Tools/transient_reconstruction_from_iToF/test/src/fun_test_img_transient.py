@@ -167,7 +167,14 @@ def test_img(name, weights_path, attempt_name, Sname, P, freqs, fl_scale, fl_nor
         x_d = np.copy(tr)
         for j in range(x_d.shape[0]):
             for k in range(x_d.shape[1]):
-                x_d[j, k, np.nanargmax(x_d[j, k, :]) + 5:] = 0
+                peaks = np.nanargmax(x_d[j, k, :], axis=0)
+                zeros_pos = np.where(x_d[j, k, :] == 0)[0]
+                valid_zero_indexes = zeros_pos[np.where(zeros_pos > peaks)]
+                if valid_zero_indexes.size == 0:
+                    x_d[j, k, :] = 0
+                else:
+                    x_d[j, k, int(valid_zero_indexes[0]):] = 0
+                #x_d[j, k, np.nanargmax(x_d[j, k, :]) + 5:] = 0
 
         v_d_gt = np.matmul(x_d, phi)
         v_g_gt = v_in - v_d_gt
