@@ -4,7 +4,7 @@ from time import time, sleep
 
 from cv2 import fisheye, CV_16SC2, remap, INTER_LINEAR, undistort, initUndistortRectifyMap
 from numpy import ndarray, array, float64, float32, eye, divide, tile, arange, zeros_like, linalg, zeros, dot, asarray, \
-    stack, reshape, flip, load, nanargmax, copy, where, delete, save, nonzero, cross, sqrt, concatenate, matmul, unique, subtract, negative, max, roll
+    stack, reshape, flip, load, nanargmax, copy, where, delete, save, nonzero, cross, sqrt, concatenate, matmul, unique, subtract, negative, max, roll, round as np_round
 from scipy import io
 from tqdm import tqdm, trange
 
@@ -53,11 +53,11 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
     det_locs = coordinates_matrix_reshape(data=flip_x_rt_depthmap[:, :, :-1],
                                           mask=mask)  # Reshape the coordinate value, putting the coordinate of each row one on the bottom of the previous one
 
-    '''
+    #'''
     plt_3d_surfaces(surfaces=[depthmap, rt_depthmap, flip_x_rt_depthmap],
                     mask=mask,
                     legends=["Original plane", "Roto-translated plane", "Flipped roto-translated plane"])
-    '''
+    #'''
 
     if laser_pos is None:   # If laser_pos is not provided it means that the laser is confocal with the camera
         src_loc = array((), dtype=float32)
@@ -376,6 +376,7 @@ def roto_transl(coordinates_matrix: ndarray) -> ndarray:
     :return: coordinates matrix in te word system
     """
 
+    coordinates_matrix = np_round(coordinates_matrix, decimals=2)  # exp_time = 0.01 max sensibility is 1cm
     center_pos = (int(coordinates_matrix.shape[0] / 2), int(coordinates_matrix.shape[1] / 2))  # Find the center position on the coordinates matrix
     nearest_center_pos = nearest_nonzero_idx(coordinates_matrix[:, :, 0], center_pos[0], center_pos[1])  # Find the location of the active poit closest to the real center
     nearest_center_coord = [coordinates_matrix[nearest_center_pos[0], nearest_center_pos[1], i] for i in range(coordinates_matrix.shape[2])]  # Extract from the coordinates' matrix the coordinates of the point closest to the center
@@ -393,14 +394,21 @@ def roto_transl(coordinates_matrix: ndarray) -> ndarray:
     n_x = normalized_normal[0]  # x component of the normal vector
     n_y = normalized_normal[1]  # y component of the normal vector
     n_z = normalized_normal[2]  # z component of the normal vector
-    sqrt_squared_sum_nx_ny = sqrt((n_x ** 2) + (n_y ** 2))
-    rot_matrix = array([[n_y / sqrt_squared_sum_nx_ny, -n_x / sqrt_squared_sum_nx_ny, 0],
-                        [(n_x * n_z) / sqrt_squared_sum_nx_ny, (n_y * n_z) / sqrt_squared_sum_nx_ny, -sqrt_squared_sum_nx_ny],
-                        [n_x, n_y, n_z]], dtype=float32)  # Build the rotation matrix (code from: https://math.stackexchange.com/questions/1956699/getting-a-transformation-matrix-from-a-normal-vector)
-    o_rot_matrix = array([[0, 1, 0],
-                          [-1, 0, 0],
-                          [0, 0, 1]], dtype=float32)  # Define a second rotation matrix to compensate for the rotation 90° over the y-axis
-    rot_matrix = matmul(o_rot_matrix, rot_matrix)  # define the complete rotation matrix multiplying together the two previously defined ones
+
+    if n_x != n_y and n_x != 0 and n_y != 0:
+        sqrt_squared_sum_nx_ny = sqrt((n_x ** 2) + (n_y ** 2))
+        rot_matrix = array([[n_y / sqrt_squared_sum_nx_ny, -n_x / sqrt_squared_sum_nx_ny, 0],
+                            [(n_x * n_z) / sqrt_squared_sum_nx_ny, (n_y * n_z) / sqrt_squared_sum_nx_ny, -sqrt_squared_sum_nx_ny],
+                            [n_x, n_y, n_z]], dtype=float32)  # Build the rotation matrix (code from: https://math.stackexchange.com/questions/1956699/getting-a-transformation-matrix-from-a-normal-vector)
+
+        o_rot_matrix = array([[0, 1, 0],
+                              [-1, 0, 0],
+                              [0, 0, 1]], dtype=float32)  # Define a second rotation matrix to compensate for the rotation 90° over the y-axis
+        rot_matrix = matmul(o_rot_matrix, rot_matrix)  # Define the complete rotation matrix multiplying together the two previously defined ones
+    else:
+        rot_matrix = array([[1, 0, 0],
+                            [0, 1, 0],
+                            [0, 0, 1]], dtype=float32)
 
     tr_vector = matmul(rot_matrix, reshape(nearest_center_coord, [3, 1]), dtype=float32)  # Define a translation vector that aims to center the plane on the nearest_center point
 
@@ -411,8 +419,8 @@ def roto_transl(coordinates_matrix: ndarray) -> ndarray:
     non_zero_pos = nonzero(coordinates_matrix[:, :, 0])  # Find the location where the coordinates' matrix is not zero
     for r in unique(non_zero_pos[0]):
         for c in unique(non_zero_pos[1]):
-            coord_vector = concatenate((reshape(coordinates_matrix[r, c, :], (3, 1)), array([[1]], dtype=float32)), axis=0)  # For every non-zero point of the coordinates' matrix concatenate a 1 at the end and reshape it from [3], to [3, 1]
+            coord_vector = concatenate((reshape(coordinates_matrix[r, c, :], (3, 1)), array([[1]], dtype=float32)), axis=0)  # For every non-zero point of the coordinates' matrix concatenate a 1 at the end and reshape it from [3], to [4, 1]
             coordinates_matrix[r, c, :] = matmul(rototransl_matrix, coord_vector, dtype=float32)[:-1, 0]  # Apply the roto-translation to each non-zero point and remove the final 1
     coordinates_matrix[where(coordinates_matrix == -0.0)] = 0  # Change all the -0.0 to 0
 
-    return coordinates_matrix
+    return np_round(coordinates_matrix, decimals=2)

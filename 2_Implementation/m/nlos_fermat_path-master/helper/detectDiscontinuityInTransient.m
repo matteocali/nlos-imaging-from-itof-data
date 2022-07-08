@@ -71,6 +71,7 @@ for i = 1 : numOfMeasurements
     if whetherSortDisconts
         disconts = sort(disconts, 'ascend');
     end
+
     
     % ----- store discont -----
     discontsAll(i, :) = disconts;
