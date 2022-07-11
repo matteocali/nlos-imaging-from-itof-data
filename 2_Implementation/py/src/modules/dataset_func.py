@@ -4,7 +4,9 @@ from random import seed as rnd_seed, sample as rnd_sample
 from lxml import etree as et
 from tqdm import trange, tqdm
 
-from modules.utilities import create_folder, permute_list, load_list, save_list, blender2mitsuba_coord_mapping
+from numpy import nonzero, unique
+
+from modules.utilities import create_folder, permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen
 
 
 def generate_dataset_file(tx_rt_list: list, folder_path: Path, objs: dict) -> None:
@@ -278,3 +280,97 @@ def generate_dataset_xml(tr_rot_list: list, template: Path, folder_path: Path, o
                         except KeyError:
                             pass
                 tree.write(str(folder_path / f"batch0{b_index + 1}" / file_name.replace(" ", "_")), xml_declaration=True, method="xml", encoding="utf8")
+
+
+def generate_dataset_xml_splitted(tr_rot_list: list, template: Path, folder_path: Path, objs: dict, img_shape: list, pattern: list) -> None:
+    """
+    Function that given the template.xml file and all the chosen position?translation?rotation combinations generate the correspondent .xml files
+    :param tr_rot_list: list of all the final combination of position/translation/rotations of each object and of the camera [batch1[obj1[(camera_pos, camera_rot), (obj_tr, obj_rot)], obj2[(camera_pos, camera_rot), (obj_tr, obj_rot)], ...], batch2[(camera_pos, camera_rot), (obj_tr, obj_rot)], obj2[(camera_pos, camera_rot), (obj_tr, obj_rot)], ...], ...]
+    :param template: template file (.xml)
+    :param folder_path: path of the output folder
+    :param img_shape: shape of the image, col, row
+    :param pattern: grid pattern
+    :param objs: Dict that contains the name and default position of every object that will be considered
+    """
+
+    create_folder(folder_path)  # Create the output folder if not already present
+
+    for b_index, batch in tqdm(enumerate(tr_rot_list), desc="Batches", leave=True, position=0):  # Cycle through each batch
+        batch_folder = folder_path / f"batch0{b_index + 1}"
+        create_folder(batch_folder)  # Create the batch folder if not already present
+        for o_index, obj in tqdm(enumerate(batch), desc="Objects", leave=False, position=1):  # Cycle through each object
+            name = list(objs.keys())[o_index]  # Extract the object name
+            for e_index, elm in tqdm(enumerate(obj), desc="File", leave=False, position=2):  # Cycle through each position/translation/rotation combination
+                cam_pos = [elm[0][0][0], elm[0][0][1], elm[0][0][2]]  # Extract the camera position
+                cam_rot = [elm[0][1][0], elm[0][1][1], elm[0][1][2]]  # Extract the camera rotation
+                if name != "Random":
+                    obj_tr = [elm[1][0][0], elm[1][0][1], elm[1][0][2]]  # Extract the object translation
+                    obj_rot = [elm[1][1][0], elm[1][1][1], elm[1][1][2]]  # Extract the object rotation
+                else:
+                    obj_tr_1 = [elm[1][0][0][0], elm[1][0][0][1], elm[1][0][0][2]]  # Extract the object translation
+                    obj_tr_2 = [elm[1][1][0][0], elm[1][1][0][1], elm[1][1][0][2]]  # Extract the object translation
+                    obj_rot_1 = [elm[1][0][1][0], elm[1][0][1][1], elm[1][0][1][2]]  # Extract the object rotation
+                    obj_rot_2 = [elm[1][1][1][0], elm[1][1][1][1], elm[1][1][1][2]]  # Extract the object rotation
+
+                if name != "Random":
+                    obj_file_name = f"{name}_batch0{b_index + 1}_tr({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_rot({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})".lower()  # Find the correct file name of the object given the translation and rotation value
+                    file_name = f"transient_nlos_{name.lower()}_cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_obj_pos_({round(objs[name][0] + obj_tr[0], 2)}_{round(objs[name][1] + obj_tr[1], 2)}_{round(objs[name][2] + obj_tr[2], 2)})_obj_rot_({round(obj_rot[0], 2)}_{round(obj_rot[1], 2)}_{round(obj_rot[2], 2)})"  # Set the output file name in a way that contains all the relevant info
+                else:
+                    obj_file_name_1 = f"{elm[1][2][0]}_batch0{b_index + 1}_tr({obj_tr_1[0]}_{obj_tr_1[1]}_{obj_tr_1[2]})_rot({obj_rot_1[0]}_{obj_rot_1[1]}_{obj_rot_1[2]})".lower()  # Find the correct file name of the object given the translation and rotation value
+                    obj_file_name_2 = f"{elm[1][2][1]}_batch0{b_index + 1}_tr({obj_tr_2[0]}_{obj_tr_2[1]}_{obj_tr_2[2]})_rot({obj_rot_2[0]}_{obj_rot_2[1]}_{obj_rot_2[2]})".lower()  # Find the correct file name of the object given the translation and rotation value
+                    file_name = f"transient_nlos_{elm[1][2][0].lower()}+{elm[1][2][1].lower()}_" \
+                                f"cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_" \
+                                f"obj_pos_({round(objs[elm[1][2][0]][0] + obj_tr_1[0], 2)}_{round(objs[elm[1][2][0]][1] + obj_tr_1[1], 2)}_{round(objs[elm[1][2][0]][2] + obj_tr_1[2], 2)})_({round(objs[elm[1][2][1]][0] + obj_tr_2[0], 2)}_{round(objs[elm[1][2][1]][1] + obj_tr_2[1], 2)}_{round(objs[elm[1][2][1]][2] + obj_tr_2[2], 2)})_" \
+                                f"obj_rot_({round(obj_rot_1[0], 2)}_{round(obj_rot_1[1], 2)}_{round(obj_rot_1[2], 2)})_({round(obj_rot_2[0], 2)}_{round(obj_rot_2[1], 2)}_{round(obj_rot_2[2], 2)})"  # Set the output file name in a way that contains all the relevant info
+
+                # Convert camera position and rotation from blender to mitsuba coordinates system
+                cam_pos, cam_rot = blender2mitsuba_coord_mapping(cam_pos[0], cam_pos[1], cam_pos[2], cam_rot[0], cam_rot[1], cam_rot[2])
+
+                # Modify the template inserting the desired data
+                # (code from: https://stackoverflow.com/questions/37868881/how-to-search-and-replace-text-in-an-xml-file-using-python)
+                if name == "Random":
+                    template_path = template.parent.absolute() / "template_rnd.xml"
+                else:
+                    template_path = template
+
+                mask = spot_bitmap_gen(img_size=img_shape,
+                                       pattern=tuple(pattern))
+                non_zero_pos = nonzero(mask)
+
+                elm_path = batch_folder / f"elm_{e_index}"
+                create_folder(elm_path)
+                for row in unique(non_zero_pos[0]):
+                    for col in unique(non_zero_pos[1]):
+                        with open(str(template_path), encoding="utf8") as f:
+                            tree = et.parse(f)
+                            root = tree.getroot()
+
+                            for elem in root.getiterator():
+                                try:
+                                    if elem.attrib["value"] == "obj_name":
+                                        elem.attrib["value"] = str(obj_file_name)
+                                    elif elem.attrib["value"] == "obj_name_1":
+                                        elem.attrib["value"] = str(obj_file_name_1)
+                                    elif elem.attrib["value"] == "obj_name_2":
+                                        elem.attrib["value"] = str(obj_file_name_2)
+                                    elif elem.attrib["value"] == "t_cam_x":
+                                        elem.attrib["value"] = str(cam_pos[0])
+                                    elif elem.attrib["value"] == "t_cam_y":
+                                        elem.attrib["value"] = str(cam_pos[1])
+                                    elif elem.attrib["value"] == "t_cam_z":
+                                        elem.attrib["value"] = str(cam_pos[2])
+                                    elif elem.attrib["value"] == "r_cam_x":
+                                        elem.attrib["value"] = str(cam_rot[0])
+                                    elif elem.attrib["value"] == "r_cam_y":
+                                        elem.attrib["value"] = str(cam_rot[1])
+                                    elif elem.attrib["value"] == "r_cam_z":
+                                        elem.attrib["value"] = str(cam_rot[2])
+                                    elif elem.attrib["value"] == "o_x":
+                                        elem.attrib["value"] = str(col)
+                                    elif elem.attrib["value"] == "o_y":
+                                        elem.attrib["value"] = str(row)
+                                    elif elem.attrib["value"] == "t_name":
+                                        elem.attrib["value"] = f"bitmap_r{row}_c{col}"
+                                except KeyError:
+                                    pass
+                        tree.write(str(elm_path / (file_name.replace(" ", "_") + f"_r{row}_c{col}.xml")), xml_declaration=True, method="xml", encoding="utf8")

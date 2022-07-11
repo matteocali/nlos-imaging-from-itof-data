@@ -8,6 +8,7 @@ import sys
 import time
 import numpy as np
 from tqdm import trange
+import open3d as o3d
 
 
 def arg_parser(argv):
@@ -73,7 +74,7 @@ if __name__ == '__main__':
                            spot_size=None,#arg_spot_size,
                            exact=False,
                            pattern=(32, 16),
-                           split=True)
+                           split=False)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
@@ -123,20 +124,56 @@ if __name__ == '__main__':
 
         #transient = tr.rmv_sparse_fermat_transient(transients=transient, channel=1, threshold=5, remove_data=False)
 
-        '''
-        for i in trange(transient.shape[0]):
-            tr.histo_plt(radiance=tr.rmv_first_reflection_transient(transient=transient[i, :, :], file_path=arg_out / "hists" / "np" / f"np_transient_{i}.npy", store=(not exists(arg_out / "hists" / "np" / f"np_transient_{i}.npy"))),
-                         exp_time=0.01,
-                         interval=None,  # [15.7, 19.6],
-                         stem=True,
-                         file_path=arg_out / "hists" / f"transient_histograms{i}.svg")
-        '''
         modules.fermat_tools.np2mat(data=transient,
                                     file_path=arg_out / "cube",
                                     data_grid_size=[32, 16],
                                     img_shape=[80, 60],
                                     fov=60,
                                     exp_time=0.01)
+
+        end = time.time()
+        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    elif arg_task == "np2mat_full":
+        print(f"TASK: {arg_task}")
+        start = time.time()
+
+        ut.create_folder(arg_out, "all")
+        images = tr.transient_loader(img_path=arg_in,
+                                     np_path=arg_out / "np_transient.npy",
+                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
+
+        transient = np.zeros([images.shape[1] * images.shape[2], images.shape[0], images.shape[3] - 1], dtype=np.float32)
+        index = 0
+        for row in range(images.shape[1]):
+            for col in range(images.shape[2]):
+                transient[index, :, :] = images[:, row, col, :-1]
+                index += 1
+
+        for i in range(transient.shape[0]):
+            transient[i, :, :] = tr.clean_transient_tail(transient=transient[i, :, :], n_samples=20)
+
+        #transient = tr.rmv_sparse_fermat_transient(transients=transient, channel=1, threshold=5, remove_data=False)
+
+        modules.fermat_tools.np2mat(data=transient,
+                                    file_path=arg_out / "cube",
+                                    data_grid_size=[80, 60],
+                                    img_shape=[80, 60],
+                                    fov=60,
+                                    exp_time=0.01)
+
+        end = time.time()
+        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+    elif arg_task == "point_cloud":
+        print(f"TASK: {arg_task}")
+        start = time.time()
+
+        print("Load a ply point cloud, print it, and render it")
+        pcd = o3d.io.read_point_cloud(str(arg_in))
+
+        print("Statistical oulier removal")
+        cl, ind = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
+
+        o3d.io.write_point_cloud(str(arg_out / "test.ply"), cl)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))

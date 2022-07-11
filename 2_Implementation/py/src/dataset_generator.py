@@ -19,13 +19,14 @@ def arg_parser(argv):
     arg_template_path = None  # Argument containing the xml template file directory
     arg_rnd_seed = None  # Argument containing the random seed value
     arg_rnd = None  # Argument that define if use or not the random database
-    arg_help = "{0} -p <perm> -d <dataset> -b <batch> -t <template> -s <seed> -r <random>".format(argv[0])  # Help string
+    arg_grid = False  # Argument that define if use or not the spot database
+    arg_help = "{0} -p <perm> -d <dataset> -b <batch> -t <template> -s <seed> -r <random> -g <grid>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(argv[1:],
-                                   "hp:d:b:t:s:r:",
-                                   ["help", "perm=", "dataset=", "batch=", "template=", "seed=", "random="])
+                                   "hp:d:b:t:s:r:g:",
+                                   ["help", "perm=", "dataset=", "batch=", "template=", "seed=", "random=", "grid="])
     except:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -43,9 +44,11 @@ def arg_parser(argv):
         elif opt in ("-t", "--template"):
             arg_template_path = Path(arg)  # Set the template file directory
         elif opt in ("-s", "--seed"):
-            arg_rnd_seed = int(arg)  # Set the template file directory
+            arg_rnd_seed = int(arg)  # Set the random seed
         elif opt in ("-r", "--random"):
-            arg_rnd = bool(arg)  # Set the template file directory
+            arg_rnd = bool(arg)  # Set the random flag
+        elif opt in ("-g", "--grid"):
+            arg_grid = bool(arg)  # Set the spot flag
 
     print("Permutation list path: ", arg_permutation_list_path)
     print("Dataset path: ", arg_dataset_file_path)
@@ -53,13 +56,14 @@ def arg_parser(argv):
     print("Template path: ", arg_template_path)
     print("Random seed: ", arg_rnd_seed)
     print("Random database: ", arg_rnd)
+    print("Spot database: ", arg_grid)
     print()
 
-    return [arg_permutation_list_path, arg_dataset_file_path, arg_batches_path, arg_template_path, arg_rnd_seed, arg_rnd]
+    return [arg_permutation_list_path, arg_dataset_file_path, arg_batches_path, arg_template_path, arg_rnd_seed, arg_rnd, arg_grid]
 
 
 if __name__ == '__main__':
-    arg_permutation_list_path, arg_dataset_file_path, arg_batches_path, arg_template_path, arg_rnd_seed, arg_rnd = arg_parser(sys.argv)  # Recover the input and output folder from the console args
+    arg_permutation_list_path, arg_dataset_file_path, arg_batches_path, arg_template_path, arg_rnd_seed, arg_rnd, arg_grid = arg_parser(sys.argv)  # Recover the input and output folder from the console args
 
     # CONSTANTS #
     N_BATCH = 8  # Number of different batches that will be generated
@@ -201,11 +205,19 @@ if __name__ == '__main__':
         dat.generate_dataset_file(tx_rt_list=tr_rot_list,
                                   folder_path=arg_dataset_file_path,
                                   objs=OBJ_POS_RND)  # Export a .txt file containing the information of the dataset
-                                                # actually used after all the random permutations
+                                                     # actually used after all the random permutations
 
         # BUILD THE XML FILE FOR EACH SCENE #
         print("\nGenerate all the .xml files:")
-        dat.generate_dataset_xml(tr_rot_list=tr_rot_list,
-                                 template=arg_template_path,
-                                 folder_path=arg_batches_path,
-                                 objs=OBJ_POS_RND)
+        if not arg_grid:
+            dat.generate_dataset_xml(tr_rot_list=tr_rot_list,
+                                     template=arg_template_path,
+                                     folder_path=arg_batches_path,
+                                     objs=OBJ_POS_RND)
+        else:
+            dat.generate_dataset_xml_splitted(tr_rot_list=tr_rot_list,
+                                              template=arg_template_path,
+                                              folder_path=arg_batches_path,
+                                              objs=OBJ_POS_RND,
+                                              img_shape=[320, 240],
+                                              pattern=[32, 16])
