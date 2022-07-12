@@ -73,8 +73,8 @@ if __name__ == '__main__':
                            img_size=arg_img_size,
                            spot_size=None,#arg_spot_size,
                            exact=False,
-                           pattern=(32, 16),
-                           split=False)
+                           pattern=(80, 60),
+                           split=True)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
