@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
         ut.spot_bitmap_gen(file_path=arg_out / "bitmaps",
                            img_size=arg_img_size,
-                           spot_size=None,#arg_spot_size,
+                           spot_size=None,
                            exact=False,
                            pattern=(80, 60),
                            split=True)
@@ -122,12 +122,12 @@ if __name__ == '__main__':
         for i in range(transient.shape[0]):
             transient[i, :, :] = tr.clean_transient_tail(transient=transient[i, :, :], n_samples=20)
 
-        #transient = tr.rmv_sparse_fermat_transient(transients=transient, channel=1, threshold=5, remove_data=False)
-
         modules.fermat_tools.np2mat(data=transient,
                                     file_path=arg_out / "cube",
-                                    data_grid_size=[32, 16],
-                                    img_shape=[80, 60],
+                                    data_grid_size=arg_spot_size,
+                                    img_shape=arg_img_size,
+                                    show_plt=True,
+                                    data_clean=True,
                                     fov=60,
                                     exp_time=0.01)
 
@@ -149,15 +149,12 @@ if __name__ == '__main__':
                 transient[index, :, :] = images[:, row, col, :-1]
                 index += 1
 
-        for i in range(transient.shape[0]):
-            transient[i, :, :] = tr.clean_transient_tail(transient=transient[i, :, :], n_samples=20)
-
-        #transient = tr.rmv_sparse_fermat_transient(transients=transient, channel=1, threshold=5, remove_data=False)
-
         modules.fermat_tools.np2mat(data=transient,
                                     file_path=arg_out / "cube",
-                                    data_grid_size=[80, 60],
-                                    img_shape=[80, 60],
+                                    data_grid_size=arg_spot_size,
+                                    img_shape=arg_img_size,
+                                    show_plt=True,
+                                    data_clean=True,
                                     fov=60,
                                     exp_time=0.01)
 
@@ -170,7 +167,7 @@ if __name__ == '__main__':
         print("Load a ply point cloud, print it, and render it")
         pcd = o3d.io.read_point_cloud(str(arg_in))
 
-        print("Statistical oulier removal")
+        print("Statistical outlier removal")
         cl, ind = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=2.0)
 
         o3d.io.write_point_cloud(str(arg_out / "test.ply"), cl)

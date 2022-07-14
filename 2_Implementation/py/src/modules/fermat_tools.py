@@ -4,18 +4,17 @@ from time import time, sleep
 
 from cv2 import fisheye, CV_16SC2, remap, INTER_LINEAR, undistort, initUndistortRectifyMap
 from numpy import ndarray, array, float64, float32, eye, divide, tile, arange, zeros_like, linalg, zeros, dot, asarray, \
-    stack, reshape, flip, load, nanargmax, copy, where, delete, save, nonzero, cross, sqrt, concatenate, matmul, unique, subtract, negative, max, roll, round as np_round
+    stack, reshape, flip, load, nanargmax, copy, where, delete, save, nonzero, cross, sqrt, concatenate, matmul, unique, \
+    subtract, negative, roll, round as np_round, flip as np_flip
 from scipy import io
-from tqdm import tqdm, trange
+from tqdm import tqdm
 
 from modules import transient_handler as tr
-from modules.transient_handler import extract_peak, active_beans_percentage
+from modules.transient_handler import extract_peak, active_beans_percentage, clear_tr
 from modules.utilities import add_extension, spot_bitmap_gen, k_matrix_calculator, plt_3d_surfaces
 
-from matplotlib import pyplot as plt
 
-
-def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list, fov: float, exp_time: float = 0.01, laser_pos: list = None) -> None:
+def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list, fov: float, data_clean: bool = False, show_plt: bool = False, exp_time: float = 0.01, laser_pos: list = None) -> None:
     """
     Function to save a .mat file in the format required from the Fermat flow Matlab script
     :param data: ndarray containing the transient measurements (n*m matrix, n transient measurements with m temporal bins)
@@ -23,6 +22,8 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
     :param data_grid_size: [n1, n2], with n1 * n2 = n, grid size of sensing points on the LOS wall (n = number of the transient measurements)
     :param img_shape: size of the image [<n_row>, <n_col>]
     :param fov: horizontal field of view of the camera
+    :param data_clean: boolean that indicate if the data should be cleaned or not
+    :param show_plt: boolean that indicate if the data should be plotted or not
     :param exp_time: exposure time used, required to compute "temporalBinCenters"
     :param laser_pos: position of the laser, if none it is confocal with the camera (1*3 vector)
     """
@@ -53,16 +54,21 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
     det_locs = coordinates_matrix_reshape(data=flip_x_rt_depthmap[:, :, :-1],
                                           mask=mask)  # Reshape the coordinate value, putting the coordinate of each row one on the bottom of the previous one
 
-    #'''
-    plt_3d_surfaces(surfaces=[depthmap, rt_depthmap, flip_x_rt_depthmap],
-                    mask=mask,
-                    legends=["Original plane", "Roto-translated plane", "Flipped roto-translated plane"])
-    #'''
+    if show_plt:
+        plt_3d_surfaces(surfaces=[depthmap, rt_depthmap, flip_x_rt_depthmap],
+                        mask=mask,
+                        legends=["Original plane", "Roto-translated plane", "Flipped roto-translated plane"])
 
     if laser_pos is None:   # If laser_pos is not provided it means that the laser is confocal with the camera
         src_loc = array((), dtype=float32)
     else:
         src_loc = array(laser_pos, dtype=float32)
+
+    # Data cleaning
+    if data_clean:
+        for i in range(data.shape[0]):
+            data[i, :, :] = tr.clean_transient_tail(transient=data[i, :, :], n_samples=20)  # Remove the transient tail
+        data = clear_tr(data)  # Remove the transient that are too dark
 
     data = rmv_first_reflection_fermat_transient(transient=data, file_path=np_file_path, store=(not exists(np_file_path)))  # Remove the direct component from all the transient data
     data = reshape_fermat_transient(transient=data[:, :, 1],
@@ -70,23 +76,11 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
                                     flip_x=False,
                                     flip_y=False)  # Reshape the transient data in order to be in the same format used in the Fermat Flow algorithm
 
-    #for i in range(data.shape[0]):  # Clean the outliers
-    #    if max(data[i, :]) < max(data)*0.1:
-    #        data[i, :] = zeros([1, data.shape[1]])
-
-    #data = data[2*16:20*16, :]
-    #det_locs = det_locs[2*16:20*16, :]
-
-    '''
-    for i in trange(data.shape[0]):
-        tr.histo_plt(data[i, :], 0.01, stem=False, file_path=f"C:\\Users\\DECaligM\\Desktop\\hists\\hist_{i}.svg")
-    '''
-
     temp_bin_centers = [exp_time / 2]  # To build the temp_bin_centers it is required to build a vector where each cell contains the center of the correspondent temporal bin, so the first cell contains half the exposure time
     for i in range(1, data.shape[1]):
         temp_bin_centers.append(temp_bin_centers[i - 1] + exp_time)  # For all the following cell simply add the exposure time to the value stored in the previous cell
 
-    io.savemat(str(file_path), mdict={"detGridSize": data_grid_size, "detLocs": det_locs, "srcLoc": src_loc, "temporalBinCenters": temp_bin_centers, "transients": data})  # Save the actual .mat file
+    io.savemat(str(file_path), mdict={"detGridSize": np_flip(data_grid_size), "detLocs": det_locs, "srcLoc": src_loc, "temporalBinCenters": temp_bin_centers, "transients": data})  # Save the actual .mat file
 
 
 def undistort_depthmap(dph, dm, k_ideal, k_real, d_real):
@@ -98,7 +92,7 @@ def undistort_depthmap(dph, dm, k_ideal, k_real, d_real):
     :param k_real: Camera matrix
     :param d_real: Distortion coefficient
     :return depthmap: undistorted depthmap with 3 dimension (x-axis coordinates, y-axis coordinates, z-coordinates)
-    :return mask_valid_positive: validity mask (1=valid points, 0= oor or invalid doths)
+    :return mask_valid_positive: validity mask (1=valid points, 0= oor or invalid dots)
     :return radial_dir: cosine(angle between optical axis and the pixel direction)
     """
 
@@ -293,13 +287,6 @@ def rmv_first_reflection_fermat_transient(transient: ndarray, file_path: Path = 
                 if glb_images[pixel, 0, channel_i] != -2:
                     shifted_transient = delete(glb_images[pixel, :, channel_i], [where(glb_images[pixel, :, channel_i] == -1)])
                     glb_images_shifted[pixel, :shifted_transient.shape[0], channel_i] = shifted_transient
-                    '''
-                    if channel_i == 1:
-                        trn = transient[pixel, :, channel_i].copy()
-                        trn[where(trn > max(glb_images_shifted[pixel, :, channel_i]))] = max(glb_images_shifted[pixel, :, channel_i]) + 100
-                        tr.histo_plt(trn, 0.01, stem=False, interval=[5, 40], file_path=f"C:\\Users\\DECaligM\\Desktop\\hists_3\\normal_hist_{pixel}.svg")
-                        tr.histo_plt(glb_images_shifted[pixel, :, channel_i], 0.01, stem=False, interval=[5, 40], file_path=f"C:\\Users\\DECaligM\\Desktop\\hists_3\\shifted_hist_{pixel}.svg")
-                    '''
     else:
         for pixel in tqdm(range(transient.shape[1])):
             zeros_pos = where(transient[pixel, :] == 0)[0]

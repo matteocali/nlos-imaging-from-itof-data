@@ -4,7 +4,7 @@ from time import time, sleep
 from modules import utilities as ut
 from OpenEXR import InputFile
 from cv2 import VideoWriter, VideoWriter_fourcc, destroyAllWindows, cvtColor, COLOR_RGB2BGR
-from numpy import empty, shape, where, divide, copy, save, load, ndarray, arange, matmul, concatenate, cos, sin, tan
+from numpy import empty, shape, where, divide, copy, save, load, ndarray, arange, matmul, concatenate, cos, sin, tan, sum as np_sum, zeros, histogram as np_hist
 from numpy import isnan, nansum, nanargmax, nanmax, nanmin
 from numpy import uint8, float32
 from modules import exr_handler as exr
@@ -47,16 +47,22 @@ def reshape_frame(files, verbose=False):
         # Perform the reshaping saving the results in frame_i for i in A, R,G , B
         for i in range(size[0]):
             if not mono:
+                # noinspection PyUnboundLocalVariable
                 frame_a[index, :, i] = img[:, i, 0]
+                # noinspection PyUnboundLocalVariable
                 frame_r[index, :, i] = img[:, i, 1]
+                # noinspection PyUnboundLocalVariable
                 frame_g[index, :, i] = img[:, i, 2]
+                # noinspection PyUnboundLocalVariable
                 frame_b[index, :, i] = img[:, i, 3]
             else:
+                # noinspection PyUnboundLocalVariable
                 frame[index, :, i] = img[:, i]
 
     if verbose:
         sleep(0.05)  # Wait a bit to allow a proper visualization in the console
         end = time()
+        # noinspection PyUnboundLocalVariable
         print("Reshaping concluded in %.2f sec\n" % (round((end - start), 2)))
 
     if not mono:
@@ -104,6 +110,7 @@ def img_matrix(channels, verbose=True):
 
     if verbose:
         end = time()
+        # noinspection PyUnboundLocalVariable
         print("Images created successfully in %.2f sec\n" % (round((end - start), 2)))
 
     return images
@@ -273,7 +280,7 @@ def cv2_transient_video(images, out_path, normalize):
 def transient_video(images, out_path, out_type="cv2", alpha=False, normalize=True, name="transient"):
     """
     Function that generate and save the transient video
-    :param images: np.array containing all the images [<n_of_images>, <n_of_rows>, <n_of_columns>, <n_of_channels>]
+    :param images: ndarray containing all the images [<n_of_images>, <n_of_rows>, <n_of_columns>, <n_of_channels>]
     :param out_path: output file path
     :param out_type: format of the video output, cv2 or plt
     :param alpha: boolean value that determines if the output video will consider or not the alpha map
@@ -304,6 +311,7 @@ def rmv_first_reflection_transient(transient: ndarray, file_path: Path = None, s
     :param transient: input transient images
     :param file_path: path of the np dataset
     :param store: if you want to save the np dataset (if already saved set it to false in order to load it)
+    :param verbose: if you want to print the progress
     :return: Transient images of only the global component as a np array
     """
 
@@ -345,6 +353,7 @@ def rmv_first_reflection_transient(transient: ndarray, file_path: Path = None, s
 
     if verbose:
         end = time()
+        # noinspection PyUnboundLocalVariable
         print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
 
     if file_path and store:
@@ -463,7 +472,7 @@ def histo_plt(radiance: ndarray, exp_time: float, interval: list = None, stem: b
     Function that plot the transient histogram of a single pixel (for each channel)
     :param radiance: radiance value (foe each channel) of the given pixel [radiance_values, n_channel]
     :param exp_time: exposure time used during the rendering
-    :param interval: list containing the min and max value of x axis
+    :param interval: list containing the min and max value of x-axis
     :param stem: flag to choose the type of graph
     :param file_path: file path where to save
     """
@@ -472,8 +481,8 @@ def histo_plt(radiance: ndarray, exp_time: float, interval: list = None, stem: b
 
     if interval is not None:
         if not mono:
-            plt_start_pos = [int(interval[0] * 3e8 / exp_time*1e-9) for i in range(3)]
-            plt_end_pos = [int(interval[1] * 3e8 / exp_time*1e-9) for i in range(3)]
+            plt_start_pos = [int(interval[0] * 3e8 / exp_time*1e-9)] * 3
+            plt_end_pos = [int(interval[1] * 3e8 / exp_time*1e-9)] * 3
         else:
             plt_start_pos = int(interval[0] * 3e8 / exp_time * 1e-9)
             plt_end_pos = int(interval[1] * 3e8 / exp_time * 1e-9)
@@ -487,7 +496,7 @@ def histo_plt(radiance: ndarray, exp_time: float, interval: list = None, stem: b
                 plt_end_pos = where(radiance != 0)[0][-1] + 11
         except IndexError:
             if not mono:
-                plt_start_pos = [0 for channel in range(0, 3)]
+                plt_start_pos = [0] * 3
                 plt_end_pos = [len(radiance[:, channel]) for channel in range(0, 3)]
             else:
                 plt_start_pos = 0
@@ -495,7 +504,7 @@ def histo_plt(radiance: ndarray, exp_time: float, interval: list = None, stem: b
 
     radiance[where(radiance < 0)] = 0
 
-    # Define the scale on the xaxis
+    # Define the scale on the x-axis
     if str(exp_time).split(".")[0] == "0":
         unit_of_measure = 1e9  # nano seconds
         unit_of_measure_name = "ns"
@@ -596,7 +605,7 @@ def clean_transient_tail(transient: ndarray, n_samples: int) -> ndarray:
     """
     Function that clean the tail of a transient measurements removing all the noise data that are located far from the actual data
     :param transient: single transient vector
-    :param n_samples: number of empty samples after which the transient will be set to zero ( ignoring the gap between drect and global)
+    :param n_samples: number of empty samples after which the transient will be set to zero ( ignoring the gap between direct and global)
     :return: the transient vector with a cleaned tail
     """
 
@@ -648,7 +657,7 @@ def plot_phi(phi_matrix: ndarray, freq_values: ndarray, file_path: Path = None, 
 
     file_path = ut.add_extension(str(file_path), ".svg")  # If necessary add the .svg extension to the file name
 
-    # Define the scale on the xaxis based on the exposure time value
+    # Define the scale on the x-axis based on the exposure time value
     if str(exp_time).split(".")[0] == "0":
         unit_of_measure = 1e9  # nano seconds
         unit_of_measure_name = "ns"
@@ -678,3 +687,58 @@ def plot_phi(phi_matrix: ndarray, freq_values: ndarray, file_path: Path = None, 
         plt.show()  # Otherwise display it
 
     plt.close()
+
+
+def direct_global_ratio(transient: ndarray) -> list:
+    """
+    Function to compute the global direct ratio
+    :param transient: single transient vector
+    :return: a list containing the ratio between the global and the direct component for each channel
+    """
+
+    mono = len(transient.shape) == 1  # Check if the images are Mono or RGBA
+
+    _, p_value = extract_peak(transient)  # Compute the direct component location
+    glb = rmv_first_reflection_transient(transient, verbose=False)  # Extract the global component from the transient data
+    glb_sum = np_sum(glb, axis=0)  # Sum oll the global component
+
+    if not mono:
+        ratio = []  # Define an empty list that will contain the ratio value for each channel
+        for c_index in range(glb_sum.shape[0]):  # For each channel
+            ratio.append(glb_sum[c_index] / p_value[c_index])  # Append to the list the ratio value
+    else:
+        ratio = [glb_sum / p_value]  # Compute the ratio value
+
+    return ratio
+
+
+def clear_tr(transient: ndarray, method: str = "otsu") -> ndarray:
+    """
+    Function to remove all the imprecise transient based on an Otsu thresholding
+    :param transient: transient data
+    :param method: method used to compute the threshold
+    :return: transient data with spurious one set to 0 (only the global is set to zero)
+    """
+
+    tr = copy(transient)  # Copy the transient information in order to not override the given one
+
+    ratio = zeros(tr.shape[0])  # Create the ndarray that will contain the ratio data as an array full of zeros
+    for i in range(tr.shape[0]):
+        ratio[i] = direct_global_ratio(tr[i, :, 1])[0]  # Populate the ratio ndarray computing the ratio value for each transient
+
+    h_data = np_hist(ratio, 100)  # Compute the histogram values of the provided data using 100 bins
+
+    if method == "otsu":
+        t_value, threshold = ut.otsu_hist_threshold(h_data)  # Compute the threshold using the Otsu's method
+    elif method == "balanced":
+        t_value, threshold = ut.balanced_hist_thresholding(h_data)  # Compute the threshold using the balanced method
+
+    # noinspection PyUnboundLocalVariable
+    indexes = where(ratio < t_value)[0]  # Find all the transient that does not satisfy the requirements of the threshold
+
+    for index in indexes:  # For each index of interest
+        glb = rmv_first_reflection_transient(tr[index, :, 1], verbose=False)  # Extract the global component
+        start = where(glb != 0)[0][0]  # Define the starting location of the global component
+        tr[index, start:, :] = zeros([tr[index, start:, 1].shape[0], tr.shape[2]])  # Set the global component to 0
+
+    return tr

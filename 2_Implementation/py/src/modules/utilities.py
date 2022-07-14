@@ -1,5 +1,5 @@
 from numpy import sum, linspace, zeros, where, nanmin, nanmax, array, ndarray, copy, cos, sin, matmul, sqrt, radians, \
-    degrees, arctan2, uint8, float32, reshape, unique, concatenate, arctan, tan, moveaxis
+    degrees, arctan2, uint8, float32, reshape, unique, concatenate, arctan, tan, moveaxis, min as np_min, max as np_max, inf, hsplit, dot
 from os import path, listdir, remove, makedirs
 from pathlib import Path
 from glob import glob
@@ -174,7 +174,7 @@ def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = No
     :param spot_size: size of the desired white spot [columns * rows]
     :param exact: flag to set white a specific pixel
     :param pattern: list made as follows [x, y] where x represent the number of white pixel in each row and y the number of white pixels in each column
-    :param split: if true the grid is splitted dot by dot
+    :param split: if true the grid is split dot by dot
     :return generated image
     """
 
@@ -242,8 +242,7 @@ def save_h5(data: ndarray, file_path: Path, name: str = None) -> None:
     file_path = add_extension(str(file_path), ".h5")  # If not already present add the .h5 extension to the file path
     data = copy(data)  # Copy the ndarray in order to avoid overriding
     data = moveaxis(data, 0, -1)  # Move the transient length from index 0 to the last one in the ndarray
-    data = data.reshape([data.shape[1], data.shape[0], data.shape[2]])
-    #data = data.reshape([data.shape[2], data.shape[1], data.shape[0]])  # Reshape the array in order to match the required layout
+    data = data.reshape([data.shape[1], data.shape[0], data.shape[2]])  # Reshape the array in order to match the required layout
     h5f = File(file_path, "w")  # Create the .h5 file and open it
     # Save the ndarray in the just created .h5 file
     if name:
@@ -293,7 +292,9 @@ def plt_3d_surfaces(surfaces: list, mask: ndarray = None, x_ticks: tuple = None,
             z = graph[:, :, 2]  # Extract from the surfaces' matrix the 2D z coordinates' matrix
         if legends is not None:  # If a legend is provided
             surf = plt3d.plot_surface(x, y, z, label=legends[index])  # Plot the surface with its related label
+            # noinspection PyProtectedMember
             surf._facecolors2d = surf._facecolor3d  # Necessary to visualize the legend color
+            # noinspection PyProtectedMember
             surf._edgecolors2d = surf._edgecolor3d
         else:
             plt3d.plot_surface(x, y, z)  # Plot the surface
@@ -435,3 +436,120 @@ def k_matrix_calculator(h_fov: float, img_shape: list) -> ndarray:
     return array([[f_x, 0, x],
                   [0, f_y, y],
                   [0, 0, 1]], dtype=float32)
+
+
+def balanced_hist_thresholding(b: tuple[ndarray, ndarray]) -> (float, int):
+    """
+    Function to compute the balanced threshold of a histogram
+    (code from: https://theailearner.com/2019/07/19/balanced-histogram-thresholding/)
+    :param b: histogram values [bins, value]
+    :return: the value and the bin where the threshold is located
+    """
+
+    # Starting point of histogram
+    i_s = np_min(where(b[0] > 0))
+    # End point of histogram
+    i_e = np_max(where(b[0] > 0))
+    # Center of histogram
+    i_m = (i_s + i_e)//2
+    # Left side weight
+    w_l = sum(b[0][0:i_m+1])
+    # Right side weight
+    w_r = sum(b[0][i_m+1:i_e+1])
+    # Until starting point not equal to endpoint
+    while i_s != i_e:
+        # If right side is heavier
+        if w_r > w_l:
+            # Remove the end weight
+            w_r -= b[0][i_e]
+            i_e -= 1
+            # Adjust the center position and recompute the weights
+            if ((i_s+i_e)//2) < i_m:
+                w_l -= b[0][i_m]
+                w_r += b[0][i_m]
+                i_m -= 1
+        else:
+            # If left side is heavier, remove the starting weight
+            w_l -= b[0][i_s]
+            i_s += 1
+            # Adjust the center position and recompute the weights
+            if ((i_s+i_e)//2) >= i_m:
+                w_l += b[0][i_m+1]
+                w_r -= b[0][i_m+1]
+                i_m += 1
+    return b[1][i_m], i_m
+
+
+def recursive_otsu(hist_data: tuple[ndarray, ndarray], w_0: float, w_1: float, weighted_sum_0: float,
+                   weighted_sum_1: object, thres: int, fn_max: float, thresh: int, total: object) -> (float, int):
+    """
+    Function to recursively compute the Otsu's threshold
+    (code from: https://theailearner.com/2019/07/19/optimum-global-thresholding-using-otsus-method/)
+    :param hist_data: histogram data
+    :param w_0: left weights
+    :param w_1: right weights
+    :param weighted_sum_0: weighted sum using the left weight
+    :param weighted_sum_1: weighted sum using the right weight
+    :param thres: recursive index
+    :param fn_max: current value of the data in the threshold
+    :param thresh: current position of the threshold
+    :param total: total number of bins
+    :return: variance_value, thresh_value
+    """
+
+    if thres <= 255:
+        # To pass the division by zero warning
+        if sum(hist_data[0][:thres + 1]) != 0 and sum(hist_data[0][thres + 1:]) != 0:
+            # Update the weights
+            w_0 += hist_data[0][thres] / total
+            w_1 -= hist_data[0][thres] / total
+            # Update the mean
+            weighted_sum_0 += (hist_data[0][thres] * hist_data[1][thres])
+            mean_0 = weighted_sum_0 / sum(hist_data[0][:thres + 1])
+            weighted_sum_1 -= (hist_data[0][thres] * hist_data[1][thres])
+            if thres == 255:
+                mean_1 = 0.0
+            else:
+                mean_1 = weighted_sum_1 / sum(hist_data[0][thres + 1:])
+            # Calculate the between-class variance
+            out = w_0 * w_1 * ((mean_0 - mean_1) ** 2)
+            # # if variance maximum, update it
+            if out > fn_max:
+                fn_max = out
+                thresh = thres
+        return recursive_otsu(hist_data,
+                              w_0=w_0, w_1=w_1,
+                              weighted_sum_0=weighted_sum_0, weighted_sum_1=weighted_sum_1,
+                              thres=thres + 1, fn_max=fn_max, thresh=thresh, total=total)
+    # Stopping condition
+    else:
+        return fn_max, thresh
+
+
+def otsu_hist_threshold(hist_data: tuple[ndarray, ndarray]) -> (float, int):
+    """
+    Function to compute the otsu threshold of a histogram
+    :param hist_data: histogram data
+    :return: value and location of the threshold
+    """
+
+    # Total pixels in the image
+    total = sum(hist_data[0])
+    # calculate the initial weights and the means
+    left, right = hsplit(hist_data[0], [0])
+    left_bins, right_bins = hsplit(hist_data[1], [0])
+    # left weights
+    w_0 = 0.0
+    # Right weights
+    w_1 = sum(right) / total
+    # Left mean
+    weighted_sum_0 = 0.0
+    # Right mean
+    weighted_sum_1 = dot(right, right_bins[:-1])
+
+    # Compute the threshold value and position recursively
+    _, thresh_value = recursive_otsu(hist_data,
+                                     w_0=w_0, w_1=w_1,
+                                     weighted_sum_0=weighted_sum_0, weighted_sum_1=weighted_sum_1,
+                                     thres=1, fn_max=-inf, thresh=0, total=total)
+    return hist_data[1][thresh_value], thresh_value
