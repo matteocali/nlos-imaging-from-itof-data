@@ -52,6 +52,15 @@ for j = 1 : size(Z, 2)
     ptCloud = pointCloud(ptc, 'Normal', ptcNormal);
     filenameThis = fullfile(folderReconstruction, sprintf('recon_%s_%d%s', filename, j, '.ply'));
     pcwrite(ptCloud, filenameThis);
+    
+    % plot the 3d point-cloud
+    if whetherVisualizexPointCloud
+        figure;
+        pcshow(ptCloud);
+        xlabel('X');
+        ylabel('Y');
+        zlabel('Z');
+    end
 end
 
 fprintf(' saving point clouds done. \n');

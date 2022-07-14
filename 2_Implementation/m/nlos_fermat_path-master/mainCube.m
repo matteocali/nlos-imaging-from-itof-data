@@ -40,5 +40,6 @@ pathSurfaceDerivativePara.curvatureRatioThreshold  = 0;           % reconstructi
 
 % ----- x, y derivatives visualization -----
 whetherVisualizexDyDzD = true;
+whetherVisualizexPointCloud = true;
 
 fermatFlowReconstruction;
