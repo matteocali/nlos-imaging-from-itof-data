@@ -10,11 +10,11 @@ from scipy import io
 from tqdm import tqdm
 
 from modules import transient_handler as tr
-from modules.transient_handler import extract_peak, active_beans_percentage, clear_tr
+from modules.transient_handler import extract_peak, active_beans_percentage, clear_tr_ratio, clear_tr_energy
 from modules.utilities import add_extension, spot_bitmap_gen, k_matrix_calculator, plt_3d_surfaces
 
 
-def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list, fov: float, data_clean: bool = False, show_plt: bool = False, exp_time: float = 0.01, laser_pos: list = None) -> None:
+def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list, fov: float, store_glb: bool = False, data_clean: bool = False, cl_method: str = None, cl_threshold: int = None, show_plt: bool = False, exp_time: float = 0.01, laser_pos: list = None) -> None:
     """
     Function to save a .mat file in the format required from the Fermat flow Matlab script
     :param data: ndarray containing the transient measurements (n*m matrix, n transient measurements with m temporal bins)
@@ -22,7 +22,10 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
     :param data_grid_size: [n1, n2], with n1 * n2 = n, grid size of sensing points on the LOS wall (n = number of the transient measurements)
     :param img_shape: size of the image [<n_row>, <n_col>]
     :param fov: horizontal field of view of the camera
+    :param store_glb: boolean to indicate if the global transient should be stored as a .npy or not
     :param data_clean: boolean that indicate if the data should be cleaned or not
+    :param cl_method: method used to clean the data (None = no cleaning, "balanced" = balanced histogram thresholding, "otsu" = otsu histogram thresholding)
+    :param cl_threshold: threshold used to clean the data (in the energy domain)
     :param show_plt: boolean that indicate if the data should be plotted or not
     :param exp_time: exposure time used, required to compute "temporalBinCenters"
     :param laser_pos: position of the laser, if none it is confocal with the camera (1*3 vector)
@@ -68,9 +71,19 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
     if data_clean:
         for i in range(data.shape[0]):
             data[i, :, :] = tr.clean_transient_tail(transient=data[i, :, :], n_samples=20)  # Remove the transient tail
-        data = clear_tr(data, method="otsu")  # Remove the transient that are too dark
+        if cl_method is not None:
+            data = clear_tr_ratio(data, method="otsu")  # Remove the transient that are too dark
+        if cl_threshold is not None:
+            data = clear_tr_energy(data, threshold=cl_threshold)
+        data = clear_tr_energy(data, threshold=60)  # Remove noise based on the global energy
 
-    data = rmv_first_reflection_fermat_transient(transient=data, file_path=np_file_path, store=(not exists(np_file_path)))  # Remove the direct component from all the transient data
+    if store_glb:
+        data = rmv_first_reflection_fermat_transient(transient=data,
+                                                     file_path=np_file_path,
+                                                     store=(not exists(np_file_path)))  # Remove the direct component from all the transient data
+    else:
+        data = rmv_first_reflection_fermat_transient(transient=data)  # Remove the direct component from all the transient data
+
     data = reshape_fermat_transient(transient=data[:, :, 1],
                                     grid_shape=(int(data_grid_size[1]), int(data_grid_size[0])),
                                     flip_x=False,
@@ -308,7 +321,7 @@ def rmv_first_reflection_fermat_transient(transient: ndarray, file_path: Path = 
 
     if file_path and store:
         save(str(file_path), glb_images_shifted)  # Save the loaded images as a numpy array
-        return glb_images_shifted
+    return glb_images_shifted
 
 
 def rmv_sparse_fermat_transient(transients: ndarray, channel: int, threshold: int, remove_data: bool) -> ndarray:

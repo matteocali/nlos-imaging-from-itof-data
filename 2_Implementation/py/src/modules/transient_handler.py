@@ -1,10 +1,10 @@
 import numpy as np
-from tqdm import tqdm
+from tqdm import tqdm, trange
 from time import time, sleep
 from modules import utilities as ut
 from OpenEXR import InputFile
 from cv2 import VideoWriter, VideoWriter_fourcc, destroyAllWindows, cvtColor, COLOR_RGB2BGR
-from numpy import empty, shape, where, divide, copy, save, load, ndarray, arange, matmul, concatenate, cos, sin, tan, sum as np_sum, zeros, histogram as np_hist
+from numpy import empty, shape, where, divide, copy, save, load, ndarray, arange, matmul, concatenate, cos, sin, tan, sum as np_sum, zeros, histogram as np_hist, max as np_max, mean
 from numpy import isnan, nansum, nanargmax, nanmax, nanmin
 from numpy import uint8, float32
 from modules import exr_handler as exr
@@ -91,7 +91,7 @@ def img_matrix(channels, verbose=True):
             sleep(0.02)
         images = empty([shape(channels[0])[2], shape(channels[0])[0], shape(channels[0])[1], len(channels)], dtype=float32)  # Empty array that will contain all the images
         # Fuse the channels together to obtain a proper [A, R, G, B] image
-        for i in tqdm(range(shape(channels[0])[2]), desc="generating images", leave=False):
+        for i in trange(shape(channels[0])[2], desc="generating images", leave=False):
             images[i, :, :, 0] = channels[1][:, :, i]
             images[i, :, :, 1] = channels[2][:, :, i]
             images[i, :, :, 2] = channels[3][:, :, i]
@@ -105,7 +105,7 @@ def img_matrix(channels, verbose=True):
         sleep(0.02)
         images = empty([shape(channels)[2], shape(channels)[0], shape(channels)[1]], dtype=float32)  # Empty array that will contain all the images
         # Fuse the channels together to obtain a proper [A, R, G, B] image
-        for i in tqdm(range(shape(channels)[2])):
+        for i in trange(shape(channels)[2]):
             images[i, :, :] = channels[:, :, i]
 
     if verbose:
@@ -257,7 +257,7 @@ def cv2_transient_video(images, out_path, normalize):
     else:
         out = VideoWriter(str(out_path), VideoWriter_fourcc(*"mp4v"), 30, (images[0].shape[1], images[0].shape[0]), 0)  # Create the cv2 video
 
-    for i in tqdm(range(images.shape[0])):
+    for i in trange(images.shape[0]):
         if not mono:
             img = copy(images[i, :, :, :-1])
         else:
@@ -325,7 +325,7 @@ def rmv_first_reflection_transient(transient: ndarray, file_path: Path = None, s
     mono = len(transient.shape) == 1  # Check id=f the images are Mono or RGBA
 
     if not mono:
-        peaks = [nanargmax(transient[:, channel_i], axis=0) for channel_i in tqdm(range(transient.shape[1]))]  # Find the index of the maximum value in the third dimension
+        peaks = [nanargmax(transient[:, channel_i], axis=0) for channel_i in trange(transient.shape[1], leave=None)]  # Find the index of the maximum value in the third dimension
     else:
         peaks = nanargmax(transient, axis=0)  # Find the index of the maximum value in the third dimension
 
@@ -336,7 +336,7 @@ def rmv_first_reflection_transient(transient: ndarray, file_path: Path = None, s
 
     glb_images = copy(transient)
     if not mono:
-        for channel_i in tqdm(range(transient.shape[1])):
+        for channel_i in trange(transient.shape[1], leave=None):
             zeros_pos = where(transient[:, channel_i] == 0)[0]
             valid_zero_indexes = zeros_pos[where(zeros_pos > peaks[channel_i])]
             if valid_zero_indexes.size == 0:
@@ -380,7 +380,7 @@ def rmv_first_reflection_img(images, file_path=None, store=False):
     mono = len(images.shape) == 3  # Check id=f the images are Mono or RGBA
 
     if not mono:
-        peaks = [nanargmax(images[:, :, :, channel_i], axis=0) for channel_i in tqdm(range(images.shape[3] - 1))]  # Find the index of the maximum value in the third dimension
+        peaks = [nanargmax(images[:, :, :, channel_i], axis=0) for channel_i in trange(images.shape[3] - 1)]  # Find the index of the maximum value in the third dimension
     else:
         peaks = nanargmax(images[:, :, :], axis=0)  # Find the index of the maximum value in the third dimension
 
@@ -390,7 +390,7 @@ def rmv_first_reflection_img(images, file_path=None, store=False):
 
     glb_images = copy(images)
     if not mono:
-        for channel_i in tqdm(range(images.shape[3] - 1)):
+        for channel_i in trange(images.shape[3] - 1):
             for pixel_r in range(images.shape[1]):
                 for pixel_c in range(images.shape[2]):
                     zeros_pos = where(images[:, pixel_r, pixel_c, channel_i] == 0)[0]
@@ -400,7 +400,7 @@ def rmv_first_reflection_img(images, file_path=None, store=False):
                     else:
                         glb_images[:int(valid_zero_indexes[0]), pixel_r, pixel_c, channel_i] = 0
     else:
-        for pixel_r in tqdm(range(images.shape[1])):
+        for pixel_r in trange(images.shape[1]):
             for pixel_c in range(images.shape[2]):
                 zeros_pos = where(images[:, pixel_r, pixel_c] == 0)[0]
                 valid_zero_indexes = zeros_pos[where(zeros_pos > peaks[pixel_r, pixel_c])]
@@ -712,7 +712,38 @@ def direct_global_ratio(transient: ndarray) -> list:
     return ratio
 
 
-def clear_tr(transient: ndarray, method: str = "otsu") -> ndarray:
+def rmv_glb(transient: ndarray) -> ndarray:
+    """
+    Function to remove the global component from the transient data and leave only the direct component
+    :param transient: transient data
+    :return: transient data without the global component
+    """
+
+    mono = len(transient.shape) == 1  # Check if the images are Mono or RGBA
+
+    if not mono:
+        peaks = [nanargmax(transient[:, channel_i], axis=0) for channel_i in range(transient.shape[1])]  # Find the index of the maximum value in the third dimension
+    else:
+        peaks = nanargmax(transient, axis=0)  # Find the index of the maximum value in the third dimension
+
+    # Extract the position of the first zero after the first peak and remove the first reflection
+    direct = copy(transient)  # Copy the transient data
+    if not mono:  # If the images are RGBA
+        for channel_i in range(transient.shape[1]):  # For each channel
+            zeros_pos = where(transient[:, channel_i] == 0)[0]  # Find the index of the zeros
+            valid_zero_indexes = zeros_pos[where(zeros_pos > peaks[channel_i])]  # Find the index of the zeros after the first peak
+            if valid_zero_indexes.size != 0:  # If there is at least one zero after the first peak
+                direct[int(valid_zero_indexes[0]):, channel_i] = 0  # Set the direct component to 0
+    else:
+        zeros_pos = where(transient == 0)[0]  # Find the index of the zeros
+        valid_zero_indexes = zeros_pos[where(zeros_pos > peaks)]  # Find the index of the zeros after the first peak
+        if valid_zero_indexes.size != 0:  # If there is at least one zero after the first peak
+            direct[int(valid_zero_indexes[0]):] = 0  # Set the direct component to 0
+
+    return direct
+
+
+def clear_tr_ratio(transient: ndarray, method: str = "otsu") -> ndarray:
     """
     Function to remove all the imprecise transient based on an Otsu thresholding
     :param transient: transient data
@@ -743,4 +774,29 @@ def clear_tr(transient: ndarray, method: str = "otsu") -> ndarray:
             tr[index, start:, :] = zeros([tr[index, start:, 1].shape[0], tr.shape[2]])  # Set the global component to 0
         except IndexError:
             pass  # If the global component is empty, do nothing
+    return tr
+
+
+def clear_tr_energy(transient: ndarray, threshold: int) -> ndarray:
+    """
+    Function to remove all the imprecise transient based on an energy thresholding
+    :param transient: Transient data af the image (as a long list)
+    :param threshold: Threshold value (percentage of the maximum energy)
+    :return: cleaned transient data
+    """
+
+    tr = copy(transient)  # Copy the transient information in order to not override the given one
+    glb = zeros(transient.shape)  # Create the ndarray that will contain the global component as an array full of zeros
+    glb_sum = zeros(transient.shape[0])  # Create the ndarray that will contain the sum of the global component as an array full of zeros
+    max_glb_value = 0  # Create the variable that will contain the maximum value of the global component
+
+    for i in trange(transient.shape[0], desc="cleaning transient"):
+        glb[i, :, :] = rmv_first_reflection_transient(transient[i, :, :], verbose=False)  # Extract the global component
+        glb_sum[i] = mean(np_sum(glb[i, :, :], axis=1))  # Compute the sum of the global component
+        max_glb_value = max(max_glb_value, np_max(glb_sum[i]))  # Find the maximum value of the global component
+
+    for i in range(transient.shape[0]):
+        if glb_sum[i] < max_glb_value * (threshold / 100):  # If the sum of the global component is less than 10% of the maximum value
+            tr[i, :, :] = rmv_glb(tr[i, :, :])  # Set the global component to 0
+
     return tr

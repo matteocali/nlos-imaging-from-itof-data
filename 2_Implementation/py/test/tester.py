@@ -126,8 +126,10 @@ if __name__ == '__main__':
                                     file_path=arg_out / "cube",
                                     data_grid_size=arg_spot_size,
                                     img_shape=arg_img_size,
-                                    show_plt=True,
-                                    data_clean=False,
+                                    store_glb=False,
+                                    show_plt=False,
+                                    data_clean=True,
+                                    cl_threshold=60,
                                     fov=60,
                                     exp_time=0.01)
 
@@ -153,8 +155,10 @@ if __name__ == '__main__':
                                     file_path=arg_out / "cube",
                                     data_grid_size=arg_spot_size,
                                     img_shape=arg_img_size,
-                                    show_plt=True,
+                                    store_glb=False,
+                                    show_plt=False,
                                     data_clean=True,
+                                    cl_threshold=60,
                                     fov=60,
                                     exp_time=0.01)
 
