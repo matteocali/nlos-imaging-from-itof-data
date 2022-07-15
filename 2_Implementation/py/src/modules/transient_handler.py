@@ -738,7 +738,9 @@ def clear_tr(transient: ndarray, method: str = "otsu") -> ndarray:
 
     for index in indexes:  # For each index of interest
         glb = rmv_first_reflection_transient(tr[index, :, 1], verbose=False)  # Extract the global component
-        start = where(glb != 0)[0][0]  # Define the starting location of the global component
-        tr[index, start:, :] = zeros([tr[index, start:, 1].shape[0], tr.shape[2]])  # Set the global component to 0
-
+        try:
+            start = where(glb != 0)[0][0]  # Define the starting location of the global component
+            tr[index, start:, :] = zeros([tr[index, start:, 1].shape[0], tr.shape[2]])  # Set the global component to 0
+        except IndexError:
+            pass  # If the global component is empty, do nothing
     return tr

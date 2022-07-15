@@ -68,7 +68,7 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
     if data_clean:
         for i in range(data.shape[0]):
             data[i, :, :] = tr.clean_transient_tail(transient=data[i, :, :], n_samples=20)  # Remove the transient tail
-        data = clear_tr(data)  # Remove the transient that are too dark
+        data = clear_tr(data, method="otsu")  # Remove the transient that are too dark
 
     data = rmv_first_reflection_fermat_transient(transient=data, file_path=np_file_path, store=(not exists(np_file_path)))  # Remove the direct component from all the transient data
     data = reshape_fermat_transient(transient=data[:, :, 1],
@@ -382,7 +382,7 @@ def roto_transl(coordinates_matrix: ndarray) -> ndarray:
     n_y = normalized_normal[1]  # y component of the normal vector
     n_z = normalized_normal[2]  # z component of the normal vector
 
-    if n_x != n_y and n_x != 0 and n_y != 0:
+    if n_x != 0 or n_y != 0:
         sqrt_squared_sum_nx_ny = sqrt((n_x ** 2) + (n_y ** 2))
         rot_matrix = array([[n_y / sqrt_squared_sum_nx_ny, -n_x / sqrt_squared_sum_nx_ny, 0],
                             [(n_x * n_z) / sqrt_squared_sum_nx_ny, (n_y * n_z) / sqrt_squared_sum_nx_ny, -sqrt_squared_sum_nx_ny],

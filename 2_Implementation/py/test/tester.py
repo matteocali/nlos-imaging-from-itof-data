@@ -127,7 +127,7 @@ if __name__ == '__main__':
                                     data_grid_size=arg_spot_size,
                                     img_shape=arg_img_size,
                                     show_plt=True,
-                                    data_clean=True,
+                                    data_clean=False,
                                     fov=60,
                                     exp_time=0.01)
 
