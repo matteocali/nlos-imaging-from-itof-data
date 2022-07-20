@@ -197,7 +197,7 @@ def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = No
         offset_x = floor((img_size[0] - ((increase_x * (pattern[0] + 1)) + pattern[0])) / 2) + increase_x  # Define the number of black pixel on the left before the first white dot
         increase_y = floor((img_size[1] - pattern[1]) / (pattern[1] - 1))  # Define the number of black pixels between two white one on each column
         offset_y = floor((img_size[1] - ((increase_y * (pattern[1] + 1)) + pattern[1])) / 2) + increase_y  # Define the number of black pixel on the top before the first white dot
-        for i in trange(offset_y, img.shape[0] - offset_y, increase_y + 1, desc="generating the images row by row"):
+        for i in trange(offset_y, img.shape[0] - offset_y, increase_y + 1, desc="generating the images row by row", leave=False):
             for j in range(offset_x, img.shape[1] - offset_x, increase_x + 1):
                 if not split:
                     img[i, j] = 255

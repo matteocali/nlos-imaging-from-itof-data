@@ -337,7 +337,7 @@ def generate_dataset_xml_splitted(tr_rot_list: list, template: Path, folder_path
                                        pattern=tuple(pattern))
                 non_zero_pos = nonzero(mask)
 
-                elm_path = batch_folder / f"elm_{e_index}"
+                elm_path = batch_folder / file_name
                 create_folder(elm_path)
                 for row in unique(non_zero_pos[0]):
                     for col in unique(non_zero_pos[1]):
@@ -373,4 +373,4 @@ def generate_dataset_xml_splitted(tr_rot_list: list, template: Path, folder_path
                                         elem.attrib["value"] = f"bitmap_r{row}_c{col}"
                                 except KeyError:
                                     pass
-                        tree.write(str(elm_path / (file_name.replace(" ", "_") + f"_r{row}_c{col}.xml")), xml_declaration=True, method="xml", encoding="utf8")
+                        tree.write(str(elm_path / (file_name.replace(" ", "_") + f"_r{row}_c{col}.xml")), method="xml", encoding="utf8")

@@ -18,15 +18,15 @@ def arg_parser(argv):
     arg_batches_path = None  # Argument containing the batches (final xml files) directory
     arg_template_path = None  # Argument containing the xml template file directory
     arg_rnd_seed = None  # Argument containing the random seed value
-    arg_rnd = None  # Argument that define if use or not the random database
+    arg_type = None  # Argument that define which type of dataset will be generated
     arg_grid = False  # Argument that define if use or not the spot database
-    arg_help = "{0} -p <perm> -d <dataset> -b <batch> -t <template> -s <seed> -r <random> -g <grid>".format(argv[0])  # Help string
+    arg_help = "{0} -p <perm> -d <dataset> -b <batch> -t <template> -s <seed> -y <type> -g <grid>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(argv[1:],
-                                   "hp:d:b:t:s:r:g:",
-                                   ["help", "perm=", "dataset=", "batch=", "template=", "seed=", "random=", "grid="])
+                                   "hp:d:b:t:s:y:g:",
+                                   ["help", "perm=", "dataset=", "batch=", "template=", "seed=", "type=", "grid="])
     except:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -45,8 +45,8 @@ def arg_parser(argv):
             arg_template_path = Path(arg)  # Set the template file directory
         elif opt in ("-s", "--seed"):
             arg_rnd_seed = int(arg)  # Set the random seed
-        elif opt in ("-r", "--random"):
-            arg_rnd = bool(arg)  # Set the random flag
+        elif opt in ("-y", "--type"):
+            arg_type = arg  # Set the random flag
         elif opt in ("-g", "--grid"):
             arg_grid = bool(arg)  # Set the spot flag
 
@@ -55,15 +55,15 @@ def arg_parser(argv):
     print("Batches path: ", arg_batches_path)
     print("Template path: ", arg_template_path)
     print("Random seed: ", arg_rnd_seed)
-    print("Random database: ", arg_rnd)
-    print("Spot database: ", arg_grid)
+    print("Dataset type: ", arg_type)
+    print("Spot dataset: ", arg_grid)
     print()
 
-    return [arg_permutation_list_path, arg_dataset_file_path, arg_batches_path, arg_template_path, arg_rnd_seed, arg_rnd, arg_grid]
+    return [arg_permutation_list_path, arg_dataset_file_path, arg_batches_path, arg_template_path, arg_rnd_seed, arg_type, arg_grid]
 
 
 if __name__ == '__main__':
-    arg_permutation_list_path, arg_dataset_file_path, arg_batches_path, arg_template_path, arg_rnd_seed, arg_rnd, arg_grid = arg_parser(sys.argv)  # Recover the input and output folder from the console args
+    arg_permutation_list_path, arg_dataset_file_path, arg_batches_path, arg_template_path, arg_rnd_seed, arg_type, arg_grid = arg_parser(sys.argv)  # Recover the input and output folder from the console args
 
     # CONSTANTS #
     N_BATCH = 8  # Number of different batches that will be generated
@@ -156,7 +156,7 @@ if __name__ == '__main__':
 
     # BUILD THE FINAL SET OF ROTATIONS/TRANSLATIONS/POSITIONS #
     print("Compute all the permutations of the camera and objects locations and rotations (batch by batch):")
-    if not arg_rnd:
+    if arg_type == "standard":
         tr_rot_list = dat.generate_dataset_list(obj_tr_list=obj_tr_list,
                                                 obj_full_rot_list=obj_full_rot_list,
                                                 obj_partial_rot_list=obj_partial_rot_list,
@@ -183,7 +183,7 @@ if __name__ == '__main__':
                                  template=arg_template_path,
                                  folder_path=arg_batches_path,
                                  objs=OBJ_POS)
-    else:
+    elif arg_type == "random":
         tr_rot_list = dat.generate_dataset_list(obj_tr_list=obj_tr_list_rnd,
                                                 obj_full_rot_list=obj_full_rot_list_rnd,
                                                 obj_partial_rot_list=obj_partial_rot_list_rnd,
@@ -201,7 +201,7 @@ if __name__ == '__main__':
                                                 n_rot_obj_rnd=N_ROT_OBJ_RND,
                                                 folder_path=arg_permutation_list_path,
                                                 seed=arg_rnd_seed,
-                                                rnd=arg_rnd)
+                                                rnd=True)
         dat.generate_dataset_file(tx_rt_list=tr_rot_list,
                                   folder_path=arg_dataset_file_path,
                                   objs=OBJ_POS_RND)  # Export a .txt file containing the information of the dataset

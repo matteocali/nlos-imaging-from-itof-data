@@ -74,8 +74,7 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
         if cl_method is not None:
             data = clear_tr_ratio(data, method="otsu")  # Remove the transient that are too dark
         if cl_threshold is not None:
-            data = clear_tr_energy(data, threshold=cl_threshold)
-        data = clear_tr_energy(data, threshold=60)  # Remove noise based on the global energy
+            data = clear_tr_energy(data, threshold=cl_threshold)  # Remove noise based on the global energy
 
     if store_glb:
         data = rmv_first_reflection_fermat_transient(transient=data,

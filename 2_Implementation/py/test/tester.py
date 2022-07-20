@@ -23,10 +23,11 @@ def arg_parser(argv):
     arg_task = ""  # Argument that defines the function that will be used
     arg_img_size = None  # Argument that defines the img resolution
     arg_spot_size = None  # Argument that defines the size of the white spot in the bitmap
-    arg_help = "{0} -i <input> -o <output> -t <task> -m <img_resolution> -s <spot_size>".format(argv[0])  # Help string
+    arg_threshold = None  # Argument that defines the threshold for the bitmap
+    arg_help = "{0} -i <input> -o <output> -t <task> -m <img_resolution> -s <spot_size> -r <threshold>".format(argv[0])  # Help string
 
     try:
-        opts, args = getopt.getopt(argv[1:], "hi:o:t:m:s:", ["help", "input=", "output=", "task=", "img_resolution=", "spot_size="])  # Recover the passed options and arguments from the command line (if any)
+        opts, args = getopt.getopt(argv[1:], "hi:o:t:m:s:r:", ["help", "input=", "output=", "task=", "img_resolution=", "spot_size=", "threshold="])  # Recover the passed options and arguments from the command line (if any)
     except:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -49,6 +50,8 @@ def arg_parser(argv):
             spot_size = str(arg)  # Read the img size
             spot_size = spot_size.split(",")
             arg_spot_size = (int(spot_size[0]), int(spot_size[1]))  # Set the spot size
+        elif opt in ("-r", "--threshold"):
+            arg_threshold = int(arg)  # Set the threshold
 
     print('Input path: ', arg_in)
     if arg_out != "":
@@ -57,13 +60,15 @@ def arg_parser(argv):
         print('Image size: ', arg_img_size)
     if arg_spot_size is not None:
         print('Spot size: ', arg_spot_size)
+    if arg_threshold is not None:
+        print('Threshold: ', arg_threshold)
     print()
 
-    return [arg_in, arg_out, arg_task, arg_img_size, arg_spot_size]
+    return [arg_in, arg_out, arg_task, arg_img_size, arg_spot_size, arg_threshold]
 
 
 if __name__ == '__main__':
-    arg_in, arg_out, arg_task, arg_img_size, arg_spot_size = arg_parser(sys.argv)  # Recover the input and output folder from the console args
+    arg_in, arg_out, arg_task, arg_img_size, arg_spot_size, arg_threshold = arg_parser(sys.argv)  # Recover the input and output folder from the console args
 
     if arg_task == "spot_bitmap":
         print(f"TASK: {arg_task}")
@@ -73,8 +78,8 @@ if __name__ == '__main__':
                            img_size=arg_img_size,
                            spot_size=None,
                            exact=False,
-                           pattern=(80, 60),
-                           split=True)
+                           pattern=arg_spot_size,
+                           split=False)
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
@@ -129,7 +134,7 @@ if __name__ == '__main__':
                                     store_glb=False,
                                     show_plt=False,
                                     data_clean=True,
-                                    cl_threshold=60,
+                                    cl_threshold=arg_threshold,
                                     fov=60,
                                     exp_time=0.01)
 
@@ -158,7 +163,7 @@ if __name__ == '__main__':
                                     store_glb=False,
                                     show_plt=False,
                                     data_clean=True,
-                                    cl_threshold=60,
+                                    cl_threshold=arg_threshold,
                                     fov=60,
                                     exp_time=0.01)
 
