@@ -13,19 +13,22 @@ from pickle import dump, load
 from itertools import product
 from random import seed as rnd_seed, shuffle
 from tqdm import trange
+from typing import Union
 
 
-def add_extension(name: str, ext: str) -> str:
+def add_extension(name: Union[str, Path], ext: str) -> Path:
     """
     Function that checks the name of a file and if not already present adds the given extension
     :param name: name of the file
     :param ext: desired extension
     :return: name of the file with the correct extension attached
     """
-    if name[-len(ext):] == ext:
-        return name
-    else:
-        return name + ext
+    if type(name) is not str:  # If the name is not a string convert it to a string
+        name = str(name)
+    if name[-len(ext):] == ext:  # If the extension is already present return the name
+        return Path(name)
+    else:  # If the extension is not present add it
+        return Path(name + ext)
 
 
 def reed_files(file_path, extension, reorder=True):
@@ -208,7 +211,7 @@ def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = No
                     imwrite(str(file_path / f"bitmap_r{i}_c{j}.png"), tmp)  # Save the image
 
     if file_path is not None and not split:
-        file_path = add_extension(str(file_path), ".png")
+        file_path = str(add_extension(str(file_path), ".png"))
         imwrite(file_path, img)  # Save the image
 
     return img
@@ -231,31 +234,32 @@ def load_h5(file_path: Path):
         return [array(h5_file[key]) for key in keys]  # Load the .h5 content (key by key) and put it inside a np array
 
 
-def save_h5(data: ndarray, file_path: Path, name: str = None) -> None:
+def save_h5(data: ndarray, file_path: Path, name: str = None, fermat: bool = False) -> None:
     """
     Function to save a transient image into an .h5 file (also perform reshaping [<n_beans>, <n_row>, <col>] -> [<n_row>, <col>, <n_beans>])
     :param data: ndarray containing the transient image (only one channel)
     :param file_path: path (with name) where to save the file
     :param name: name of the key of the data inside the .h5 file
+    :param fermat: if true the data is reshaped to [<n_beans>, <n_row>, <col>]
     """
 
-    file_path = add_extension(str(file_path), ".h5")  # If not already present add the .h5 extension to the file path
-    data = copy(data)  # Copy the ndarray in order to avoid overriding
-    data = moveaxis(data, 0, -1)  # Move the transient length from index 0 to the last one in the ndarray
-    data = data.reshape([data.shape[1], data.shape[0], data.shape[2]])  # Reshape the array in order to match the required layout
-    h5f = File(file_path, "w")  # Create the .h5 file and open it
-    # Save the ndarray in the just created .h5 file
-    if name:
-        h5f.create_dataset(name=name,
-                           data=data,
-                           shape=data.shape,
-                           dtype=float32)
-    else:
-        h5f.create_dataset(name=file_path.split("\\")[-1][-3:],
-                           # If a key name is not provided use the name of the name of the file as key name
-                           data=data,
-                           shape=data.shape,
-                           dtype=float32)
+    file_path = add_extension(file_path, ".h5")  # If not already present add the .h5 extension to the file path
+    if fermat:
+        data = copy(data)  # Copy the ndarray in order to avoid overriding
+        data = moveaxis(data, 0, -1)  # Move the transient length from index 0 to the last one in the ndarray
+        data = data.reshape([data.shape[1], data.shape[0], data.shape[2]])  # Reshape the array in order to match the required layout
+    with File(str(file_path), "w") as h5f:  # Create the .h5 file and open it
+        # Save the ndarray in the just created .h5 file
+        if name:
+            h5f.create_dataset(name=name,
+                               data=data,
+                               shape=data.shape,
+                               dtype=float32)
+        else:
+            h5f.create_dataset(name=file_path.stem,  # If a key name is not provided use the name of the file as key name
+                               data=data,
+                               shape=data.shape,
+                               dtype=float32)
 
 
 def plt_3d_surfaces(surfaces: list, mask: ndarray = None, x_ticks: tuple = None, y_ticks: tuple = None,

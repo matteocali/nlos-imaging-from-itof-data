@@ -71,7 +71,7 @@ def reshape_frame(files, verbose=False):
         return frame
 
 
-def img_matrix(channels, verbose=True):
+def img_matrix(channels, verbose=False):
     """
     Function that from the single channel matrices generate a proper image matrix fusing them
     :param channels: list of the 4 channels (1 if input is mono)
@@ -102,10 +102,10 @@ def img_matrix(channels, verbose=True):
     else:
         if verbose:
             print(f"Build the {shape(channels)[2]} image matrices:")
-        sleep(0.02)
+            sleep(0.02)
         images = empty([shape(channels)[2], shape(channels)[0], shape(channels)[1]], dtype=float32)  # Empty array that will contain all the images
         # Fuse the channels together to obtain a proper [A, R, G, B] image
-        for i in trange(shape(channels)[2]):
+        for i in trange(shape(channels)[2], desc="generating images", leave=False):
             images[i, :, :] = channels[:, :, i]
 
     if verbose:
@@ -655,7 +655,7 @@ def plot_phi(phi_matrix: ndarray, freq_values: ndarray, file_path: Path = None, 
     :param exp_time: exposure_time
     """
 
-    file_path = ut.add_extension(str(file_path), ".svg")  # If necessary add the .svg extension to the file name
+    file_path = str(ut.add_extension(str(file_path), ".svg"))  # If necessary add the .svg extension to the file name
 
     # Define the scale on the x-axis based on the exposure time value
     if str(exp_time).split(".")[0] == "0":

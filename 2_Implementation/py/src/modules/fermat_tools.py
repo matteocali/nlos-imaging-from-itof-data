@@ -32,7 +32,7 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
     """
 
     np_file_path = dirname(file_path) + "\\glb_np_transient.npy"
-    file_path = add_extension(str(file_path), ".mat")  # If not already present add the .h5 extension to the file path
+    file_path = str(add_extension(str(file_path), ".mat"))  # If not already present add the .h5 extension to the file path
 
     # Define all the required vectors for the .mat file
     data_grid_size = array(data_grid_size, dtype=float64)  # Convert the data_grid_size from a list to a ndarray

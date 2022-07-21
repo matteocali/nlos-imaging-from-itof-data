@@ -1,12 +1,12 @@
 from pathlib import Path
 from random import seed as rnd_seed, sample as rnd_sample
-
 from lxml import etree as et
 from tqdm import trange, tqdm
-
 from numpy import nonzero, unique
+from os import path as os_path, listdir
 
-from modules.utilities import create_folder, permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen
+from modules.utilities import create_folder, permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen, read_folders, save_h5, load_h5, add_extension
+from modules.transient_handler import transient_loader
 
 
 def generate_dataset_file(tx_rt_list: list, folder_path: Path, objs: dict) -> None:
@@ -15,7 +15,6 @@ def generate_dataset_file(tx_rt_list: list, folder_path: Path, objs: dict) -> No
     :param tx_rt_list: list of all the final combination of position/translation/rotations of each object and of the camera [batch1[obj1[(camera_pos, camera_rot), (obj_tr, obj_rot)], obj2[(camera_pos, camera_rot), (obj_tr, obj_rot)], ...], batch2[(camera_pos, camera_rot), (obj_tr, obj_rot)], obj2[(camera_pos, camera_rot), (obj_tr, obj_rot)], ...], ...]
     :param folder_path: path of the folder where to save the dataset file
     :param objs: dict containing all the name of the used objects (keys) with the relatives default positions (values)
-    :param rnd: Define if I want the dataset with or without random elements
     """
 
     if folder_path is not None:
@@ -100,12 +99,14 @@ def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partia
         if b_index <= 3:
             cam_tr = [(def_cam_pos[0], def_cam_pos[1], def_cam_pos[2])]
         else:
+            # noinspection PyUnboundLocalVariable
             cam_tr = rnd_sample(cam_pos_tmp, n_tr_rot_cam)
             cam_pos_tmp = [x for x in cam_pos_tmp if x not in cam_tr]  # Avoid that two consecutive batches have the same data
         # Rotations
         if b_index <= 1 or 4 <= b_index <= 5:
             cam_rot = [(def_cam_rot[0], def_cam_rot[1], def_cam_rot[2])]
         else:
+            # noinspection PyUnboundLocalVariable
             cam_rot = rnd_sample(cam_rot_tmp, n_tr_rot_cam)
             cam_rot_tmp = [x for x in cam_rot_tmp if x not in cam_rot]  # Avoid that two consecutive batches have the same data
 
@@ -126,6 +127,7 @@ def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partia
             else:
                 # Translations
                 if name != "Sphere" and name != "Random":
+                    # noinspection PyUnboundLocalVariable
                     obj_tr = rnd_sample(obj_tr_tmp, n_tr_obj[b_index])
                     if name == obj_names[-1]:  # Avoid that two consecutive batches have the same data
                         obj_tr_tmp = [x for x in obj_tr_tmp if x not in obj_tr]
@@ -139,10 +141,12 @@ def generate_dataset_list(obj_tr_list: list, obj_full_rot_list: list, obj_partia
                         obj_tr_tmp = [x for x in obj_tr_tmp if x not in obj_tr]
                 # Rotations
                 if name == "Cube" or name == "Parallelepiped" or name == "Concave plane" or name == "Cube + sphere":
+                    # noinspection PyUnboundLocalVariable
                     obj_rot = rnd_sample(obj_full_rot_tmp, n_rot_obj[b_index])
                     if name == obj_names[-1]:  # Avoid that two consecutive batches have the same data
                         obj_full_rot_tmp = [x for x in obj_full_rot_tmp if x not in obj_rot]
                 elif name == "Cone" or name == "Cylinder" or name == "Cylinder + cone" or name == "Sphere + cone":
+                    # noinspection PyUnboundLocalVariable
                     obj_rot = rnd_sample(obj_partial_rot_tmp, n_rot_obj[b_index])
                     if name == obj_names[-1]:  # Avoid that two consecutive batches have the same data
                         obj_partial_rot_tmp = [x for x in obj_partial_rot_tmp if x not in obj_rot]
@@ -234,10 +238,13 @@ def generate_dataset_xml(tr_rot_list: list, template: Path, folder_path: Path, o
                     obj_rot_2 = [elm[1][1][1][0], elm[1][1][1][1], elm[1][1][1][2]]  # Extract the object rotation
 
                 if name != "Random":
+                    # noinspection PyUnboundLocalVariable
                     obj_file_name = f"{name}_batch0{b_index + 1}_tr({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_rot({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})".lower()  # Find the correct file name of the object given the translation and rotation value
                     file_name = f"transient_nlos_{name.lower()}_cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_obj_pos_({round(objs[name][0] + obj_tr[0], 2)}_{round(objs[name][1] + obj_tr[1], 2)}_{round(objs[name][2] + obj_tr[2], 2)})_obj_rot_({round(obj_rot[0], 2)}_{round(obj_rot[1], 2)}_{round(obj_rot[2], 2)}).xml"  # Set the output file name in a way that contains all the relevant info
                 else:
+                    # noinspection PyUnboundLocalVariable
                     obj_file_name_1 = f"{elm[1][2][0]}_batch0{b_index + 1}_tr({obj_tr_1[0]}_{obj_tr_1[1]}_{obj_tr_1[2]})_rot({obj_rot_1[0]}_{obj_rot_1[1]}_{obj_rot_1[2]})".lower()  # Find the correct file name of the object given the translation and rotation value
+                    # noinspection PyUnboundLocalVariable
                     obj_file_name_2 = f"{elm[1][2][1]}_batch0{b_index + 1}_tr({obj_tr_2[0]}_{obj_tr_2[1]}_{obj_tr_2[2]})_rot({obj_rot_2[0]}_{obj_rot_2[1]}_{obj_rot_2[2]})".lower()  # Find the correct file name of the object given the translation and rotation value
                     file_name = f"transient_nlos_{elm[1][2][0].lower()}+{elm[1][2][1].lower()}_" \
                                 f"cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_" \
@@ -260,10 +267,13 @@ def generate_dataset_xml(tr_rot_list: list, template: Path, folder_path: Path, o
                     for elem in root.getiterator():
                         try:
                             if elem.attrib["value"] == "obj_name":
+                                # noinspection PyUnboundLocalVariable
                                 elem.attrib["value"] = str(obj_file_name)
                             elif elem.attrib["value"] == "obj_name_1":
+                                # noinspection PyUnboundLocalVariable
                                 elem.attrib["value"] = str(obj_file_name_1)
                             elif elem.attrib["value"] == "obj_name_2":
+                                # noinspection PyUnboundLocalVariable
                                 elem.attrib["value"] = str(obj_file_name_2)
                             elif elem.attrib["value"] == "t_cam_x":
                                 elem.attrib["value"] = str(cam_pos[0])
@@ -313,10 +323,13 @@ def generate_dataset_xml_splitted(tr_rot_list: list, template: Path, folder_path
                     obj_rot_2 = [elm[1][1][1][0], elm[1][1][1][1], elm[1][1][1][2]]  # Extract the object rotation
 
                 if name != "Random":
+                    # noinspection PyUnboundLocalVariable
                     obj_file_name = f"{name}_batch0{b_index + 1}_tr({obj_tr[0]}_{obj_tr[1]}_{obj_tr[2]})_rot({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})".lower()  # Find the correct file name of the object given the translation and rotation value
                     file_name = f"transient_nlos_{name.lower()}_cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_obj_pos_({round(objs[name][0] + obj_tr[0], 2)}_{round(objs[name][1] + obj_tr[1], 2)}_{round(objs[name][2] + obj_tr[2], 2)})_obj_rot_({round(obj_rot[0], 2)}_{round(obj_rot[1], 2)}_{round(obj_rot[2], 2)})"  # Set the output file name in a way that contains all the relevant info
                 else:
+                    # noinspection PyUnboundLocalVariable
                     obj_file_name_1 = f"{elm[1][2][0]}_batch0{b_index + 1}_tr({obj_tr_1[0]}_{obj_tr_1[1]}_{obj_tr_1[2]})_rot({obj_rot_1[0]}_{obj_rot_1[1]}_{obj_rot_1[2]})".lower()  # Find the correct file name of the object given the translation and rotation value
+                    # noinspection PyUnboundLocalVariable
                     obj_file_name_2 = f"{elm[1][2][1]}_batch0{b_index + 1}_tr({obj_tr_2[0]}_{obj_tr_2[1]}_{obj_tr_2[2]})_rot({obj_rot_2[0]}_{obj_rot_2[1]}_{obj_rot_2[2]})".lower()  # Find the correct file name of the object given the translation and rotation value
                     file_name = f"transient_nlos_{elm[1][2][0].lower()}+{elm[1][2][1].lower()}_" \
                                 f"cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_" \
@@ -348,10 +361,13 @@ def generate_dataset_xml_splitted(tr_rot_list: list, template: Path, folder_path
                             for elem in root.getiterator():
                                 try:
                                     if elem.attrib["value"] == "obj_name":
+                                        # noinspection PyUnboundLocalVariable
                                         elem.attrib["value"] = str(obj_file_name)
                                     elif elem.attrib["value"] == "obj_name_1":
+                                        # noinspection PyUnboundLocalVariable
                                         elem.attrib["value"] = str(obj_file_name_1)
                                     elif elem.attrib["value"] == "obj_name_2":
+                                        # noinspection PyUnboundLocalVariable
                                         elem.attrib["value"] = str(obj_file_name_2)
                                     elif elem.attrib["value"] == "t_cam_x":
                                         elem.attrib["value"] = str(cam_pos[0])
@@ -374,3 +390,42 @@ def generate_dataset_xml_splitted(tr_rot_list: list, template: Path, folder_path
                                 except KeyError:
                                     pass
                         tree.write(str(elm_path / (file_name.replace(" ", "_") + f"_r{row}_c{col}.xml")), method="xml", encoding="utf8")
+
+
+def load_gt_data(gt_path, out_path=None):
+    """
+    Load the ground truth data from the given path
+    :param gt_path: Path to the ground truth data
+    :param out_path: Path were to save the loaded data
+    :return: A dictionary containing the raw ground truth data
+    """
+
+    if out_path is not None:
+        if out_path.exists():
+            files = listdir(out_path)
+            raw_gt_data = {}
+            for file in tqdm(files, desc="Loading ground truth data"):
+                file_name = file.stem
+                data = load_h5(out_path / file)
+                raw_gt_data[file_name] = data
+            return raw_gt_data
+        else:
+            out_path.mkdir(parents=True)
+
+    batches_folder = read_folders(gt_path)
+    data_path = []
+    for batch_folder in batches_folder:
+        data_folder = read_folders(batch_folder)
+        data_path = data_path + data_folder
+
+    raw_gt_data = {}
+    for file_path in tqdm(data_path, desc="Loading ground truth data"):
+        tr = transient_loader(file_path)
+        file_name = os_path.basename(os_path.normpath(file_path))
+        raw_gt_data[file_name] = tr[:, :, :, :-1]
+
+    if out_path is not None:
+        for key, value in tqdm(raw_gt_data.items(), desc="Saving ground truth data"):
+            save_h5(file_path=add_extension(out_path / key, ".npy"), data=value)
+
+    return raw_gt_data
