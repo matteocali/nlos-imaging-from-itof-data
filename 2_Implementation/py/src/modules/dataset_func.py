@@ -405,7 +405,7 @@ def load_gt_data(gt_path, out_path=None):
             files = listdir(out_path)
             raw_gt_data = {}
             for file in tqdm(files, desc="Loading ground truth data"):
-                file_name = file.stem
+                file_name = Path(file).stem
                 data = load_h5(out_path / file)
                 raw_gt_data[file_name] = data
             return raw_gt_data

@@ -54,7 +54,7 @@ if __name__ == '__main__':
         start = time()
 
         # Generate the ground truth for the mirror task
-        load_gt_data(in_folder, out_folder)
+        raw_gt = load_gt_data(in_folder, out_folder)
 
         end = time()
         print(f"Task <{type_gt}> concluded in in %.2f sec\n" % (round((end - start), 2)))

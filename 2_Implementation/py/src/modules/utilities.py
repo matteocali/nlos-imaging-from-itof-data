@@ -234,13 +234,14 @@ def load_h5(file_path: Path):
         return [array(h5_file[key]) for key in keys]  # Load the .h5 content (key by key) and put it inside a np array
 
 
-def save_h5(data: ndarray, file_path: Path, name: str = None, fermat: bool = False) -> None:
+def save_h5(data: ndarray, file_path: Path, name: str = None, fermat: bool = False, compression: bool = True) -> None:
     """
     Function to save a transient image into an .h5 file (also perform reshaping [<n_beans>, <n_row>, <col>] -> [<n_row>, <col>, <n_beans>])
     :param data: ndarray containing the transient image (only one channel)
     :param file_path: path (with name) where to save the file
     :param name: name of the key of the data inside the .h5 file
     :param fermat: if true the data is reshaped to [<n_beans>, <n_row>, <col>]
+    :param compression: if true the data is compressed
     """
 
     file_path = add_extension(file_path, ".h5")  # If not already present add the .h5 extension to the file path
@@ -250,13 +251,17 @@ def save_h5(data: ndarray, file_path: Path, name: str = None, fermat: bool = Fal
         data = data.reshape([data.shape[1], data.shape[0], data.shape[2]])  # Reshape the array in order to match the required layout
     with File(str(file_path), "w") as h5f:  # Create the .h5 file and open it
         # Save the ndarray in the just created .h5 file
-        if name:
+        if not name:
+            name = file_path.stem  # If a key name is not provided use the name of the file as key name
+        if compression:
             h5f.create_dataset(name=name,
                                data=data,
+                               compression="gzip",
+                               compression_opts=9,
                                shape=data.shape,
                                dtype=float32)
         else:
-            h5f.create_dataset(name=file_path.stem,  # If a key name is not provided use the name of the file as key name
+            h5f.create_dataset(name=name,
                                data=data,
                                shape=data.shape,
                                dtype=float32)
