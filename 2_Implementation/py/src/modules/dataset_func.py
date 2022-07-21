@@ -426,6 +426,6 @@ def load_gt_data(gt_path, out_path=None):
 
     if out_path is not None:
         for key, value in tqdm(raw_gt_data.items(), desc="Saving ground truth data"):
-            save_h5(file_path=add_extension(out_path / key, ".npy"), data=value)
+            save_h5(file_path=out_path / key, data=value)
 
     return raw_gt_data
