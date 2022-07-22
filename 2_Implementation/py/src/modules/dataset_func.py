@@ -2,11 +2,10 @@ from pathlib import Path
 from random import seed as rnd_seed, sample as rnd_sample
 from lxml import etree as et
 from tqdm import trange, tqdm
-from numpy import nonzero, unique
-from os import path as os_path, listdir
+from numpy import nonzero, unique, zeros as np_zeros, where, sum as np_sum, swapaxes
 
-from modules.utilities import create_folder, permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen, read_folders, save_h5, load_h5, add_extension
-from modules.transient_handler import transient_loader
+from modules.utilities import create_folder, permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen, read_folders, save_h5, load_h5, read_files
+from modules.transient_handler import transient_loader, compute_distance_map
 
 
 def generate_dataset_file(tx_rt_list: list, folder_path: Path, objs: dict) -> None:
@@ -392,25 +391,10 @@ def generate_dataset_xml_splitted(tr_rot_list: list, template: Path, folder_path
                         tree.write(str(elm_path / (file_name.replace(" ", "_") + f"_r{row}_c{col}.xml")), method="xml", encoding="utf8")
 
 
-def load_gt_data(gt_path, out_path=None):
-    """
-    Load the ground truth data from the given path
-    :param gt_path: Path to the ground truth data
-    :param out_path: Path were to save the loaded data
-    :return: A dictionary containing the raw ground truth data
-    """
+def build_mirror_gt(gt_path: Path, out_path: Path, fov: int, exp_time: float) -> None:
 
-    if out_path is not None:
-        if out_path.exists():
-            files = listdir(out_path)
-            raw_gt_data = {}
-            for file in tqdm(files, desc="Loading ground truth data"):
-                file_name = Path(file).stem
-                data = load_h5(out_path / file)
-                raw_gt_data[file_name] = data
-            return raw_gt_data
-        else:
-            out_path.mkdir(parents=True)
+    if not out_path.exists():  # Create out_path if it doesn't exist
+        out_path.mkdir(parents=True)
 
     batches_folder = read_folders(gt_path)
     data_path = []
@@ -418,14 +402,80 @@ def load_gt_data(gt_path, out_path=None):
         data_folder = read_folders(batch_folder)
         data_path = data_path + data_folder
 
-    raw_gt_data = {}
-    for file_path in tqdm(data_path, desc="Loading ground truth data"):
+    for i, file_path in tqdm(enumerate(data_path), desc="Generating ground truth data"):
+        file_name = str(Path(file_path).name) + "_GT"
         tr = transient_loader(file_path)
-        file_name = os_path.basename(os_path.normpath(file_path))
-        raw_gt_data[file_name] = tr[:, :, :, :-1]
+        d_map = compute_distance_map(tr, fov, exp_time)
+        a_map = np_zeros(d_map.shape)
+        a_map[where(np_sum(tr[:, :, :, -1], axis=0) != 0)] = 1
+        save_h5(file_path=out_path / file_name, data={"depth_map": d_map, "alpha_map": a_map}, fermat=False)
+        if i == 0:
+            break
 
-    if out_path is not None:
-        for key, value in tqdm(raw_gt_data.items(), desc="Saving ground truth data"):
-            save_h5(file_path=out_path / key, data=value)
 
-    return raw_gt_data
+def load_dataset(d_path: Path, out_path: Path) -> None:
+    if not out_path.exists():  # Create out_path if it doesn't exist
+        out_path.mkdir(parents=True)
+
+    batches_folder = read_folders(d_path)
+    data_path = []
+    for batch_folder in batches_folder:
+        data_folder = read_folders(batch_folder)
+        data_path = data_path + data_folder
+
+    for i, file_path in tqdm(enumerate(data_path), desc="Loading dataset"):
+        file_name = str(Path(file_path).name)
+        tr = transient_loader(file_path)[:, :, :, 1]
+        save_h5(file_path=out_path / file_name, data={"data": tr}, fermat=True)
+        if i == 0:
+            break
+
+
+def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path) -> None:
+    if not out_path.exists():  # Create out_path if it doesn't exist
+        out_path.mkdir(parents=True)
+
+    d_files_name = [Path(i).name for i in read_files(d_path, "h5")]
+    gt_files_name = [Path(i).name for i in read_files(gt_path, "h5")]
+
+    if len(d_files_name) != len(gt_files_name):
+        raise ValueError("The number of files in the dataset and the ground truth folder are different")
+
+    for d_name in tqdm(d_files_name, desc="Fusing dataset and ground truth"):
+        d_name_shortened = d_name.replace("cam_pos_(1.5_-1_1.65)_cam_rot_(90_0_50)_", "")[:-3]  # Remove the cam_pos and cam_rot from the file name since I'm considering just the fixed camera position
+        obj_name = d_name_shortened[(d_name_shortened.find("nlos") + 5):(d_name_shortened.find("obj") - 1)]
+        obj_pos = d_name_shortened[(d_name_shortened.find("obj_pos") + 9):(d_name_shortened.find("obj_rot") - 2)]
+        obj_rot = d_name_shortened[(d_name_shortened.find("obj_rot") + 9):(-1)]
+        if d_name_shortened.find("+") == -1:
+            obj_pos = d_name_shortened[(d_name_shortened.find("obj_pos") + 9):(d_name_shortened.find("obj_rot") - 2)]
+            obj_rot = d_name_shortened[(d_name_shortened.find("obj_rot") + 9):(-1)]
+            obj_pos = [float(i) for i in obj_pos.split("_")]
+            obj_pos = [round(obj_pos[i] - elm, 1) for i, elm in enumerate([1.5, 1.0, 1.65])]
+            obj_rot = [int(i) for i in obj_rot.split("_")]
+            gt_name = f"transient_nlos_{obj_name}_tr({obj_pos[0]}_{obj_pos[1]}_{obj_pos[2]})_rot({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})_GT.h5"
+        else:
+            obj_name1 = obj_name.split("+")[0]
+            obj_name2 = obj_name.split("+")[1]
+            obj_pos1 = obj_pos.split(")_(")[0]
+            obj_pos2 = obj_pos.split(")_(")[1]
+            obj_pos1 = [float(i) for i in obj_pos1.split("_")]
+            obj_pos2 = [float(i) for i in obj_pos2.split("_")]
+            obj_pos1 = [round(obj_pos1[i] - elm, 1) for i, elm in enumerate([1.5, 1.0, 1.65])]
+            obj_pos2 = [round(obj_pos2[i] - elm, 1) for i, elm in enumerate([1.5, 1.0, 1.65])]
+            obj_rot1 = obj_rot.split(")_(")[0]
+            obj_rot2 = obj_rot.split(")_(")[1]
+            obj_rot1 = [int(i) for i in obj_rot1.split("_")]
+            obj_rot2 = [int(i) for i in obj_rot2.split("_")]
+            gt_name = f"transient_nlos_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name1}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
+
+        if gt_name not in gt_files_name:
+            raise ValueError("The ground truth file is missing")
+
+        d_file = d_path / d_name
+        gt_file = gt_path / gt_name
+        d = load_h5(d_file)
+        gt = load_h5(gt_file)
+
+        file_name = d_name_shortened.replace("-", "n").replace("(", "").replace(")", "").replace(".", "dot")
+
+        save_h5(file_path=out_path / file_name, data={"data": d["data"], "depth_map": swapaxes(gt["depth_map"], 0, 1), "alpha_map": swapaxes(gt["alpha_map"], 0, 1)}, fermat=False)

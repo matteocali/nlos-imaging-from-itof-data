@@ -31,7 +31,7 @@ def add_extension(name: Union[str, Path], ext: str) -> Path:
         return Path(name + ext)
 
 
-def reed_files(file_path, extension, reorder=True):
+def read_files(file_path, extension, reorder=True):
     """
     Function to load all the files in a folder and if needed reorder them using the numbers in the final part of the name
     :param reorder: flag to toggle the reorder process (default = true)
@@ -217,27 +217,27 @@ def spot_bitmap_gen(img_size: list, file_path: Path = None, spot_size: list = No
     return img
 
 
-def load_h5(file_path: Path):
+def load_h5(file_path: Path) -> dict:
     """
     Function that load a .h5 file and return its content as a np array. If the .h5 file contains more than one keys it returns a list of np arrays one for each key
     :param file_path: path of the .h5 file
-    :return: a np array containing the content of the .h5 file or a list of np array each one containing the content of a key of the .h5 file
+    :return: a data containing as data a np array containing the content of the .h5 file
     """
 
     h5_file = File(str(file_path), 'r')  # Open the .h5 file
     keys = list(h5_file.keys())  # Obtain the list of keys contained in the .h5 file
 
     # Check if the .h5 file has only one key or more than one
-    if len(keys) == 1:
-        return array(h5_file[keys[0]])  # Load the .h5 content and put it inside a np array
-    else:
-        return [array(h5_file[key]) for key in keys]  # Load the .h5 content (key by key) and put it inside a np array
+    data = {}
+    for key in keys:
+        data[key] = array(h5_file[key])  # Load the .h5 content and put it inside a np array
+    return data
 
 
-def save_h5(data: ndarray, file_path: Path, name: str = None, fermat: bool = False, compression: bool = True) -> None:
+def save_h5(data: Union[ndarray, dict], file_path: Path, name: str = None, fermat: bool = False, compression: bool = True) -> None:
     """
     Function to save a transient image into an .h5 file (also perform reshaping [<n_beans>, <n_row>, <col>] -> [<n_row>, <col>, <n_beans>])
-    :param data: ndarray containing the transient image (only one channel)
+    :param data: ndarray containing the transient image (only one channel) or dict containing multiple transient images (one for each key)
     :param file_path: path (with name) where to save the file
     :param name: name of the key of the data inside the .h5 file
     :param fermat: if true the data is reshaped to [<n_beans>, <n_row>, <col>]
@@ -245,26 +245,46 @@ def save_h5(data: ndarray, file_path: Path, name: str = None, fermat: bool = Fal
     """
 
     file_path = add_extension(file_path, ".h5")  # If not already present add the .h5 extension to the file path
-    if fermat:
-        data = copy(data)  # Copy the ndarray in order to avoid overriding
-        data = moveaxis(data, 0, -1)  # Move the transient length from index 0 to the last one in the ndarray
-        data = data.reshape([data.shape[1], data.shape[0], data.shape[2]])  # Reshape the array in order to match the required layout
+
     with File(str(file_path), "w") as h5f:  # Create the .h5 file and open it
-        # Save the ndarray in the just created .h5 file
-        if not name:
-            name = file_path.stem  # If a key name is not provided use the name of the file as key name
-        if compression:
-            h5f.create_dataset(name=name,
-                               data=data,
-                               compression="gzip",
-                               compression_opts=9,
-                               shape=data.shape,
-                               dtype=float32)
+        # Save the data in the just created .h5 file
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if fermat:
+                    value = copy(value)  # Copy the ndarray in order to avoid overriding
+                    value = moveaxis(value, 0, -1)  # Move the transient length from index 0 to the last one in the ndarray
+                    value = value.reshape([value.shape[1], value.shape[0], value.shape[2]])  # Reshape the array in order to match the required layout
+                if compression:
+                    h5f.create_dataset(name=key,
+                                       data=value,
+                                       compression="gzip",
+                                       compression_opts=9,
+                                       shape=value.shape,
+                                       dtype=float32)
+                else:
+                    h5f.create_dataset(name=key,
+                                       data=value,
+                                       shape=value.shape,
+                                       dtype=float32)
         else:
-            h5f.create_dataset(name=name,
-                               data=data,
-                               shape=data.shape,
-                               dtype=float32)
+            if fermat:
+                data = copy(data)  # Copy the ndarray in order to avoid overriding
+                data = moveaxis(data, 0, -1)  # Move the transient length from index 0 to the last one in the ndarray
+                data = data.reshape([data.shape[1], data.shape[0], data.shape[2]])  # Reshape the array in order to match the required layout
+            if not name:
+                name = file_path.stem  # If a key name is not provided use the name of the file as key name
+            if compression:
+                h5f.create_dataset(name=name,
+                                   data=data,
+                                   compression="gzip",
+                                   compression_opts=9,
+                                   shape=data.shape,
+                                   dtype=float32)
+            else:
+                h5f.create_dataset(name=name,
+                                   data=data,
+                                   shape=data.shape,
+                                   dtype=float32)
 
 
 def plt_3d_surfaces(surfaces: list, mask: ndarray = None, x_ticks: tuple = None, y_ticks: tuple = None,

@@ -429,7 +429,8 @@ def transient_loader(img_path, np_path=None, store=False):
     if np_path and not store:  # If already exists a npy file containing all the transient images load it instead of processing everything again
         return load(str(np_path))
     else:
-        files = ut.reed_files(str(img_path), "exr")  # Load the path of all the files in the input folder with extension .exr
+        files = ut.read_files(str(img_path),
+                              "exr")  # Load the path of all the files in the input folder with extension .exr
         channels = reshape_frame(files)  # Reshape the frame in a standard layout
         images = img_matrix(channels)  # Create the image files
         if store:
@@ -451,12 +452,13 @@ def grid_transient_loader(transient_path: Path, np_path: Path = None, store: boo
         return load(str(np_path))
     else:
         folder_path = ut.read_folders(folder_path=transient_path, reorder=True)
-        dw = InputFile(ut.reed_files(str(folder_path[0]), "exr")[0]).header()['dataWindow']  # Extract the data window dimension from the header of the exr file
+        dw = InputFile(ut.read_files(str(folder_path[0]), "exr")[0]).header()['dataWindow']  # Extract the data window dimension from the header of the exr file
         size = (dw.max.x - dw.min.x + 1, dw.max.y - dw.min.y + 1)  # Define the actual size of the image
         transient = empty([len(folder_path), size[0], 3])
         print("Loading all the transient data:\n")
         for index, img_path in enumerate(tqdm(folder_path, desc="loading files")):
-            files = ut.reed_files(str(img_path), "exr")  # Load the path of all the files in the input folder with extension .exr
+            files = ut.read_files(str(img_path),
+                                  "exr")  # Load the path of all the files in the input folder with extension .exr
             channels = reshape_frame(files, verbose=False)  # Reshape the frame in a standard layout
             images = img_matrix(channels, verbose=False)  # Create the image files
             transient[index, :] = images[:, 0, 0, :-1]
@@ -588,13 +590,13 @@ def compute_focal(fov: float, row_pixel: int) -> float:
 def compute_distance(transient: ndarray, fov: float, exp_time: float) -> float:
     """
     Function to compute the distance of a specific pixel
-    :param transient: transient of the target pixel
+    :param transient: transient of the target pixel (no alpha channel)
     :param fov: field of view of the used camera
     :param exp_time: exposure time
     :return: the distance value
     """
 
-    peak_pos, peak_value = extract_peak(transient[:, :-1])  # Extract the radiance value of the first peak
+    peak_pos, peak_value = extract_peak(transient[:, :])  # Extract the radiance value of the first peak
     radial_dist = compute_radial_distance(peak_pos[nanargmax(peak_value)], exp_time)  # Compute the radial distance
     angle = tan(fov)  # compute the angle from the formula: fov = arctan(distance/2*f)
 
@@ -800,3 +802,25 @@ def clear_tr_energy(transient: ndarray, threshold: int) -> ndarray:
             tr[i, :, :] = rmv_glb(tr[i, :, :])  # Set the global component to 0
 
     return tr
+
+
+def compute_distance_map(tr: ndarray, fov: int, exp_time: float) -> ndarray:
+    """
+    Function to compute the distance map of the image
+    :param tr: Transient data af the image (as a numpy array)
+    :param fov: Field of view of the camera
+    :param exp_time: Exposure time of the camera
+    :return: distance map
+    """
+
+    d_map = zeros([tr.shape[1], tr.shape[2]])  # Create the ndarray that will contain the distance map as an array full of zeros
+    if tr.shape[3] == 4:  # If the image is RGBA
+        non_zero = where(np_sum(tr[:, :, :, -1], axis=0) != 0)  # Find the index of the non-zero values in the alpha channel
+        for row, col in tqdm(zip(non_zero[0], non_zero[1]), desc="computing distance map", leave=False):  # For each non-zero value
+            d_map[row, col] = compute_distance(tr[:, row, col, :-1], fov=fov, exp_time=exp_time)  # Compute the distance of the current pixel
+    else:
+        for i in trange(tr.shape[1], desc="computing distance map", leave=False):
+            for j in range(tr.shape[2]):
+                d_map[i, j] = compute_distance(tr[:, i, j, :], fov=fov, exp_time=exp_time)  # Compute the distance of the current pixel
+
+    return d_map
