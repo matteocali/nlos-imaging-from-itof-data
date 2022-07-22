@@ -265,7 +265,7 @@ def distance_plot(in_path, out_name):
     :param in_path: input path containing all the txt file of the measured distances
     :param out_name: path and name (no extension) of the output file
     """
-    files = ut.reed_files(str(in_path), "txt")  # Load the path of all the files in the input folder with extension .exr
+    files = ut.read_files(str(in_path), "txt")  # Load the path of all the files in the input folder with extension .exr
     dist, radiance = extract_data_from_file(files)  # Extract the distance and radiance values from the files
     save_distance_plot(dist, radiance, str(out_name))  # Generate and save the standard plot
 
@@ -278,7 +278,7 @@ def mm_distance_plot(in_path, step, max_value, out_name):
     :param max_value: maximum value visualized on the x axes
     :param out_name: path and name (no extension) of the output file
     """
-    files = ut.reed_files(str(in_path), "txt")  # Load the path of all the files in the input folder with extension .exr
+    files = ut.read_files(str(in_path), "txt")  # Load the path of all the files in the input folder with extension .exr
     dist, radiance = extract_data_from_file(files)  # Extract the distance and radiance values from the files
     save_millimiter_plot(dist, step, max_value, str(out_name))  # Generate and save the millimiter plot
 
@@ -426,7 +426,7 @@ def plot_norm_factor(folder_path, rgb_path, out_path):
     """
 
     folders = ut.read_folders(folder_path)  # Load all the subdirectory of the folder containing the various transient
-    rgb_images = ut.reed_files(file_path=rgb_path, extension="exr")  # Load all the rgb renders
+    rgb_images = ut.read_files(file_path=rgb_path, extension="exr")  # Load all the rgb renders
 
     norm_factors = []  # Initialize the list that will contain all the norm factors
     samples = []
