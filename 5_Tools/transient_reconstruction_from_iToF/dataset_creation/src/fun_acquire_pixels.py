@@ -52,15 +52,16 @@ def acquire_pixels(images,num_pixels=2000,max_img=1000,f_ran=1,s=3,flag_ow=True,
 
     with h5py.File(images[0],"r") as h:
         print(images[0])
-        for key in h.keys():
-            temp = h[key][:]
-    [dim_x,dim_y,dim_t] = temp.shape
+        #for key in h.keys():
+        #    temp = h[key][:]
+        temp = h["data"][:]
+    [dim_x, dim_y, dim_t] = temp.shape
 
     # Given the image size, build a mask to choose which pixels to get the ground truth from. This can be done either with a grid or randomly
 
     # 1) GRID
     if not(f_ran):
-        mask = np.zeros((dim_x-2*pad_s,dim_y-2*pad_s),dtype = np.int32)
+        mask = np.zeros((dim_x-2*pad_s, dim_y-2*pad_s),dtype = np.int32)
         num_x = np.sqrt(num_pixels*dim_x/dim_y)
         num_y = np.sqrt(num_pixels*dim_y/dim_x)
         st_x = int(dim_x/num_x)
@@ -81,6 +82,7 @@ def acquire_pixels(images,num_pixels=2000,max_img=1000,f_ran=1,s=3,flag_ow=True,
     #    mask = mask1
 
     v_real = np.zeros((num_images,num_pixels,s,s,nf),dtype=np.float32)
+    gt_real = np.zeros((num_images,num_pixels,s,s),dtype=np.float32)
     v_real_no_d = np.zeros((num_images,num_pixels,s,s,nf),dtype=np.float32)
     v_real_d = np.zeros((num_images,num_pixels,s,s,nf),dtype=np.float32)
     if flag_fit:
@@ -96,7 +98,7 @@ def acquire_pixels(images,num_pixels=2000,max_img=1000,f_ran=1,s=3,flag_ow=True,
     count = 0
     num_ow = 0
 
-    for k,image in enumerate(images):
+    for k, image in enumerate(images):
         if f_ran:
             mask1 = np.zeros((dim_x,dim_y),dtype = np.int32)
             mask = np.zeros((dim_x-2*pad_s,dim_y-2*pad_s),dtype = np.int32)
@@ -117,14 +119,17 @@ def acquire_pixels(images,num_pixels=2000,max_img=1000,f_ran=1,s=3,flag_ow=True,
                 continue
         # Load the transient data
         with h5py.File(image,"r") as h:
-            for key in h.keys():
-                
-                temp = h[key][:]
+            #for key in h.keys():
+            gt = h["depth_map"][:]
+            gt = np.swapaxes(gt, 0, 1)
+            temp = h["data"][:]#h[key][:]
 
         #Compute the v_values for the patch around each pixels
         ind = np.where(mask>0)
         # 1) COMPUTATION OF v_real, v_real_no_d AND v_real_d
         for i in range(ind[0].shape[0]):
+            depth_patch = gt[ind[0][i]-pad_s:ind[0][i]+pad_s+1,ind[1][i]-pad_s:ind[1][i]+pad_s+1]
+            #depth_patch = np.reshape(depth_patch, (s, s))
             tran_patch = temp[ind[0][i]-pad_s:ind[0][i]+pad_s+1,ind[1][i]-pad_s:ind[1][i]+pad_s+1]
             tran_patch = np.reshape(tran_patch,(s*s,dim_t))
             
@@ -136,7 +141,7 @@ def acquire_pixels(images,num_pixels=2000,max_img=1000,f_ran=1,s=3,flag_ow=True,
             ind_maxima = np.argmax(tran_patch,axis=-1)
             val_maxima = np.zeros(ind_maxima.shape,dtype=np.float32)
             for j in range(ind_maxima.shape[0]):
-                val_maxima[j] = np.sum(tran_patch[j,:ind_maxima[j]+5])
+                val_maxima[j] = np.sum(tran_patch[j,:ind_maxima[j]+5])  ## Da sistemare cambiando il piu' 5
             for j in range(tran_patch.shape[0]):
                 tran_patch[j,:ind_maxima[j]+5] = 0  # Se non divide correttamente transient da global va cambiata
             for j in range(tran_patch.shape[0]):
@@ -162,12 +167,14 @@ def acquire_pixels(images,num_pixels=2000,max_img=1000,f_ran=1,s=3,flag_ow=True,
                 tran_patch[j,ind_maxima[j]+5:] = 0
             v = np.matmul(tran_patch,np.transpose(phi))
             v = np.reshape(v,(s,s,phi.shape[0]))
-            v_real_d[count,i,:,:,:] =  v
+            v_real_d[count,i,:,:,:] = v
         
         back = np.zeros((num_pixels,s,s,dim_t),dtype = np.float32)
+        gt_patches = np.zeros((num_pixels,s,s),dtype = np.float32)
         for i in range(s):
             for j in range(s):
                 back[:,i,j,:] = temp[ind[0][:]+i-pad_s , ind[1][:]+j-pad_s]
+                gt_patches[:,i,j] = gt[ind[0][:]+i-pad_s , ind[1][:]+j-pad_s]
 
         # fix first peak before continuing
         # The first peak can be scattered over more than one bin so we just sum the bins and put them all in the same one
@@ -187,6 +194,7 @@ def acquire_pixels(images,num_pixels=2000,max_img=1000,f_ran=1,s=3,flag_ow=True,
                 for m in range(s):
                     back[j,l,m,ind_maxima[j,l,m]] = val_maxima[j,l,m]
         back_nod = np.copy(back)
+        '''
         #Handle one walls scenes in a different manner 
         if lol[:2] == "ow":
             maxima = np.zeros((back.shape[0],s,s),dtype=np.float32)
@@ -210,7 +218,7 @@ def acquire_pixels(images,num_pixels=2000,max_img=1000,f_ran=1,s=3,flag_ow=True,
                             Fit_Data[count,i,l,m,:] = back[i,l,m,:]
             count += 1    # Otherwise owalls images are not counted and we get less patches
             continue
-
+        '''
         if fl_normalize_transient: 
             # Normalize everything again for the sum of elements 
             norm_values = np.sum(back,axis=-1,keepdims=True)
@@ -243,7 +251,7 @@ def acquire_pixels(images,num_pixels=2000,max_img=1000,f_ran=1,s=3,flag_ow=True,
                 indpeak1[:,l,m] = indpeak1s
                 indpeak2[:,l,m] = indpeak2s
 
-        # starting parameters for curve fitting
+        # starting parameters for curve fitting -> si puo' togliere
         b1_ = np.zeros((indpeak1.shape),dtype = np.float32)
         for l in range(s):
             for m in range(s):
@@ -293,6 +301,7 @@ def acquire_pixels(images,num_pixels=2000,max_img=1000,f_ran=1,s=3,flag_ow=True,
         
         cumv = np.cumsum(back,axis=-1)
         Back[count,...] = back[:,pad_s,pad_s,:]
+        gt_real[count,...] = gt_patches#[:,pad_s,pad_s]
         Back_nod[count,...] = back_nod[:,pad_s,pad_s,:]
         if flag_fit:
             Fit_Data[count,...] = fit_data_cum
@@ -312,6 +321,7 @@ def acquire_pixels(images,num_pixels=2000,max_img=1000,f_ran=1,s=3,flag_ow=True,
     max_ind = count
     
     Back = Back[:max_ind,...]
+    gt_real = gt_real[:max_ind,...]
     Back_nod = Back_nod[:max_ind,...]
     if flag_fit:
         Fit_Data = Fit_Data[:max_ind,...]
@@ -323,6 +333,7 @@ def acquire_pixels(images,num_pixels=2000,max_img=1000,f_ran=1,s=3,flag_ow=True,
     v_real_d = v_real_d[:max_ind,...]
 
     Back = np.reshape(Back,(Back.shape[0]*Back.shape[1],dim_t))
+    gt_real = np.reshape(gt_real,(gt_real.shape[0]*gt_real.shape[1], s, s))
     Back_nod = np.reshape(Back_nod,(Back_nod.shape[0]*Back_nod.shape[1],dim_t))
     if flag_fit:
         Fit_Data = np.reshape(Fit_Data,(Fit_Data.shape[0]*Fit_Data.shape[1],s,s,dim_t))
@@ -337,7 +348,8 @@ def acquire_pixels(images,num_pixels=2000,max_img=1000,f_ran=1,s=3,flag_ow=True,
   
     # Random shuffling of all arrays
     ran_ind = np.random.permutation(v_real.shape[0])
-    Back = Back[ran_ind,...]
+    Back = Back[ran_ind, ...]
+    gt_real = gt_real[ran_ind, ...]
     Back_nod = Back_nod[ran_ind,...]
     if flag_fit:
         Fit_Data = Fit_Data[ran_ind,...]

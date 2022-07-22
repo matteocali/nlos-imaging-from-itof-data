@@ -107,7 +107,7 @@ class DataLoader:
         self.f.close()
 
 
-    def add_shot_noise(self,dict_data):
+    def add_shot_noise(self,dict_data):  # Da ignorare
 
         shot_scale = self.shot_scale
         freqs = np.array((20e06,50e06,60e06),dtype=np.float32)
@@ -294,4 +294,4 @@ class DataLoader:
         
         else:   # If the file is finished...
             self.init_iter()
-            return  None
+            return None

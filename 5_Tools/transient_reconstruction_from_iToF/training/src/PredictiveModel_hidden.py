@@ -279,7 +279,7 @@ class PredictiveModel:
                            trainable = True,
                            name='cd1')(c_out)
 
-        v_res = layers.Conv2D(filters=2*self.fn2,
+        v_res = layers.Conv2D(filters=2*self.fn2, # =12 va modificato 2*depth_map*alphamap
                            kernel_size=1,
                            strides=1,
                            padding="valid",
@@ -289,16 +289,16 @@ class PredictiveModel:
                            trainable = True,
                            name='cd2')(c_out)
 
-        v_res_constr = tf.slice(v_res,begin=[0,0,0,0],size=[-1,-1,-1,self.fn2])
+        v_res_constr = tf.slice(v_res,begin=[0,0,0,0],size=[-1,-1,-1,self.fn2])  ' sei elementi ciascuno ne voglio solo uno a testo'
         v_res_free = tf.slice(v_res,begin=[0,0,0,self.fn2],size=[-1,-1,-1,self.fn2])
 
-        v_out_d = v_in_1x1 + v_res_constr
-        v_out_g = v_in_1x1 - v_out_d
+        v_out_d = v_in_1x1 + v_res_constr  # questo non va bene perche' non uso i residui, uso dirertaam4nte 'out
+        v_out_g = v_in_1x1 - v_out_d  # non serve piu'
 
         # Phase corresponding to the predicted direct itof measurements
         phi = tf.math.atan2(v_out_d[:,:,:,self.fn:],v_out_d[:,:,:,:self.fn])
         phi = tf.where(tf.math.is_nan(phi),0.,phi)   # Needed for the first epochs to correct the output in case of a 0/0
-        phi = phi%(2*math.pi)
+        phi = phi%(2*math.pi) # tolgo tutte le phi
 
         model_pred = tf.keras.Model(inputs=v_in, outputs=[v_out_g,v_out_d,v_res_free], name=self.name)
         return model_pred
@@ -464,6 +464,7 @@ class PredictiveModel:
         v_in = data_dict["raw_itof"]
         v_d = data_dict["direct_itof"]
         v_g = data_dict["global_itof"]
+        # VA CARICATO IL PIXEL CENTRALE DELLA DEPTHMAP
         scale = data_dict["v_scale"]
         i_mid = int((self.P-1)/2) # index keeping track of the middle position
 
@@ -489,9 +490,9 @@ class PredictiveModel:
         else:
             v_nf = v_in
         # Process the output with the Direct CNN
-        v_out_g,v_out_d,v_free = self.DirectCNN(v_nf)
+        v_out_g,v_out_d,v_free = self.DirectCNN(v_nf) # nel caso della depth non mi serve v_free
         # If desired, compute also the transient prediction
-        if self.use_transient:
+        if self.use_transient: # potrebbe essere false
             v_in_1x1 = v_in[:,self.ex,self.ex,:]
             v_in_1x1 = tf.expand_dims(v_in_1x1,1)
             v_in_1x1 = tf.expand_dims(v_in_1x1,1)
@@ -561,6 +562,8 @@ class PredictiveModel:
         # MAE losses on the prediction of the Encoder-Decoder and DirectCNN-Decoder configurations.
         # The MAE is computed both on the pdf and the cdf
         # The MAE loss on the pdf here computed is not used in the current implementation. The actual pdf loss is defined below.
+
+        # Le 4 los successive vanno tolte se non uso la seconda rete mettere un if con else che le pone a zero
         loss_mae_auto = tf.math.reduce_mean(tf.math.abs(x_auto-x_g))
         loss_mae_CNN = tf.math.reduce_mean(tf.math.abs(x_CNN-x_g))
         loss_cum_auto = tf.math.reduce_mean(tf.math.abs(tf.math.cumsum(x_auto,axis=-1)-tf.math.cumsum(x_g,axis=-1)))
@@ -574,10 +577,10 @@ class PredictiveModel:
         # Definition of the complessive loss of our network architecture
         # The first if can be useful if we want a different initial loss for our network
         #####
-        if epoch<-1:
+        if epoch<-1:  # posso toglierlo
             loss_value = loss_emd1 + loss_emd2/1000 + loss_consistency 
         else:
-            loss_value =  loss_emd1 + loss_emd2 + 1000*loss_vd + 1000*loss_consistency
+            loss_value = loss_emd1 + loss_emd2 + 1000*loss_vd + 1000*loss_consistency
 
         loss_emd = tf.math.reduce_mean(loss_emd1) + loss_emd2
 

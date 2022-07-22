@@ -41,12 +41,12 @@ Flags and variables:
 
 
 out_dir = "../training/data/"    # Output directory
-data_dir = "../../dataset_rec/"  # dataset directory
+data_dir = "../dataset_rec/"  # dataset directory
 
 if not os.path.exists(out_dir):
     os.mkdir(out_dir)
 
-flag_new_shuffle = False # whether to shuffle again the images and create new training validation and test datasets
+flag_new_shuffle = True#False  # whether to shuffle again the images and create new training validation and test datasets
 flag_ow = True  # whether to use also one wall images or not
 flag_fit = False  # whether to fit the data using weibull functions (slows down the code)
 f_ran = True
@@ -65,8 +65,8 @@ if freqs.shape[0] == 2:
 
 # Choose which datasets you want to build
 fl_get_train = True
-fl_get_val = True
-fl_get_test = True
+fl_get_val = False#True
+fl_get_test = False#True
 fl_normalize_transient = False  # Whether to normalize the transient information 
 
 # Grab all the names of the images of the dataset, shuffle them and save them in a csv file
@@ -101,7 +101,7 @@ if flag_new_shuffle:
     twalls = [s for s in file_list if (("twalls" in s) and ("angle" not in s))]
     three_walls = [s for s in file_list if "3walls" in s]
 
-    images_list = [owalls, twalls_ang, twalls, three_walls]
+    images_list = [file_list]#[owalls, twalls_ang, twalls, three_walls]
 
 
     train_files = []

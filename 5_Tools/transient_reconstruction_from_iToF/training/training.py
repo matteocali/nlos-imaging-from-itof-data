@@ -48,7 +48,7 @@ fil_encoder = 32     #Number of feature maps of encoder and decoder
 # Training and test set generators
 use_S1 = False
 use_walls = True
-use_transient = True
+use_transient = False#True (se funziona anche con False)
 fl_scale = True
 fl_scale_perpixel = True
 fl_2freq = False
@@ -69,7 +69,7 @@ else:
 train_S1_filename = "./data/train_S1_400_s" + str(P) + str_freqs+".h5"
 val_S1_filename = "./data/val_S1_140_s" + str(P) + str_freqs+".h5"
 # Training and validation data for dataset walls
-train_walls_filename = "./data/train_walls_20200_s" + str(P) + str_freqs+".h5"
+train_walls_filename = "./data/train_walls_200_s3_nonorm" + str(P) + str_freqs+".h5"
 val_walls_filename = "./data/val_walls_6800_s" + str(P) + str_freqs+".h5"
 #train_walls_filename = "./data/train_aug_shot_20200_s" +str(P)+ str_freqs+".h5"
 #val_walls_filename = "./data/val_aug_shot_6800_s" + str(P) + str_freqs+".h5"
