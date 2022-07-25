@@ -31,7 +31,7 @@ def add_extension(name: Union[str, Path], ext: str) -> Path:
         return Path(name + ext)
 
 
-def read_files(file_path, extension, reorder=True):
+def read_files(file_path: Union[str, Path], extension: str, reorder: bool = True):
     """
     Function to load all the files in a folder and if needed reorder them using the numbers in the final part of the name
     :param reorder: flag to toggle the reorder process (default = true)
@@ -40,11 +40,14 @@ def read_files(file_path, extension, reorder=True):
     :return: list of file paths
     """
 
-    files = [file_name for file_name in glob(str(file_path) + "\\*." + extension)]  # Load the path of all the files in the input folder with the target extension
-    # (code from: https://www.delftstack.com/howto/python/python-open-all-files-in-directory/)
+    if type(file_path) is not Path:
+        file_path = Path(file_path)
+    files = [file_name for file_name in glob(
+        str(file_path / f"*.{extension}"))]  # Load the path of all the files in the input folder with the target extension
+                                             # (code from: https://www.delftstack.com/howto/python/python-open-all-files-in-directory/)
     if reorder:
         files = natsorted(files, key=lambda y: y.lower())  # Sort alphanumeric in ascending order
-        # (code from: https://studysection.com/blog/how-to-sort-a-list-in-alphanumeric-order-python/)
+                                                           # (code from: https://studysection.com/blog/how-to-sort-a-list-in-alphanumeric-order-python/)
     return files
 
 

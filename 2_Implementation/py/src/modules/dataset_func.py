@@ -466,7 +466,7 @@ def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path) -> None:
             obj_rot2 = obj_rot.split(")_(")[1]
             obj_rot1 = [int(i) for i in obj_rot1.split("_")]
             obj_rot2 = [int(i) for i in obj_rot2.split("_")]
-            gt_name = f"transient_nlos_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name1}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
+            gt_name = f"transient_nlos_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
 
         if gt_name not in gt_files_name:
             raise ValueError("The ground truth file is missing")
