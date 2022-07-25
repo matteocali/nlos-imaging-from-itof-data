@@ -402,15 +402,13 @@ def build_mirror_gt(gt_path: Path, out_path: Path, fov: int, exp_time: float) ->
         data_folder = read_folders(batch_folder)
         data_path = data_path + data_folder
 
-    for i, file_path in tqdm(enumerate(data_path), desc="Generating ground truth data"):
+    for file_path in tqdm(data_path, desc="Generating ground truth data"):
         file_name = str(Path(file_path).name) + "_GT"
         tr = transient_loader(file_path)
         d_map = compute_distance_map(tr, fov, exp_time)
         a_map = np_zeros(d_map.shape)
         a_map[where(np_sum(tr[:, :, :, -1], axis=0) != 0)] = 1
         save_h5(file_path=out_path / file_name, data={"depth_map": d_map, "alpha_map": a_map}, fermat=False)
-        if i == 0:
-            break
 
 
 def load_dataset(d_path: Path, out_path: Path) -> None:
@@ -423,12 +421,10 @@ def load_dataset(d_path: Path, out_path: Path) -> None:
         data_folder = read_folders(batch_folder)
         data_path = data_path + data_folder
 
-    for i, file_path in tqdm(enumerate(data_path), desc="Loading dataset"):
+    for file_path in tqdm(data_path, desc="Loading dataset"):
         file_name = str(Path(file_path).name)
         tr = transient_loader(file_path)[:, :, :, 1]
         save_h5(file_path=out_path / file_name, data={"data": tr}, fermat=True)
-        if i == 0:
-            break
 
 
 def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path) -> None:
