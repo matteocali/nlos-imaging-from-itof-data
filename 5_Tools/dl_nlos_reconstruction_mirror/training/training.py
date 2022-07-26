@@ -1,18 +1,13 @@
-import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
 import sys
-from os.path import dirname, abspath
 sys.path.append("./src/")
 sys.path.append("./data/")
 sys.path.append("../utils/")
 import DataLoader
-#import PredictiveModel
 import PredictiveModel_hidden as PredictiveModel
-#import PredictiveModel_hidden_2 as PredictiveModel
 from datetime import date
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 """
 Main file for all trainings.
@@ -33,17 +28,12 @@ Parameters:
 -dim_b              Batch size 
 -dim_t              Number of bins in the transient dimension
 """
-"""
-#physical_devices = tf.config.experimental.list_physical_devices("GPU")
-#assert len(physical_devices) > 0
-#tf.config.experimental.set_memory_growth(physical_devices[0],True)
-#import PredictiveModel_min as PredictiveModel
-"""
-name_of_attempt = "s3_samesize"     # String used to denominate the attempt. 
+
+name_of_attempt = "test_00"     # String used to denominate the attempt.
 name_of_attempt = str(date.today()) + "_" + name_of_attempt
-fil_spat_size = 32
-fil_dir_size = 32
-fil_encoder = 32     #Number of feature maps of encoder and decoder
+fil_spat_size = 32  # Number of feature maps for the Spatial Feature Extractor model
+fil_dir_size = 32  # Number of feature maps for the Direct_CNN model
+fil_encoder = 32  # Number of feature maps of encoder and decoder
 
 # Training and test set generators
 use_S1 = False
@@ -53,22 +43,23 @@ fl_scale = True
 fl_scale_perpixel = True
 fl_2freq = False
 P = 3
-dim_b = 1024 # Dimensione della batch
-dim_t = 2000 # Number of bins in the transient dimension
+dim_b = 1024  # Batch dimension
+dim_t = 2000  # Number of bins in the transient dimension
+
 # Additional string used to highlight if the approach was trained on two frequencies
-str_freqs = ""
 if fl_2freq:
     str_freqs = "_2freq"
-    freqs = np.array((20e06,50e06),dtype=np.float32)
-    dim_encoding = 8    #Dimension in the encoding domain
+    freqs = np.array((20e06, 50e06), dtype=np.float32)
+    dim_encoding = 8  # Dimension in the encoding domain
 else:
-    freqs = np.array((20e06,50e06,60e06),dtype=np.float32)
-    dim_encoding = 12    #Dimension in the encoding domain
+    str_freqs = ""
+    freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
+    dim_encoding = 12  # Dimension in the encoding domain
 
 # Path of training and validation data of dataset S1
 train_S1_filename = "./data/train_S1_400_s" + str(P) + str_freqs+".h5"
 val_S1_filename = "./data/val_S1_140_s" + str(P) + str_freqs+".h5"
-# Training and validation data for dataset walls
+# Training and validation data for dataset
 train_walls_filename = "./data/train_walls_200_s3_nonorm" + str(P) + str_freqs+".h5"
 val_walls_filename = "./data/val_walls_6800_s" + str(P) + str_freqs+".h5"
 #train_walls_filename = "./data/train_aug_shot_20200_s" +str(P)+ str_freqs+".h5"
