@@ -74,16 +74,9 @@ def test_synth(name,weights_path,attempt_name,Sname,P,freqs,fl_test_img=False,fl
 
 
  
-    net = PredictiveModel.PredictiveModel(name='DeepBVE_nf_std',
-                                               dim_b = dim_dataset,
-                                               P = P, 
-                                               freqs = freqs,
-                                               saves_path='./saves',
-                                               fil_size=fil_dir,
-                                               dim_t=dim_t,
-                                               dim_encoding=dim_encoding,
-                                               fil_denoise_size=fil_den,
-                                               fil_encoder=fil_auto)
+    net = PredictiveModel.PredictiveModel(name='DeepBVE_nf_std', dim_b=dim_dataset, freqs=freqs, P=P,
+                                          saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, fil_denoise_size=fil_den,
+                                          dim_encoding=dim_encoding, fil_encoder=fil_auto)
 
 
     if P != 3:

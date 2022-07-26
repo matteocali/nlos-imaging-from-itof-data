@@ -68,11 +68,8 @@ def test_aligned(name,weights_path,attempt_name,Sname,P,freqs,fl_scale,fl_norm_p
 
     # If we are testing also the old network, load the weights and needed data to test that one too
     if fl_test_old:
-        net_old = PredictiveModel_old.PredictiveModel(name='DeepBVE_nf_std',
-                                               dim_b = dim_dataset,
-                                               P = Pold, 
-                                               freqs = freqs,
-                                               saves_path='./saves')
+        net_old = PredictiveModel_old.PredictiveModel(name='DeepBVE_nf_std', dim_b=dim_dataset, freqs=freqs, P=Pold,
+                                                      saves_path='./saves')
         gen_old = GenerativeModel.GenerativeModel(dim_b = dim_dataset,
                                                     dim_x=1,
                                                     dim_y=1,
@@ -86,15 +83,9 @@ def test_aligned(name,weights_path,attempt_name,Sname,P,freqs,fl_scale,fl_norm_p
         net_old.DirectCNN.load_weights(old_weights[1])
         net_old.TransientNet.load_weights(old_weights[2])
 
-    net = PredictiveModel.PredictiveModel(name='DeepBVE_nf_std',
-                                               dim_b = dim_dataset,
-                                               P = P, 
-                                               freqs = freqs,
-                                               saves_path='./saves',
-                                               dim_t=dim_t,
-                                               fil_size=fil_dir,
-                                               fil_denoise_size=fil_den,
-                                               fil_encoder=fil_auto)
+    net = PredictiveModel.PredictiveModel(name='DeepBVE_nf_std', dim_b=dim_dataset, freqs=freqs, P=P,
+                                          saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, fil_denoise_size=fil_den,
+                                          fil_encoder=fil_auto)
 
     if P != 3:
         net.SpatialNet.load_weights(weights_path[0])

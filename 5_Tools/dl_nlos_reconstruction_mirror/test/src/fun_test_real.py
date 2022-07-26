@@ -81,13 +81,8 @@ def test_real(name,weights_path,attempt_name,Sname,P,freqs,fl_scale_perpixel=Fal
     avgmax = 0
 
     # Network definition and weights loading
-    net = PredictiveModel.PredictiveModel(name='DeepBVE_nf_std',
-                                               dim_b = 1,
-                                               P = P, 
-                                               freqs = freqs,
-                                               saves_path='./saves',
-                                               fil_size=num_fil_direct,
-                                               fil_denoise_size=num_fil_denoise)
+    net = PredictiveModel.PredictiveModel(name='DeepBVE_nf_std', dim_b=1, freqs=freqs, P=P, saves_path='./saves',
+                                          fil_size=num_fil_direct, fil_denoise_size=num_fil_denoise)
 
     if fl_denoise:
         net.SpatialNet.load_weights(weights_path[0])

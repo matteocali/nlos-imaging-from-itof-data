@@ -67,12 +67,8 @@ def test_img(name, weights_path, attempt_name, Sname, P, freqs, fl_scale, fl_nor
 
     # If we are testing also the old network, load the weights and needed data to test that one too
     if fl_test_old:
-        net_old = PredictiveModel_old.PredictiveModel(name='DeepBVE_nf_std',
-                                                      dim_b=dim_dataset,
-                                                      P=Pold,
-                                                      fil_size=128,
-                                                      freqs=freqs,
-                                                      saves_path='./saves')
+        net_old = PredictiveModel_old.PredictiveModel(name='DeepBVE_nf_std', dim_b=dim_dataset, freqs=freqs, P=Pold,
+                                                      saves_path='./saves', fil_size=128)
         gen_old = GenerativeModel.GenerativeModel(dim_b=dim_dataset,
                                                   dim_x=1,
                                                   dim_y=1,
@@ -87,16 +83,9 @@ def test_img(name, weights_path, attempt_name, Sname, P, freqs, fl_scale, fl_nor
         net_old.TransientNet.load_weights(old_weights[2])
 
     # Define the network and load the corresponding weights
-    net = PredictiveModel.PredictiveModel(name='DeepBVE_nf_std',
-                                          dim_b=dim_dataset,
-                                          P=P,
-                                          freqs=freqs,
-                                          saves_path='./saves',
-                                          dim_t=dim_t,
-                                          fil_size=fil_dir,
-                                          fil_denoise_size=fil_den,
-                                          dim_encoding=dim_encoding,
-                                          fil_encoder=fil_auto)
+    net = PredictiveModel.PredictiveModel(name='DeepBVE_nf_std', dim_b=dim_dataset, freqs=freqs, P=P,
+                                          saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, fil_denoise_size=fil_den,
+                                          dim_encoding=dim_encoding, fil_encoder=fil_auto)
 
     if P != 3:
         net.SpatialNet.load_weights(weights_path[0])

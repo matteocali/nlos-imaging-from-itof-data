@@ -133,13 +133,8 @@ def testS1(data_path,weights_path,attempt_name,Sname,P,freqs,fl_norm_perpixel=Fa
         else: 
             v_in = scale_vin(v_in,P)
 
-        net = PredictiveModel.PredictiveModel(name='DeepBVE_nf_std',
-                                                   dim_b = 1,
-                                                   P = P, 
-                                                   freqs = freqs,
-                                                   saves_path='./saves',
-                                                   fil_size=fil_direct,
-                                                   fil_denoise_size=fil_denoise)
+        net = PredictiveModel.PredictiveModel(name='DeepBVE_nf_std', dim_b=1, freqs=freqs, P=P, saves_path='./saves',
+                                              fil_size=fil_direct, fil_denoise_size=fil_denoise)
         # Load weights
         if P != 3:
             net.SpatialNet.load_weights(weights_path[0])
