@@ -67,7 +67,8 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=1, s=3, flag_ow=
         num_pixels = np.sum(mask)
 
     v_real = np.zeros((num_images, num_pixels, s, s, nf), dtype=np.float32)
-    gt_real = np.zeros((num_images, num_pixels, s, s), dtype=np.float32)
+    gt_depth_real = np.zeros((num_images, num_pixels, s, s), dtype=np.float32)
+    gt_alpha_real = np.zeros((num_images, num_pixels, s, s), dtype=np.float32)
     v_real_no_d = np.zeros((num_images, num_pixels, s, s, nf), dtype=np.float32)
     v_real_d = np.zeros((num_images, num_pixels, s, s, nf), dtype=np.float32)
     peak_val = np.zeros((num_images, num_pixels, s, s), dtype=np.float32)
@@ -95,7 +96,8 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=1, s=3, flag_ow=
         # Load the transient data
         with h5py.File(image, "r") as h:
             temp = h["data"][:]  # load the transient data
-            gt = h["depth_map"][:]  # load the ground truth data
+            gt_depth = h["depth_map"][:]  # load the ground truth depth data
+            gt_alpha = h["alpha_map"][:]  # load the ground truth alpha map data
 
         # Compute the v_values for the patch around each pixels
         ind = np.where(mask > 0)
@@ -148,11 +150,13 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=1, s=3, flag_ow=
             v_real_d[count, i, :, :, :] = v
 
         back = np.zeros((num_pixels, s, s, dim_t), dtype=np.float32)  # backscattering vector [num_pixels, s, s, dim_t]
-        gt_patches = np.zeros((num_pixels, s, s), dtype=np.float32)  # ground truth vector [num_pixels, s, s]
+        gt_depth_patches = np.zeros((num_pixels, s, s), dtype=np.float32)  # depthground truth vector [num_pixels, s, s]
+        gt_alpha_patches = np.zeros((num_pixels, s, s), dtype=np.float32)  # alpha ground truth vector [num_pixels, s, s]
         for i in range(s):
             for j in range(s):
                 back[:, i, j, :] = temp[ind[0][:] + i - pad_s, ind[1][:] + j - pad_s]
-                gt_patches[:, i, j] = gt[ind[0][:] + i - pad_s, ind[1][:] + j - pad_s]
+                gt_depth_patches[:, i, j] = gt_depth[ind[0][:] + i - pad_s, ind[1][:] + j - pad_s]
+                gt_alpha_patches[:, i, j] = gt_alpha[ind[0][:] + i - pad_s, ind[1][:] + j - pad_s]
 
         # fix first peak before continuing
         # The first peak can be scattered over more than one bin, so we just sum the bins and put them all in the same one
@@ -253,7 +257,8 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=1, s=3, flag_ow=
                             mask_cum[i] = 1
 
         Back[count, ...] = back[:, pad_s, pad_s, :]
-        gt_real[count, ...] = gt_patches  # [:,pad_s,pad_s]
+        gt_depth_real[count, ...] = gt_depth_patches
+        gt_alpha_real[count, ...] = gt_alpha_patches
         Back_nod[count, ...] = back_nod[:, pad_s, pad_s, :]
         if flag_fit:
             Fit_Data[count, ...] = fit_data_cum
@@ -275,7 +280,8 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=1, s=3, flag_ow=
     max_ind = count
 
     Back = Back[:max_ind, ...]
-    gt_real = gt_real[:max_ind, ...]
+    gt_depth_real = gt_depth_real[:max_ind, ...]
+    gt_alpha_real = gt_alpha_real[:max_ind, ...]
     Back_nod = Back_nod[:max_ind, ...]
     if flag_fit:
         Fit_Data = Fit_Data[:max_ind, ...]
@@ -287,7 +293,8 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=1, s=3, flag_ow=
     v_real_d = v_real_d[:max_ind, ...]
 
     Back = np.reshape(Back, (Back.shape[0] * Back.shape[1], dim_t))
-    gt_real = np.reshape(gt_real, (gt_real.shape[0] * gt_real.shape[1], s, s))
+    gt_depth_real = np.reshape(gt_depth_real, (gt_depth_real.shape[0] * gt_depth_real.shape[1], s, s))
+    gt_alpha_real = np.reshape(gt_alpha_real, (gt_alpha_real.shape[0] * gt_alpha_real.shape[1], s, s))
     Back_nod = np.reshape(Back_nod, (Back_nod.shape[0] * Back_nod.shape[1], dim_t))
     if flag_fit:
         Fit_Data = np.reshape(Fit_Data, (Fit_Data.shape[0] * Fit_Data.shape[1], s, s, dim_t))
@@ -305,7 +312,8 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=1, s=3, flag_ow=
     # Random shuffling of all arrays
     ran_ind = np.random.permutation(v_real.shape[0])
     Back = Back[ran_ind, ...]
-    gt_real = gt_real[ran_ind, ...]
+    gt_depth_real = gt_depth_real[ran_ind, ...]
+    gt_alpha_real = gt_alpha_real[ran_ind, ...]
     Back_nod = Back_nod[ran_ind, ...]
     if flag_fit:
         Fit_Data = Fit_Data[ran_ind, ...]
@@ -320,4 +328,4 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=1, s=3, flag_ow=
     minutes, seconds = divmod(fi - st, 60)
     hours, minutes = divmod(minutes, 60)
     print(" The overall computation time for the dataset is %d:%02d:%02d" % (hours, minutes, seconds))
-    return Back, Back_nod, gt_real, Fit_Parameters, peak_ind, peak_val, v_real, v_real_no_d, v_real_d, phi, Fit_Data
+    return Back, Back_nod, gt_depth_real, gt_alpha_real, Fit_Parameters, peak_ind, peak_val, v_real, v_real_no_d, v_real_d, phi, Fit_Data
