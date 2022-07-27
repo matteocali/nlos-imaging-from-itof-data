@@ -120,7 +120,9 @@ if __name__ == '__main__':
                      file_path=arg_out / "transient_histograms.svg")
 
         end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+        minutes, seconds = divmod(end - start, 60)
+        hours, minutes = divmod(minutes, 60)
+        print(f"Task <{arg_task}> concluded in in %d:%02d:%02d\n" % (hours, minutes, seconds))
     elif arg_task == "hists_glb":
         print(f"TASK: {arg_task}")
         start = time.time()
@@ -139,7 +141,9 @@ if __name__ == '__main__':
                      file_path=arg_out / "transient_histograms.svg")
 
         end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+        minutes, seconds = divmod(end - start, 60)
+        hours, minutes = divmod(minutes, 60)
+        print(f"Task <{arg_task}> concluded in in %d:%02d:%02d\n" % (hours, minutes, seconds))
     elif arg_task == "test":
         print(f"TASK: {arg_task}")
         start = time.time()
@@ -188,6 +192,8 @@ if __name__ == '__main__':
             print()
 
         end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+        minutes, seconds = divmod(end - start, 60)
+        hours, minutes = divmod(minutes, 60)
+        print(f"Task <{arg_task}> concluded in in %d:%02d:%02d\n" % (hours, minutes, seconds))
     else:
         print("Wrong task provided\nPossibilities are: tr_video, total_img, glb_tr_video, hists, hists_glb")

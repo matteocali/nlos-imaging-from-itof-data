@@ -78,6 +78,8 @@ if __name__ == '__main__':
             sys.exit(2)
 
         end = time()
-        print(f"Task <{type_gt}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+        minutes, seconds = divmod(end - start, 60)
+        hours, minutes = divmod(minutes, 60)
+        print(f"Task <{type_gt}> concluded in in %d:%02d:%02d\n" % (hours, minutes, seconds))
     else:
         print("Wrong type provided\nPossibilities are: mirror")

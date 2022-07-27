@@ -103,7 +103,9 @@ if __name__ == '__main__':
                                 output_path=arg_out)
 
         end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+        minutes, seconds = divmod(end - start, 60)
+        hours, minutes = divmod(minutes, 60)
+        print(f"Task <{arg_task}> concluded in in %d:%02d:%02d\n" % (hours, minutes, seconds))
     elif arg_task == "distance_plot":
         print(f"TASK: {arg_task}\n")
         start = time.time()
@@ -112,7 +114,9 @@ if __name__ == '__main__':
                          out_name=arg_out)
 
         end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+        minutes, seconds = divmod(end - start, 60)
+        hours, minutes = divmod(minutes, 60)
+        print(f"Task <{arg_task}> concluded in in %d:%02d:%02d\n" % (hours, minutes, seconds))
     elif arg_task == "mm_distance_plot":
         print(f"TASK: {arg_task}\n")
         start = time.time()
@@ -123,7 +127,9 @@ if __name__ == '__main__':
                             out_name=arg_out)
 
         end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+        minutes, seconds = divmod(end - start, 60)
+        hours, minutes = divmod(minutes, 60)
+        print(f"Task <{arg_task}> concluded in in %d:%02d:%02d\n" % (hours, minutes, seconds))
     elif arg_task == "tot_img_test":
         print(f"TASK: {arg_task}\n")
         start = time.time()
@@ -141,7 +147,9 @@ if __name__ == '__main__':
                           ratio_limits=arg_ratio_limits)
 
         end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+        minutes, seconds = divmod(end - start, 60)
+        hours, minutes = divmod(minutes, 60)
+        print(f"Task <{arg_task}> concluded in in %d:%02d:%02d\n" % (hours, minutes, seconds))
     elif arg_task == "norm_factor":
         print(f"TASK: {arg_task}\n")
         start = time.time()
@@ -154,7 +162,9 @@ if __name__ == '__main__':
                                o_img_path=arg_rgb)
 
         end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+        minutes, seconds = divmod(end - start, 60)
+        hours, minutes = divmod(minutes, 60)
+        print(f"Task <{arg_task}> concluded in in %d:%02d:%02d\n" % (hours, minutes, seconds))
     elif arg_task == "plot_norm_factor":
         print(f"TASK: {arg_task}\n")
         start = time.time()
@@ -164,6 +174,8 @@ if __name__ == '__main__':
                             out_path=arg_out)
 
         end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+        minutes, seconds = divmod(end - start, 60)
+        hours, minutes = divmod(minutes, 60)
+        print(f"Task <{arg_task}> concluded in in %d:%02d:%02d\n" % (hours, minutes, seconds))
     else:
         print("Wrong task provided\nPossibilities are: cross, distance_plot, mm_distance_plot, tot_img_test, norm_factor")
