@@ -437,7 +437,7 @@ def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path) -> None:
     if len(d_files_name) != len(gt_files_name):
         raise ValueError("The number of files in the dataset and the ground truth folder are different")
 
-    for d_name in tqdm(d_files_name, desc="Fusing dataset and ground truth"):
+    for d_name in tqdm(d_files_name[60:], desc="Fusing dataset and ground truth"):
         d_name_shortened = d_name.replace("cam_pos_(1.5_-1_1.65)_cam_rot_(90_0_50)_", "")[:-3]  # Remove the cam_pos and cam_rot from the file name since I'm considering just the fixed camera position
         obj_name = d_name_shortened[(d_name_shortened.find("nlos") + 5):(d_name_shortened.find("obj") - 1)]
         obj_pos = d_name_shortened[(d_name_shortened.find("obj_pos") + 9):(d_name_shortened.find("obj_rot") - 2)]
@@ -447,25 +447,44 @@ def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path) -> None:
             obj_rot = d_name_shortened[(d_name_shortened.find("obj_rot") + 9):(-1)]
             obj_pos = [float(i) for i in obj_pos.split("_")]
             obj_pos = [round(obj_pos[i] - elm, 1) for i, elm in enumerate([1.5, 1.0, 1.65])]
-            obj_rot = [int(i) for i in obj_rot.split("_")]
+            obj_rot = [int(float(i)) for i in obj_rot.split("_")]
             gt_name = f"transient_nlos_{obj_name}_tr({obj_pos[0]}_{obj_pos[1]}_{obj_pos[2]})_rot({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})_GT.h5"
         else:
             obj_name1 = obj_name.split("+")[0]
             obj_name2 = obj_name.split("+")[1]
             obj_pos1 = obj_pos.split(")_(")[0]
             obj_pos2 = obj_pos.split(")_(")[1]
-            obj_pos1 = [float(i) for i in obj_pos1.split("_")]
-            obj_pos2 = [float(i) for i in obj_pos2.split("_")]
-            obj_pos1 = [round(obj_pos1[i] - elm, 1) for i, elm in enumerate([1.5, 1.0, 1.65])]
-            obj_pos2 = [round(obj_pos2[i] - elm, 1) for i, elm in enumerate([1.5, 1.0, 1.65])]
+            obj_pos1_raw = [float(i) for i in obj_pos1.split("_")]
+            obj_pos2_raw = [float(i) for i in obj_pos2.split("_")]
+            obj_pos1 = [round(obj_pos1_raw[i] - elm, 1) for i, elm in enumerate([1.5, 1.0, 1.65])]
+            obj_pos2 = [round(obj_pos2_raw[i] - elm, 1) for i, elm in enumerate([1.5, 1.0, 1.65])]
             obj_rot1 = obj_rot.split(")_(")[0]
             obj_rot2 = obj_rot.split(")_(")[1]
-            obj_rot1 = [int(i) for i in obj_rot1.split("_")]
-            obj_rot2 = [int(i) for i in obj_rot2.split("_")]
+            obj_rot1 = [int(float(i)) for i in obj_rot1.split("_")]
+            obj_rot2 = [float(i) for i in obj_rot2.split("_")]
             gt_name = f"transient_nlos_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
 
         if gt_name not in gt_files_name:
-            raise ValueError("The ground truth file is missing")
+            # noinspection PyUnboundLocalVariable
+            obj_pos1 = [round(obj_pos1_raw[i] - elm, 1) for i, elm in enumerate([1.5, 1.0, 1.55])]
+            # noinspection PyUnboundLocalVariable
+            gt_name = f"transient_nlos_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
+            if gt_name not in gt_files_name:
+                # noinspection PyUnboundLocalVariable
+                obj_pos1 = [round(obj_pos1_raw[i] - elm, 1) for i, elm in enumerate([1.5, 1.0, 1.65])]
+                # noinspection PyUnboundLocalVariable
+                obj_pos2 = [round(obj_pos2_raw[i] - elm, 1) for i, elm in enumerate([1.5, 1.0, 1.55])]
+                # noinspection PyUnboundLocalVariable
+                gt_name = f"transient_nlos_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
+                if gt_name not in gt_files_name:
+                    # noinspection PyUnboundLocalVariable
+                    obj_pos1 = [round(obj_pos1_raw[i] - elm, 1) for i, elm in enumerate([1.5, 1.0, 1.55])]
+                    # noinspection PyUnboundLocalVariable
+                    obj_pos2 = [round(obj_pos2_raw[i] - elm, 1) for i, elm in enumerate([1.5, 1.0, 1.55])]
+                    # noinspection PyUnboundLocalVariable
+                    gt_name = f"transient_nlos_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
+                    if gt_name not in gt_files_name:
+                        raise ValueError("The ground truth file is missing")
 
         d_file = d_path / d_name
         gt_file = gt_path / gt_name
