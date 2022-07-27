@@ -1,10 +1,10 @@
 import numpy as np
 import sys
-sys.path.append("./src/")
+sys.path.append("/src/")
 sys.path.append("./data/")
 sys.path.append("../utils/")
-import DataLoader.py as DataLoader
-import PredictiveModel_hidden.py as PredictiveModel
+import DataLoader as DataLoader
+import PredictiveModel_hidden as PredictiveModel
 from datetime import date
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
