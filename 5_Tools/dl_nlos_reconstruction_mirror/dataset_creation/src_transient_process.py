@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import sys
 import h5py
 import numpy as np
@@ -39,7 +40,8 @@ Flags and variables:
 start_time = time.time()
 
 out_dir = "../training/data/"    # output directory
-data_dir = "../dataset_rec/"  # dataset directory
+# data_dir = "../dataset_rec/"
+data_dir = "Z:/decaligm/mitsuba_renders/nlos_scenes/dataset/depth_map_ground_truth_far/final_dataset/"  # dataset directory
 rnd_seed = 2019283  # random seed
 np.random.seed(rnd_seed)
 
