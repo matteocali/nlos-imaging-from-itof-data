@@ -1,10 +1,10 @@
 import numpy as np
 import sys
-sys.path.append("./src/")
+#sys.path.append("./src/")
 sys.path.append("./data/")
 sys.path.append("../utils/")
-import DataLoader as DataLoader
-import PredictiveModel_hidden as PredictiveModel
+import src.DataLoader as DataLoader
+import src.PredictiveModel_hidden as PredictiveModel
 from datetime import date
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
@@ -16,7 +16,6 @@ All flags for training and the number of feature maps for each network can be se
 Flags:
 -use_S1             Whether to use the S1 dataset for training
 -use_data          Whether to use the walls dataset for training
--use_transient      Whether to train our model also on transient data (backpropagation is done also on the Transient Reconstruction Module)
 -fl_scale_perpixel  Controls the normalization by the 20 MHz component. If the flag is True the normalization is done pixel per pixel, otherwise each patch is normalized by the mean 20 MHz value
 -fl_2freq           If set, the training is done on only 2 frequencies (in this case 20 and 50 MHz)
 
@@ -37,7 +36,6 @@ fil_encoder = 32  # Number of feature maps of encoder and decoder
 
 # Training and test set generators
 use_data = True
-use_transient = False#True (se funziona anche con False)
 fl_scale = True
 fl_scale_perpixel = True
 fl_2freq = False
