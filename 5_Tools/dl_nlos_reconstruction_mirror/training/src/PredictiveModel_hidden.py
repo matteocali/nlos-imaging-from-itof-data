@@ -517,9 +517,9 @@ class PredictiveModel:
                     tf.summary.scalar('loss_alpha', loss_list_trainw[0][1], step=epoch + 1)
             with summary_val.as_default():
                 if self.use_data:
-                    tf.summary.scalar('loss_data', loss_trainw, step=epoch + 1)
-                    tf.summary.scalar('loss_depth', loss_list_trainw[0][0], step=epoch + 1)
-                    tf.summary.scalar('loss_alpha', loss_list_trainw[0][1], step=epoch + 1)
+                    tf.summary.scalar('loss_data', loss_testw, step=epoch + 1)
+                    tf.summary.scalar('loss_depth', loss_list_testw[0][0], step=epoch + 1)
+                    tf.summary.scalar('loss_alpha', loss_list_testw[0][1], step=epoch + 1)
             loss_train = loss_trainw
             loss_test = loss_testw
 
