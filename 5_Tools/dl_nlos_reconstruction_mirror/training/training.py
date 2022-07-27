@@ -1,4 +1,5 @@
 import numpy as np
+from pathlib import Path
 import sys
 #sys.path.append("./src/")
 sys.path.append("./data/")
@@ -54,8 +55,8 @@ else:
     dim_encoding = 12  # Dimension in the encoding domain
 
 # Training and validation data for dataset
-train_filename = f"/data/train_n40200_s{str(P)}_nonorm{str_freqs}.h5"
-val_filename = f"/data/val_n13400_s{str(P)}_nonorm{str_freqs}.h5"
+train_filename = str(Path(f"/data/train_n40200_s{str(P)}_nonorm{str_freqs}.h5"))
+val_filename = str(Path(f"/data/val_n13400_s{str(P)}_nonorm{str_freqs}.h5"))
 
 # Put the loaded data in the right format for the network.
 train_loader = DataLoader.DataLoader(filename=train_filename,
