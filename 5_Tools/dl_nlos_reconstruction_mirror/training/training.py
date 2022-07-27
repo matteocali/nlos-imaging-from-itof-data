@@ -3,7 +3,7 @@ import sys
 sys.path.append("./src/")
 sys.path.append("./data/")
 sys.path.append("../utils/")
-import DataLoader
+import src.DataLoader as DataLoader
 import PredictiveModel_hidden as PredictiveModel
 from datetime import date
 import os
