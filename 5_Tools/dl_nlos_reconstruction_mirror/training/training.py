@@ -55,6 +55,7 @@ else:
     dim_encoding = 12  # Dimension in the encoding domain
 
 # Training and validation data for dataset
+print(f"CURRENT FOLDER: {os.getcwd()}")
 train_filename = str(Path(f"/cig/common04nb/students/decaligm/thesis-nlos-for-itof/5_Tools/dl_nlos_reconstruction_mirror/training/data/train_n40200_s{str(P)}_nonorm{str_freqs}.h5"))
 val_filename = str(Path(f"/cig/common04nb/students/decaligm/thesis-nlos-for-itof/5_Tools/dl_nlos_reconstruction_mirror/training/data/val_n13400_s{str(P)}_nonorm{str_freqs}.h5"))
 
