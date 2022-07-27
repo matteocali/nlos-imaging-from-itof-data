@@ -4,7 +4,7 @@ import os
 import sys
 sys.path.append("../../utils/")
 sys.path.append("../")
-#import Autoencoder_sameconv as Autoencoder_Interp
+import Autoencoder_sameconv as Autoencoder_Interp
 import time
 
 
@@ -95,9 +95,9 @@ class PredictiveModel:
             os.makedirs(self.checkpoint_path)
 
         # Define autoencoder model with transposed convolutions
-        #self.Autoencoder = Autoencoder_Interp.Autoencoder_Interp(self.dim_b, self.dim_t, self.dim_encoding, self.fil_encoder)
-        #self.encoder = self.Autoencoder.encoder()
-        #self.decoder = self.Autoencoder.interpConv()
+        self.Autoencoder = Autoencoder_Interp.Autoencoder_Interp(self.dim_b, self.dim_t, self.dim_encoding, self.fil_encoder)
+        self.encoder = self.Autoencoder.encoder()
+        self.decoder = self.Autoencoder.interpConv()
 
         # Define predictive models
         self.SpatialNet = self.def_SpatialNet()
@@ -136,8 +136,8 @@ class PredictiveModel:
         weight_filename_dec = self.name + '_dec_' + suffix + '.h5'
         self.SpatialNet.save_weights(os.path.join(self.checkpoint_path, weight_filename_d))
         self.DirectCNN.save_weights(os.path.join(self.checkpoint_path, weight_filename_v))
-        #self.encoder.save_weights(os.path.join(self.checkpoint_path, weight_filename_enc))
-        #self.decoder.save_weights(os.path.join(self.checkpoint_path, weight_filename_dec))
+        self.encoder.save_weights(os.path.join(self.checkpoint_path, weight_filename_enc))
+        self.decoder.save_weights(os.path.join(self.checkpoint_path, weight_filename_dec))
 
     def A_compute(self, v):
         """
