@@ -1,5 +1,4 @@
 import tensorflow as tf
-import sys
 import tensorflow.keras.layers as layers
 
 # Class defining the autoencoder structure of our network.

@@ -4,7 +4,7 @@ sys.path.append("./src/")
 sys.path.append("./data/")
 sys.path.append("../utils/")
 import src.DataLoader as DataLoader
-import PredictiveModel_hidden as PredictiveModel
+import src.PredictiveModel_hidden as PredictiveModel
 from datetime import date
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
