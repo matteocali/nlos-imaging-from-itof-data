@@ -8,7 +8,6 @@ import DataLoader as DataLoader
 import PredictiveModel_hidden as PredictiveModel
 from datetime import date
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 """
 Main file for all trainings.

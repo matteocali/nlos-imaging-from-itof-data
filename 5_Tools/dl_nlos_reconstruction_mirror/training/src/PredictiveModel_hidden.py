@@ -294,8 +294,7 @@ class PredictiveModel:
             v_nf = self.SpatialNet(v_in)
         else:
             v_nf = v_in
-        # depth_pred-depth_gt *.alpha_gt
-        # alpha_pred-alpha_gt
+
         # Process the output with the Direct CNN
         pred_depth_map, pred_alpha_map = self.DirectCNN(v_nf)
         pred_depth_map = tf.squeeze(pred_depth_map, axis=-1)
@@ -303,11 +302,10 @@ class PredictiveModel:
 
         # Compute the masked data
         pred_msk_depth = pred_depth_map * gt_alpha
-        pred_msk_alpha = pred_alpha_map * gt_alpha
 
         # Compute the loss
-        loss_depth = tf.math.reduce_mean(tf.squeeze(tf.keras.losses.MSE(gt_depth, pred_msk_depth, ), axis=-1))
-        loss_alpha = tf.math.reduce_mean(tf.squeeze(tf.keras.losses.binary_crossentropy(gt_alpha, pred_msk_alpha), axis=-1))
+        loss_depth = tf.math.reduce_sum(tf.keras.losses.MAE(gt_depth, pred_msk_depth)) / tf.math.reduce_sum(gt_alpha)
+        loss_alpha = tf.math.reduce_mean(tf.squeeze(tf.keras.losses.binary_crossentropy(gt_alpha, pred_alpha_map), axis=-1))
         final_loss = loss_depth + loss_alpha
 
         # Keep track of the losses
