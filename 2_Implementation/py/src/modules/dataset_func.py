@@ -2,10 +2,12 @@ from pathlib import Path
 from random import seed as rnd_seed, sample as rnd_sample
 from lxml import etree as et
 from tqdm import trange, tqdm
-from numpy import nonzero, unique, zeros as np_zeros, where, sum as np_sum, swapaxes, ndarray
+from numpy import nonzero, unique, zeros as np_zeros, where, sum as np_sum, swapaxes, ndarray, copy as np_copy, array, float32, zeros, count_nonzero
+import open3d as o3d
 
-from modules.utilities import create_folder, permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen, read_folders, save_h5, load_h5, read_files
+from modules.utilities import create_folder, permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen, read_folders, save_h5, load_h5, read_files, k_matrix_calculator
 from modules.transient_handler import transient_loader, compute_distance_map
+from modules.fermat_tools import undistort_depthmap, compute_bin_center
 
 
 def generate_dataset_file(tx_rt_list: list, folder_path: Path, objs: dict) -> None:
@@ -397,11 +399,11 @@ def build_mirror_gt(gt_path: Path, out_path: Path, fov: int, exp_time: float) ->
     Load all the output from mitsuba, put them in standard form. From them extracts:
     - depth_map (radial)
     - alpha_map
-    Finally save the obtained data in the out_path folder as a h5 file.
-    :param gt_path: Path to the folder containing the output from mitsuba.
-    :param out_path: Path to the folder where the output will be saved.
-    :param fov: Field of view of the camera.
-    :param exp_time: Exposure time of the camera.
+    Finally save the obtained data in the out_path folder as a h5 file
+    :param gt_path: Path to the folder containing the output from mitsuba
+    :param out_path: Path to the folder where the output will be saved
+    :param fov: Field of view of the camera
+    :param exp_time: Exposure time of the camera
     """
 
     if not out_path.exists():  # Create out_path if it doesn't exist
@@ -422,11 +424,103 @@ def build_mirror_gt(gt_path: Path, out_path: Path, fov: int, exp_time: float) ->
         save_h5(file_path=out_path / file_name, data={"depth_map": d_map, "alpha_map": a_map}, fermat=False)  # Save the data in the out_path folder as a h5 file
 
 
+def build_fermat_gt(gt_path: Path, out_path: Path, fov: int, exp_time: float) -> None:
+    """
+    Build the fermat ground truth.
+    Load all the output from mitsuba, put them in standard form. From them extracts:
+    - first discontinuity location (index)
+    Finally save the obtained data in the out_path folder as a h5 file
+    :param gt_path: Path to the folder containing the output from mitsuba
+    :param out_path: Path to the folder where the output will be saved
+    :param fov: Field of view of the camera
+    :param exp_time: Exposure time of the camera
+    """
+
+    if not out_path.exists():  # Create out_path if it doesn't exist
+        out_path.mkdir(parents=True)
+
+    batches_folder = read_folders(gt_path)  # Get the list of batches
+    data_path = []
+    for batch_folder in batches_folder:
+        data_folder = read_folders(batch_folder)  # Get the list of data in each batch
+        data_path = data_path + data_folder  # Put together (in the same list) all the file present in all the batches
+
+    for file_path in tqdm(data_path, desc="Generating ground truth data"):  # For each file
+        file_name = str(Path(file_path).name) + "_GT"  # Get the file name and add the suffix
+        tr = transient_loader(file_path)  # Load the data and put them in standard form
+        tr_samples = tr.size[0] * tr.size[1]
+        temp_bin_center = compute_bin_center(exp_time, tr.shape[2])
+        num_of_bin_center = len(temp_bin_center)
+        if num_of_bin_center == 1:
+            x = num_of_bin_center
+        else:
+            assert (num_of_bin_center == tr_samples);
+        '''
+        discontsAll = nan(tr_samples, numOfDiscont);
+
+        if whetherVisualize
+            figure;
+        end
+
+        % parfor
+        for i = 1: tr_samples
+        fprintf(' detecting discontinuities: %d (%d) \n', i, tr_samples);
+
+        if numOfBinCenters > 1
+            X = temporalBinCenters(i,:);
+            end
+            Y = transients(i,:);
+            Y = Y / max(Y);
+
+            % ----- convolve
+            transients
+            with DoG filters, and keep the maximum filter response -----
+            dgY = -Inf(size(Y));
+            for expCoeffOne = expCoeff
+            for sigmaBlurOne = sigmaBlur
+            filter = generateFilter(expCoeffOne, sigmaBlurOne);
+            if convolveTwoSides
+                dgYOne = max(conv(Y, filter, 'same'), conv(Y, filter(end:-1: 1), 'same'));
+                else
+                dgYOne = conv(Y, filter, 'same');
+            end
+            dgY = max(dgY, dgYOne);
+        end
+    end
+    dgY = dgY / max(dgY);
+
+    % ----- discontinuties
+    correspond
+    to
+    larger
+    filter
+    responses - ----
+    [~, locsPeak, ~, p] = findpeaks(dgY, X, 'MinPeakProminence', 0);
+    [~, indsP] = sort(p, 'descend');
+    locsPeak = locsPeak(indsP);
+
+    disconts = nan(1, numOfDiscont);
+    if numel(locsPeak) >= numOfDiscont
+        disconts = locsPeak(1: numOfDiscont);
+        else
+        disconts(1: numel(locsPeak)) = locsPeak;
+    end
+
+    if whetherSortDisconts
+        disconts = sort(disconts, 'ascend');
+    end
+
+    % ----- store
+    discont - ----
+    discontsAll(i,:) = disconts;
+        save_h5(file_path=out_path / file_name, data={"depth_map": d_map, "alpha_map": a_map}, fermat=True)  # Save the data
+        '''
+
 def load_dataset(d_path: Path, out_path: Path) -> None:
     """
-    Load the dataset and save it in the out_path folder.
-    :param d_path: folder containing the dataset (raw output of mitsuba).
-    :param out_path: folder where the dataset will be saved after processing.
+    Load the dataset and save it in the out_path folder
+    :param d_path: folder containing the dataset (raw output of mitsuba)
+    :param out_path: folder where the dataset will be saved after processing
     """
     if not out_path.exists():  # Create out_path if it doesn't exist
         out_path.mkdir(parents=True)
@@ -445,10 +539,10 @@ def load_dataset(d_path: Path, out_path: Path) -> None:
 
 def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path) -> None:
     """
-    Fuse the dataset and the ground truth together in the same h5 file.
-    :param d_path: folder containing the dataset (already processed and in h5 form).
-    :param gt_path: folder containing the ground truth (already processed and in h5 form).
-    :param out_path: folder where the fused dataset will be saved.
+    Fuse the dataset and the ground truth together in the same h5 file
+    :param d_path: folder containing the dataset (already processed and in h5 form)
+    :param gt_path: folder containing the ground truth (already processed and in h5 form)
+    :param out_path: folder where the fused dataset will be saved
     """
 
     if not out_path.exists():  # Create out_path if it doesn't exist
@@ -515,6 +609,51 @@ def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path) -> None:
         save_h5(file_path=out_path / file_name, data={"data": d["data"], "depth_map": swapaxes(gt["depth_map"], 0, 1), "alpha_map": swapaxes(gt["alpha_map"], 0, 1)}, fermat=False)  # Save the file
 
 
-def build_point_cloud(data: ndarray, fov: int, img_size: tuple[int, int], alpha: ndarray = None):
-    if alpha is not None:
-        pass
+def build_point_cloud(data: ndarray, out_path: Path, fov: int, img_size: tuple[int, int], alpha: ndarray = None, visualize: bool = False) -> (o3d.geometry.PointCloud, o3d.geometry.TriangleMesh):
+    """
+    Build a point cloud (and mesh) from a depth map
+    :param data: depth map
+    :param out_path: folder where to save the point cloud and the mesh
+    :param fov: field of view of the camera
+    :param img_size: size of the image in pixel (width, height)
+    :param alpha: alpha map
+    :param visualize: flag to visualize the point cloud and the mesh
+    :return: point cloud and mesh
+    """
+
+    if alpha is not None:  # If the alpha map is provided
+        data = data * alpha  # Apply the alpha map
+
+    k_matrix = k_matrix_calculator(fov, list(img_size)[::-1])  # Calculate the K matrix
+
+    pc = undistort_depthmap(dph=np_copy(data),
+                            dm="RADIAL",
+                            k_ideal=k_matrix,
+                            k_real=k_matrix,
+                            d_real=array([[0, 0, 0, 0, 0]], dtype=float32))[0]  # Find the x, y, z coordinates of the points in the camera coordinates system
+
+    n_points = count_nonzero(pc[:, :, 0])  # Count the number of points that actually corresponds to an object
+    t = zeros([n_points, 3])  # Create a matrix to store the coordinates of the points
+    t[:, 0] = pc[:, :, 0][where(pc[:, :, 0] != 0)]  # Store the x coordinates of the points
+    t[:, 1] = pc[:, :, 1][where(pc[:, :, 1] != 0)]  # Store the y coordinates of the points
+    t[:, 2] = pc[:, :, 2][where(pc[:, :, 2] != 0)]  # Store the z coordinates of the points
+
+    pcd = o3d.geometry.PointCloud()  # Create a new point cloud
+    pcd.points = o3d.utility.Vector3dVector(t)  # Set the points
+    pcd.estimate_normals(fast_normal_computation=True)  # Estimate the normals
+
+    radii = [0.005, 0.01, 0.02, 0.04]  # Create a list of radii
+    rec_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(pcd=pcd, radii=o3d.utility.DoubleVector(radii))  # Create the mesh
+
+    if visualize:  # If the visualization is requested
+        from numpy import float64
+        o3d.visualization.draw_geometries(geometry_list=[pcd, rec_mesh],
+                                          window_name="Point cloud and mesh visualization",
+                                          point_show_normal=True,
+                                          mesh_show_back_face=True,
+                                          mesh_show_wireframe=True)  # Visualize the point cloud and the mesh
+
+    o3d.io.write_point_cloud(str(out_path / "point_cloud.ply"), pcd)  # Save the point cloud
+    o3d.io.write_triangle_mesh(str(out_path / "mesh.ply"), rec_mesh)  # Save the mesh
+
+    return pcd, rec_mesh

@@ -7,7 +7,6 @@ import getopt
 import sys
 import time
 import numpy as np
-from tqdm import trange
 import open3d as o3d
 
 

@@ -16,7 +16,7 @@ def arg_parser(argv):
     """
 
     arg_in_gt = ""  # Argument containing the input directory (gt)
-    arg_in_dat = "" # Argument containing the input dataset
+    arg_in_dat = ""  # Argument containing the input dataset
     arg_out_gt = os.getcwd()  # Argument containing the output directory (gt)
     arg_out_dat = os.getcwd()  # Argument containing the output directory (dataset)
     arg_out_final = os.getcwd()  # Argument containing the output directory (final)

@@ -429,8 +429,7 @@ def transient_loader(img_path, np_path=None, store=False):
     if np_path and not store:  # If already exists a npy file containing all the transient images load it instead of processing everything again
         return load(str(np_path))
     else:
-        files = ut.read_files(str(img_path),
-                              "exr")  # Load the path of all the files in the input folder with extension .exr
+        files = ut.read_files(str(img_path), "exr")  # Load the path of all the files in the input folder with extension .exr
         channels = reshape_frame(files)  # Reshape the frame in a standard layout
         images = img_matrix(channels)  # Create the image files
         if store:

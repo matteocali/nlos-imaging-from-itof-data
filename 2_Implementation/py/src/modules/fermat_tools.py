@@ -88,11 +88,23 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
                                     flip_x=False,
                                     flip_y=False)  # Reshape the transient data in order to be in the same format used in the Fermat Flow algorithm
 
-    temp_bin_centers = [exp_time / 2]  # To build the temp_bin_centers it is required to build a vector where each cell contains the center of the correspondent temporal bin, so the first cell contains half the exposure time
-    for i in range(1, data.shape[1]):
-        temp_bin_centers.append(temp_bin_centers[i - 1] + exp_time)  # For all the following cell simply add the exposure time to the value stored in the previous cell
+    temp_bin_centers = compute_bin_center(exp_time, data.shape[1])  # To build the temp_bin_centers it is required to build a vector where each cell contains the center of the correspondent temporal bin, so the first cell contains half the exposure time
 
     io.savemat(str(file_path), mdict={"detGridSize": np_flip(data_grid_size), "detLocs": det_locs, "srcLoc": src_loc, "temporalBinCenters": temp_bin_centers, "transients": data})  # Save the actual .mat file
+
+
+def compute_bin_center(exp_time: float, n_bins: int) -> list:
+    """
+    Compute the center of the temporal bins
+    :param exp_time: exposure time
+    :param n_bins: number of temporal bins
+    :return: list of the center of the temporal bins
+    """
+
+    temp_bin_centers = [exp_time / 2]  # To build the temp_bin_centers it is required to build a vector where each cell contains the center of the correspondent temporal bin, so the first cell contains half the exposure time
+    for i in range(1, n_bins):
+        temp_bin_centers.append(temp_bin_centers[i - 1] + exp_time)  # For all the following cell simply add the exposure time to the value stored in the previous cell
+    return temp_bin_centers
 
 
 def undistort_depthmap(dph, dm, k_ideal, k_real, d_real):

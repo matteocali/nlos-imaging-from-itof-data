@@ -1,5 +1,6 @@
 from numpy import sum, linspace, zeros, where, nanmin, nanmax, array, ndarray, copy, cos, sin, matmul, sqrt, radians, \
-    degrees, arctan2, uint8, float32, reshape, unique, concatenate, arctan, tan, moveaxis, min as np_min, max as np_max, inf, hsplit, dot
+    degrees, arctan2, uint8, float32, reshape, unique, concatenate, arctan, tan, moveaxis, min as np_min, max as np_max, \
+    inf, hsplit, dot, power as np_power, swapaxes
 from os import path, listdir, remove, makedirs
 from pathlib import Path
 from glob import glob
@@ -139,8 +140,24 @@ def normalize_img(img: ndarray) -> ndarray:
 
     if max_val - min_val != 0:
         for i in range(img.shape[2]):
-            img[:, :, i] = (img[:, :, i] - min_val) / (
-                    max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
+            img[:, :, i] = (img[:, :, i] - min_val) / (max_val - min_val)  # Normalize each image in [0, 1] ignoring the alpha channel
+    return img
+
+
+def exr2rgb(img: ndarray) -> ndarray:
+    """
+    Convert an EXR image to RGB
+    :param img: np array corresponding to an EXR image
+    :return: np array corresponding to an RGB image
+    """
+
+    # linear to standard RGB
+    img[..., :3] = where(img[..., :3] <= 0.0031308,
+                         12.92 * img[..., :3],
+                         1.055 * np_power(img[..., :3], 1 / 2.4) - 0.055)
+
+    # sanitize image to be in range [0, 1]
+    img = where(img < 0.0, 0.0, where(img > 1.0, 1, img))
     return img
 
 
@@ -256,7 +273,7 @@ def save_h5(data: Union[ndarray, dict], file_path: Path, name: str = None, ferma
                 if fermat:
                     value = copy(value)  # Copy the ndarray in order to avoid overriding
                     value = moveaxis(value, 0, -1)  # Move the transient length from index 0 to the last one in the ndarray
-                    value = value.reshape([value.shape[1], value.shape[0], value.shape[2]])  # Reshape the array in order to match the required layout
+                    value = swapaxes(value, 0, 1)  # Reshape the array in order to match the required layout [col, row, beans]
                 if compression:
                     h5f.create_dataset(name=key,
                                        data=value,
