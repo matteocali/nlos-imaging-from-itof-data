@@ -132,12 +132,12 @@ class PredictiveModel:
 
         weight_filename_d = self.name + '_d_' + suffix + '.h5'
         weight_filename_v = self.name + '_v_' + suffix + '.h5'
-        weight_filename_enc = self.name + '_enc_' + suffix + '.h5'
-        weight_filename_dec = self.name + '_dec_' + suffix + '.h5'
+        #weight_filename_enc = self.name + '_enc_' + suffix + '.h5'
+        #weight_filename_dec = self.name + '_dec_' + suffix + '.h5'
         self.SpatialNet.save_weights(os.path.join(self.checkpoint_path, weight_filename_d))
         self.DirectCNN.save_weights(os.path.join(self.checkpoint_path, weight_filename_v))
-        self.encoder.save_weights(os.path.join(self.checkpoint_path, weight_filename_enc))
-        self.decoder.save_weights(os.path.join(self.checkpoint_path, weight_filename_dec))
+        #self.encoder.save_weights(os.path.join(self.checkpoint_path, weight_filename_enc))
+        #self.decoder.save_weights(os.path.join(self.checkpoint_path, weight_filename_dec))
 
     def A_compute(self, v):
         """
