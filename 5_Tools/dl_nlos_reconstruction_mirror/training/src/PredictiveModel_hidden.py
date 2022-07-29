@@ -115,7 +115,7 @@ class PredictiveModel:
         self.best_epoch = -1
         self.c = 299792458.  # speed of light
 
-    def load_weights(self, weight_filename_d=None, weight_filename_v=None, weight_filename_z=None):
+    def load_weights(self, weight_filename_d=None, weight_filename_v=None):
         """
         Load weights from a file
         """
@@ -455,8 +455,8 @@ class PredictiveModel:
         self.save_weights(suffix='e' + str(init_epoch) + '_best_weights')
 
         # Use some pretrained weights if provided
-        if (pretrain_filenamed is not None) or (pretrain_filenamev is not None) or (pretrain_filenamez is not None):
-            self.load_weights(pretrain_filenamed, pretrain_filenamev, pretrain_filenamez)
+        if (pretrain_filenamed is not None) or (pretrain_filenamev is not None):
+            self.load_weights(pretrain_filenamed, pretrain_filenamev)
 
         init_time = time.time()
         for epoch in range(init_epoch, final_epochs):
@@ -475,7 +475,7 @@ class PredictiveModel:
                     break
 
                 if self.use_data:
-                    with tf.GradientTape() as denoise_tape2, tf.GradientTape() as predv_tape2, tf.GradientTape() as predenc_tape, tf.GradientTape() as preddec_tape, tf.GradientTape() as predv_enc_tape:
+                    with tf.GradientTape() as denoise_tape2, tf.GradientTape() as predv_tape2:
                         lossw, loss_listw = self.loss_fn(data_dictw, epoch)
 
                 if self.use_data:
@@ -536,8 +536,8 @@ class PredictiveModel:
                 # Remove old best model
                 os.remove(os.path.join(self.checkpoint_path, old_weight_filenamed))
                 os.remove(os.path.join(self.checkpoint_path, old_weight_filenamev))
-                os.remove(os.path.join(self.checkpoint_path, old_weight_filename_enc))
-                os.remove(os.path.join(self.checkpoint_path, old_weight_filename_dec))
+                #os.remove(os.path.join(self.checkpoint_path, old_weight_filename_enc))
+                #os.remove(os.path.join(self.checkpoint_path, old_weight_filename_dec))
 
             # Print loss
             if (epoch + 1) % print_freq == 0:
