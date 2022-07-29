@@ -2,11 +2,7 @@ import numpy as np
 import h5py
 import sys
 from utils import phi as phi_func
-import matplotlib.pyplot as plt
-from scipy.ndimage.filters import uniform_filter1d
-from scipy.optimize import curve_fit
-from class_fit import fitData, fitCum
-from fct_data_fitters import split_fitter, data_fitter, cumul_fitter, data_fitter_lam
+from fct_data_fitters import cumul_fitter
 from fct_aux import find_ind_peaks_vec
 from fct_losses import loss_mae, loss_mse, loss_EMD, loss_wEMD
 import time

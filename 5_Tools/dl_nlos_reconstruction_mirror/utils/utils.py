@@ -60,15 +60,15 @@ def max_t(dim_t=2000):
 def max_d(dim_t=2000):
     return 0.5*max_t(dim_t)*c()
 
-def phi(freqs,dim_t=2000):
+def phi(freqs, dim_t=2000, exp_time=0.01):
     pi = math.pi
+    # 0.00249827
     min_t = 0
-    max_t = 2*0.00249827/c()*dim_t # 0.00249827 va cambiato con exp_time = 0.01
-    #step_t = (max_t-min_t) / dim_t
-    step_t = 2*0.00249827/c()
+    max_t = 2 * exp_time / c() * dim_t
+    step_t = (max_t - min_t) / dim_t
     times = np.arange(dim_t) * step_t
-    phi_arg = 2 * pi * np.matmul(freqs.reshape(-1,1),times.reshape(1,-1))
-    phi = np.concatenate([np.cos(phi_arg),np.sin(phi_arg)],axis=0)
+    phi_arg = 2 * pi * np.matmul(freqs.reshape(-1, 1), times.reshape(1, -1))
+    phi = np.concatenate([np.cos(phi_arg), np.sin(phi_arg)], axis=0)
     return phi
 
 def phi_10f(dim_t=2000):
@@ -76,11 +76,10 @@ def phi_10f(dim_t=2000):
     freqs = np.array((10e06,20e06,30e06,40e06,50e06,60e06,70e06,80e06,90e06, 100e06),dtype = 'float32')
     min_t = 0
     max_t = 2*0.00249827/c()*dim_t
-    #step_t = (max_t-min_t) / dim_t
-    step_t = 2*0.00249827/c()
+    step_t = (max_t-min_t) / dim_t
     times = np.arange(dim_t) * step_t
     phi_arg = 2 * pi * np.matmul(freqs.reshape(-1,1),times.reshape(1,-1))
-    phi = np.concatenate([np.cos(phi_arg),np.sin(phi_arg)],axis=0)
+    phi = np.concatenate([np.cos(phi_arg), np.sin(phi_arg)],axis=0)
     return phi
 
 # Reconstruct depth map from transient matrix

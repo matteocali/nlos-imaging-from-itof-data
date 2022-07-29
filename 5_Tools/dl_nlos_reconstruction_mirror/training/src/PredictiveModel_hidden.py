@@ -261,6 +261,7 @@ class PredictiveModel:
         # Separate the two output: depth_map and alpha_map
         depth_map = tf.slice(final_out, begin=[0, 0, 0, 0], size=[-1, -1, -1, 1])
         alpha_map = tf.slice(final_out, begin=[0, 0, 0, 1], size=[-1, -1, -1, 1])
+        alpha_map = tf.nn.sigmoid(alpha_map)
 
         model_pred = tf.keras.Model(inputs=v_in, outputs=[depth_map, alpha_map], name=self.name)
         return model_pred
@@ -526,8 +527,8 @@ class PredictiveModel:
                 # Save new best model
                 old_weight_filenamed = self.name + '_d_e' + str(self.best_epoch) + '_best_weights.h5'
                 old_weight_filenamev = self.name + '_v_e' + str(self.best_epoch) + '_best_weights.h5'
-                old_weight_filename_enc = self.name + '_enc_e' + str(self.best_epoch) + '_best_weights.h5'
-                old_weight_filename_dec = self.name + '_dec_e' + str(self.best_epoch) + '_best_weights.h5'
+                #old_weight_filename_enc = self.name + '_enc_e' + str(self.best_epoch) + '_best_weights.h5'
+                #old_weight_filename_dec = self.name + '_dec_e' + str(self.best_epoch) + '_best_weights.h5'
 
                 self.best_loss_test = loss_test
                 self.best_epoch = epoch + 1
