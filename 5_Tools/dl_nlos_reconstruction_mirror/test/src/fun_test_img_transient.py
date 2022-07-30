@@ -123,7 +123,6 @@ def test_img(weight_names, data_path, P, freqs, fl_scale, fl_norm_perpixel, fil_
 
         [pred_depth, pred_alpha] = net.DirectCNN(v_in_v)
         pred_depth = np.squeeze(pred_depth)
-        pred_alpha = tf.nn.sigmoid(pred_alpha)
         pred_alpha = np.squeeze(pred_alpha)
 
         with h5py.File(f"C:/Users/DECaligM/Desktop/New folder/{name}_TEST.h5", "w") as f:

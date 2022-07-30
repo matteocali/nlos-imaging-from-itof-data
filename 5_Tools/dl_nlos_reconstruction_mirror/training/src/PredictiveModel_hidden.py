@@ -299,7 +299,7 @@ class PredictiveModel:
         # Process the output with the Direct CNN
         pred_depth_map, pred_alpha_map = self.DirectCNN(v_nf)
         pred_depth_map = tf.squeeze(pred_depth_map, axis=-1)
-        pred_alpha_map = tf.squeeze(tf.nn.sigmoid(pred_alpha_map), axis=-1)
+        pred_alpha_map = tf.squeeze(pred_alpha_map, axis=-1)
 
         # Compute the masked data
         pred_msk_depth = pred_depth_map * gt_alpha
