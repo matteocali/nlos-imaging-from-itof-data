@@ -554,7 +554,7 @@ def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path) -> None:
     if len(d_files_name) != len(gt_files_name):
         raise ValueError("The number of files in the dataset and the ground truth folder are different")  # Raise an error if the number of files is different
 
-    for d_name in tqdm(d_files_name[60:], desc="Fusing dataset and ground truth"):  # For each file in d_path
+    for d_name in tqdm(d_files_name[:60], desc="Fusing dataset and ground truth"):  # For each file in d_path
         d_name_shortened = d_name.replace("cam_pos_(1.5_-1_1.65)_cam_rot_(90_0_50)_", "")[:-3]  # Remove the cam_pos and cam_rot from the file name since I'm considering just the fixed camera position
         obj_name = d_name_shortened[(d_name_shortened.find("nlos") + 5):(d_name_shortened.find("obj") - 1)]  # Get the object name
         obj_pos = d_name_shortened[(d_name_shortened.find("obj_pos") + 9):(d_name_shortened.find("obj_rot") - 2)]  # Get the object position (as string)
