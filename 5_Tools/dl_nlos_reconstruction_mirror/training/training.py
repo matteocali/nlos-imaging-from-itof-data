@@ -27,7 +27,7 @@ Parameters:
 -dim_t              Number of bins in the transient dimension
 """
 
-name_of_attempt = "test_02"  # String used to denominate the attempt.
+name_of_attempt = "test_03"  # String used to denominate the attempt.
 name_of_attempt = str(date.today()) + "_" + name_of_attempt
 fil_spat_size = 32  # Number of feature maps for the Spatial Feature Extractor model
 fil_dir_size = 32  # Number of feature maps for the Direct_CNN model
