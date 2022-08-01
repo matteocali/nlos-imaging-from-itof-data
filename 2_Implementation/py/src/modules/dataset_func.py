@@ -609,7 +609,7 @@ def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path) -> None:
         save_h5(file_path=out_path / file_name, data={"data": d["data"], "depth_map": swapaxes(gt["depth_map"], 0, 1), "alpha_map": swapaxes(gt["alpha_map"], 0, 1)}, fermat=False)  # Save the file
 
 
-def build_point_cloud(data: ndarray, out_path: Path, fov: int, img_size: tuple[int, int], alpha: ndarray = None, visualize: bool = False) -> (o3d.geometry.PointCloud, o3d.geometry.TriangleMesh):
+def build_point_cloud(data: ndarray, out_path: Path, fov: int, img_size: tuple[int, int], alpha: ndarray = None, f_mesh: bool = True, visualize: bool = False) -> (o3d.geometry.PointCloud, o3d.geometry.TriangleMesh):
     """
     Build a point cloud (and mesh) from a depth map
     :param data: depth map
@@ -617,6 +617,7 @@ def build_point_cloud(data: ndarray, out_path: Path, fov: int, img_size: tuple[i
     :param fov: field of view of the camera
     :param img_size: size of the image in pixel (width, height)
     :param alpha: alpha map
+    :param f_mesh: if True, build a mesh
     :param visualize: flag to visualize the point cloud and the mesh
     :return: point cloud and mesh
     """
@@ -642,18 +643,22 @@ def build_point_cloud(data: ndarray, out_path: Path, fov: int, img_size: tuple[i
     pcd.points = o3d.utility.Vector3dVector(t)  # Set the points
     pcd.estimate_normals(fast_normal_computation=True)  # Estimate the normals
 
-    radii = [0.005, 0.01, 0.02, 0.04]  # Create a list of radii
-    rec_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(pcd=pcd, radii=o3d.utility.DoubleVector(radii))  # Create the mesh
+    objs = [pcd]
+
+    if f_mesh:  # If the mesh is requested
+        radii = [0.005, 0.01, 0.02, 0.04]  # Create a list of radii
+        rec_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(pcd=pcd, radii=o3d.utility.DoubleVector(radii))  # Create the mesh
+        objs.append(rec_mesh)
 
     if visualize:  # If the visualization is requested
-        from numpy import float64
-        o3d.visualization.draw_geometries(geometry_list=[pcd, rec_mesh],
+        o3d.visualization.draw_geometries(geometry_list=objs,
                                           window_name="Point cloud and mesh visualization",
                                           point_show_normal=True,
                                           mesh_show_back_face=True,
                                           mesh_show_wireframe=True)  # Visualize the point cloud and the mesh
 
     o3d.io.write_point_cloud(str(out_path / "point_cloud.ply"), pcd)  # Save the point cloud
-    o3d.io.write_triangle_mesh(str(out_path / "mesh.ply"), rec_mesh)  # Save the mesh
+    if f_mesh:
+        o3d.io.write_triangle_mesh(str(out_path / "mesh.ply"), rec_mesh)  # Save the mesh
 
-    return pcd, rec_mesh
+    return objs
