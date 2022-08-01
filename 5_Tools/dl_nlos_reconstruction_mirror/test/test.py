@@ -22,7 +22,7 @@ In case of 2 frequencies, the name of the approach must finish with '2freq'
 
 """
 
-attempt_name = "2022-07-28_test_01"                                                                 # name of the stored approach weights
+attempt_name = "2022-07-31_test_02"                                                                 # name of the stored approach weights
 win_server_path = "Z:/decaligm"  # path to the server
 git_folder_path = "thesis-nlos-for-itof/5_Tools/dl_nlos_reconstruction_mirror"                      # path to the git folder
 dataset_folder = "mitsuba_renders/nlos_scenes/datasets/depth_map_ground_truth_far"                  # path to the dataset folder

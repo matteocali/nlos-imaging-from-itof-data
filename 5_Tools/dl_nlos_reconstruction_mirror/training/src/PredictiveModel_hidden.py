@@ -9,7 +9,7 @@ import time
 
 
 class PredictiveModel:
-    def __init__(self, name, dim_b, freqs, P, saves_path, use_data=True, dim_t=2000,
+    def __init__(self, name, dim_b, lr, freqs, P, saves_path, dim_t=2000,
                  fil_size=8, fil_denoise_size=32, fil_z_size=32, dim_encoding=12, fil_encoder=32):
         """
         Initialize the Predictive model class
@@ -26,9 +26,6 @@ class PredictiveModel:
             saves_path:         dtype='string'
                                 Path to the directory where to save checkpoints and logs
 
-            use_data:           dtype='bool'
-                                Whether to train on transient data
-
             dim_t:              dtype='int'
                                 Number of bins in the transient dimension
 
@@ -44,30 +41,28 @@ class PredictiveModel:
         """
 
         # Initializing the flags and other input parameters
-        self.use_data = use_data  # whether to train on transient data
-
-        self.name = name  # name of the predictive model
-        self.dim_b = dim_b  # batch dimension
-        self.dim_t = dim_t  # number of bins in the transient dimension
-        self.dim_encoding = dim_encoding  # dimension of the encoding
-        self.fil_encoder = fil_encoder  # features of the encoder
-        self.P = P  # patch size
-        self.ex = int((self.P - 1) / 2)  # index keeping track of the middle of the patch
-        self.fn = freqs.shape[0]  # number of frequencies
-        self.fn2 = self.fn * 2  # number of raw measurements (twice the number of frequencies)
-        self.fl_2freq = (self.fn == 2)  # whether we are training with 2 frequencies or not
-        self.num_fil_denoise = fil_denoise_size  # number of filters for each of the convolutional layers of the Spatial Feature Extractor
-        self.fil_pred = fil_size  # number of filter for the Direct CNN
-        self.fil_z_size = fil_z_size  # number of filter for the transient reconstruction network
+        self.name = name                                           # name of the predictive model
+        self.dim_b = dim_b                                         # batch dimension
+        self.dim_t = dim_t                                         # number of bins in the transient dimension
+        self.dim_encoding = dim_encoding                           # dimension of the encoding
+        self.fil_encoder = fil_encoder                             # features of the encoder
+        self.P = P                                                 # patch size
+        self.ex = int((self.P - 1) / 2)                            # index keeping track of the middle of the patch
+        self.fn = freqs.shape[0]                                   # number of frequencies
+        self.fn2 = self.fn * 2                                     # number of raw measurements (twice the number of frequencies)
+        self.fl_2freq = (self.fn == 2)                             # whether we are training with 2 frequencies or not
+        self.num_fil_denoise = fil_denoise_size                    # number of filters for each of the convolutional layers of the Spatial Feature Extractor
+        self.fil_pred = fil_size                                   # number of filter for the Direct CNN
+        self.fil_z_size = fil_z_size                               # number of filter for the transient reconstruction network
         self.freqs = tf.convert_to_tensor(freqs, dtype="float32")  # modulation frequencies
 
         # Defining all parameters needed by the denoising network
-        self.in_shape = (P, P, self.fn2)  # Shape of the input (batch size excluded)
-        self.out_win = 3  # Side of the window provided in output of the Spatial Feature Extractor
+        self.in_shape = (P, P, self.fn2)       # Shape of the input (batch size excluded)
+        self.out_win = 3                       # Side of the window provided in output of the Spatial Feature Extractor
         self.padz = self.P - self.out_win + 2  # Padding needed
-        self.fl_denoise = not (P == 3)  # Whether to use the Spatial Feature Extractor
-        self.k_size = 3  # Kernel size for each layer of the denoiser network
-        self.f_skip = True  # Whether to use a skip connection or not
+        self.fl_denoise = not (P == 3)         # Whether to use the Spatial Feature Extractor
+        self.k_size = 3                        # Kernel size for each layer of the denoiser network
+        self.f_skip = True                     # Whether to use a skip connection or not
 
         # Create saves directory if it does not exist
         if not os.path.exists(saves_path):
@@ -94,20 +89,22 @@ class PredictiveModel:
         if not os.path.exists(self.checkpoint_path):
             os.makedirs(self.checkpoint_path)
 
+        '''
         # Define autoencoder model with transposed convolutions
         self.Autoencoder = Autoencoder_Interp.Autoencoder_Interp(self.dim_b, self.dim_t, self.dim_encoding, self.fil_encoder)
         self.encoder = self.Autoencoder.encoder()
         self.decoder = self.Autoencoder.interpConv()
+        '''
 
         # Define predictive models
-        self.SpatialNet = self.def_SpatialNet()
+        #self.SpatialNet = self.def_SpatialNet()
         self.DirectCNN = self.def_DirectCNN()
 
         # Define loss function and metrics
         self.loss_fn = self.def_loss
 
         # Define optimizer
-        self.lr = 1e-05
+        self.lr = lr
         self.optimizer = tf.optimizers.Adam(learning_rate=self.lr, beta_1=0.9, beta_2=0.999, epsilon=1e-07)
 
         # Track and save the best performing model over the test set at each epoch
@@ -132,12 +129,8 @@ class PredictiveModel:
 
         weight_filename_d = self.name + '_d_' + suffix + '.h5'
         weight_filename_v = self.name + '_v_' + suffix + '.h5'
-        #weight_filename_enc = self.name + '_enc_' + suffix + '.h5'
-        #weight_filename_dec = self.name + '_dec_' + suffix + '.h5'
         self.SpatialNet.save_weights(os.path.join(self.checkpoint_path, weight_filename_d))
         self.DirectCNN.save_weights(os.path.join(self.checkpoint_path, weight_filename_v))
-        #self.encoder.save_weights(os.path.join(self.checkpoint_path, weight_filename_enc))
-        #self.decoder.save_weights(os.path.join(self.checkpoint_path, weight_filename_dec))
 
     def A_compute(self, v):
         """
@@ -211,6 +204,8 @@ class PredictiveModel:
         Define the DirectCNN model
         """
 
+        n_layers = 3  # Number of hidden layers
+
         # Define the input placeholder
         v_in = tf.keras.Input(shape=(None, None, self.fn2), batch_size=None, dtype='float32', name='v_in')
         ind_ = int((self.out_win - 1) / 2)  # Index keeping track of the middle value
@@ -237,16 +232,18 @@ class PredictiveModel:
                                 name='c_3x3')(v_in)
         c_out = tf.concat([out_1x1, out_3x3], axis=-1, name='cat1')  # Features concatenation
 
-        # Convolutional layers leading to the prediction of the direct itof measurements
-        c_out = layers.Conv2D(filters=self.fil_pred,
-                              kernel_size=1,
-                              strides=1,
-                              padding="valid",
-                              data_format='channels_last',
-                              activation='relu',
-                              use_bias=True,
-                              trainable=True,
-                              name='cd1')(c_out)
+        # Convolutional layers leading to the prediction of the depth data
+        for i in range(n_layers):
+            lname = f"cd{str(i)}"
+            c_out = layers.Conv2D(filters=self.fil_pred,
+                                  kernel_size=1,
+                                  strides=1,
+                                  padding="valid",
+                                  data_format='channels_last',
+                                  activation='relu',
+                                  use_bias=True,
+                                  trainable=True,
+                                  name=lname)(c_out)
 
         final_out = layers.Conv2D(filters=2,
                                   kernel_size=1,
@@ -256,17 +253,17 @@ class PredictiveModel:
                                   activation=None,
                                   use_bias=True,
                                   trainable=True,
-                                  name='cd2')(c_out)
+                                  name=f'cd{n_layers + 1}')(c_out)
 
         # Separate the two output: depth_map and alpha_map
         depth_map = tf.slice(final_out, begin=[0, 0, 0, 0], size=[-1, -1, -1, 1])
         alpha_map = tf.slice(final_out, begin=[0, 0, 0, 1], size=[-1, -1, -1, 1])
-        alpha_map = tf.nn.sigmoid(alpha_map)
+        #alpha_map = tf.nn.sigmoid(alpha_map)
 
         model_pred = tf.keras.Model(inputs=v_in, outputs=[depth_map, alpha_map], name=self.name)
         return model_pred
 
-    def def_loss(self, data_dict, epoch):
+    def def_loss(self, data_dict):
         """
         Define custom loss function
         NOTE:
@@ -276,11 +273,11 @@ class PredictiveModel:
         """
 
         # Choose what kind of loss and networks to use according to the dataset we are using.
-        loss, loss_list = self.loss_data(data_dict, epoch)  # Uso solo questa loss
+        loss, loss_list = self.loss_data(data_dict)
         return loss, loss_list
 
     # Loss computed on the transient dataset
-    def loss_data(self, data_dict, epoch):
+    def loss_data(self, data_dict):
         # Load the needed data
         v_in = data_dict["raw_itof"]
         gt_depth = data_dict["gt_depth"]
@@ -305,8 +302,8 @@ class PredictiveModel:
         pred_msk_depth = pred_depth_map * gt_alpha
 
         # Compute the loss
-        loss_depth = tf.math.reduce_sum(tf.keras.losses.MAE(gt_depth, pred_msk_depth)) / tf.math.reduce_sum(gt_alpha)
-        loss_alpha = tf.math.reduce_mean(tf.squeeze(tf.keras.losses.binary_crossentropy(gt_alpha, pred_alpha_map), axis=-1))
+        loss_depth = tf.math.reduce_sum(tf.keras.losses.MAE(gt_depth, pred_msk_depth)) / tf.math.reduce_sum(gt_alpha)  # MAE loss on the masked depth
+        loss_alpha = tf.math.reduce_mean(tf.squeeze(tf.keras.losses.MAE(gt_alpha, pred_alpha_map), axis=-1))
         final_loss = loss_depth + loss_alpha
 
         # Keep track of the losses
@@ -389,7 +386,7 @@ class PredictiveModel:
         return emd
 
     # Compute loss function and useful metrics over a given max number of batches
-    def loss_perbatches(self, loader, N_batches=5, epoch=0):
+    def loss_perbatches(self, loader, N_batches=5):
         loader.init_iter()
         b = 0
         while b < N_batches:
@@ -398,7 +395,7 @@ class PredictiveModel:
             if data_dict is None:
                 loader.init_iter()
                 continue
-            loss_batch, loss_list_batch = self.loss_fn(data_dict, epoch)
+            loss_batch, loss_list_batch = self.loss_fn(data_dict)
             # Update loss and metrics value
             if b <= 0:
                 loss = loss_batch
@@ -416,37 +413,28 @@ class PredictiveModel:
 
     # Training loop
     def training_loop(self, train_w_loader=0, test_w_loader=0, final_epochs=2000, init_epoch=0, print_freq=5,
-                      save_freq=5, pretrain_filenamed=None, pretrain_filenamev=None, pretrain_filenamez=None):
+                      save_freq=5, pretrain_filenamed=None, pretrain_filenamev=None):
 
         if train_w_loader is None:
             train_w_loader = 0
             test_w_loader = 0
 
         # Compute the initial loss and metrics
-        if not self.use_data:
-            print("ERROR: AT least one dataset must be used")
-            sys.exit()
-        if self.use_data:
-            loss_trainw, loss_list_trainw = self.loss_perbatches(train_w_loader, N_batches=1)
-            loss_testw, loss_list_testw = self.loss_perbatches(test_w_loader, N_batches=test_w_loader.N_batches)
-        else:
-            loss_trainw = 0
-            loss_testw = 0
+        loss_trainw, loss_list_trainw = self.loss_perbatches(train_w_loader, N_batches=1)
+        loss_testw, loss_list_testw = self.loss_perbatches(test_w_loader, N_batches=test_w_loader.N_batches)
 
         # Create log file and record initial loss and metrics
         summary_tr = tf.summary.create_file_writer(self.log_path_train)
         with summary_tr.as_default():
-            if self.use_data:
-                tf.summary.scalar('loss_data', loss_trainw, step=init_epoch)
-                tf.summary.scalar('loss_depth', loss_list_trainw[0][0], step=init_epoch)
-                tf.summary.scalar('loss_alpha', loss_list_trainw[0][1], step=init_epoch)
+            tf.summary.scalar('loss_data', loss_trainw, step=init_epoch)
+            tf.summary.scalar('loss_depth', loss_list_trainw[0][0], step=init_epoch)
+            tf.summary.scalar('loss_alpha', loss_list_trainw[0][1], step=init_epoch)
 
         summary_val = tf.summary.create_file_writer(self.log_path_validation)
         with summary_val.as_default():
-            if self.use_data:
-                tf.summary.scalar('loss_data', loss_trainw, step=init_epoch)
-                tf.summary.scalar('loss_depth', loss_list_trainw[0][0], step=init_epoch)
-                tf.summary.scalar('loss_alpha', loss_list_trainw[0][1], step=init_epoch)
+            tf.summary.scalar('loss_data', loss_trainw, step=init_epoch)
+            tf.summary.scalar('loss_depth', loss_list_trainw[0][0], step=init_epoch)
+            tf.summary.scalar('loss_alpha', loss_list_trainw[0][1], step=init_epoch)
         loss_train = loss_trainw
         loss_test = loss_testw
         print("Epoch = %d,\t train_loss = %f,\t test_loss = %f" % (init_epoch, loss_train, loss_test))
@@ -464,69 +452,57 @@ class PredictiveModel:
             # START_TRAINING over all the batches in the training dataset
             train_w_loader.init_iter()
             loss_trainw = 0
-            tr_count = 0  # Use to keep count of the number of loops
+            tr_count = 0  # use to keep count of the number of loops
             while True:
                 # Get one batch (stop if the end is reached)
-                if self.use_data:
-                    data_dictw = train_w_loader.next_batch()
-                else:
-                    data_dictw = 0
-
+                data_dictw = train_w_loader.next_batch()
                 if data_dictw is None:
                     break
 
-                if self.use_data:
-                    with tf.GradientTape() as denoise_tape2, tf.GradientTape() as predv_tape2:
-                        lossw, loss_listw = self.loss_fn(data_dictw, epoch)
+                with tf.GradientTape() as denoise_tape2, tf.GradientTape() as predv_tape2:
+                        lossw, loss_listw = self.loss_fn(data_dictw)
 
-                if self.use_data:
-                    if tr_count == 0:
+                if tr_count == 0:
                         loss_list_trainw = loss_listw
-                    else:
-                        for i in range(len(loss_list_trainw)):
-                            loss_list_trainw[i] = [a + b for a, b in zip(loss_list_trainw[i], loss_listw[i])]
-                    loss_trainw += lossw
+                else:
+                    for i in range(len(loss_list_trainw)):
+                        loss_list_trainw[i] = [a + b for a, b in zip(loss_list_trainw[i], loss_listw[i])]
+                loss_trainw += lossw
 
-                # Computes gradient of the loss function wrt the training variables...
-                # ...and then apply one batch optimization (apply gradients to training variables)
-                if self.use_data:
-                    if self.fl_denoise:
-                        grads_d2 = denoise_tape2.gradient(lossw, self.SpatialNet.trainable_variables)
-                        self.optimizer.apply_gradients(
-                            grads_and_vars=zip(grads_d2, self.SpatialNet.trainable_variables))
-                    grads_v = predv_tape2.gradient(lossw, self.DirectCNN.trainable_variables)
-                    self.optimizer.apply_gradients(grads_and_vars=zip(grads_v, self.DirectCNN.trainable_variables))
+                # Computes gradient of the loss function wrt the training variables
+                # and then apply one batch optimization (apply gradients to training variables)
+                if self.fl_denoise:
+                    grads_d2 = denoise_tape2.gradient(lossw, self.SpatialNet.trainable_variables)
+                    self.optimizer.apply_gradients(grads_and_vars=zip(grads_d2, self.SpatialNet.trainable_variables))
+                grads_v = predv_tape2.gradient(lossw, self.DirectCNN.trainable_variables)
+                self.optimizer.apply_gradients(grads_and_vars=zip(grads_v, self.DirectCNN.trainable_variables))
 
                 tr_count += 1
             # END_TRAINING over all the batches in the training set
-            if self.use_data:
-                loss_trainw /= tr_count
-                for i in range(len(loss_list_trainw)):
-                    loss_list_trainw[i] = [a / tr_count for a in loss_list_trainw[i]]
+            loss_trainw /= tr_count
+            for i in range(len(loss_list_trainw)):
+                loss_list_trainw[i] = [a / tr_count for a in loss_list_trainw[i]]
 
             # Compute loss and metrics for the current epoch
-            if self.use_data:
-                loss_testw, loss_list_testw = self.loss_perbatches(test_w_loader, N_batches=test_w_loader.N_batches, epoch=epoch)
+            loss_testw, loss_list_testw = self.loss_perbatches(test_w_loader, N_batches=test_w_loader.N_batches)
 
             # Update log
             with summary_tr.as_default():
-                if self.use_data:
-                    tf.summary.scalar('loss_data', loss_trainw, step=epoch + 1)
-                    tf.summary.scalar('loss_depth', loss_list_trainw[0][0], step=epoch + 1)
-                    tf.summary.scalar('loss_alpha', loss_list_trainw[0][1], step=epoch + 1)
+                tf.summary.scalar('loss_data', loss_trainw, step=epoch + 1)
+                tf.summary.scalar('loss_depth', loss_list_trainw[0][0], step=epoch + 1)
+                tf.summary.scalar('loss_alpha', loss_list_trainw[0][1], step=epoch + 1)
             with summary_val.as_default():
-                if self.use_data:
-                    tf.summary.scalar('loss_data', loss_testw, step=epoch + 1)
-                    tf.summary.scalar('loss_depth', loss_list_testw[0][0], step=epoch + 1)
-                    tf.summary.scalar('loss_alpha', loss_list_testw[0][1], step=epoch + 1)
+                tf.summary.scalar('loss_data', loss_testw, step=epoch + 1)
+                tf.summary.scalar('loss_depth', loss_list_testw[0][0], step=epoch + 1)
+                tf.summary.scalar('loss_alpha', loss_list_testw[0][1], step=epoch + 1)
             loss_train = loss_trainw
             loss_test = loss_testw
 
             # Track and save best performing model over the test set
             if loss_test < self.best_loss_test:
                 # Save new best model
-                old_weight_filenamed = self.name + '_d_e' + str(self.best_epoch) + '_best_weights.h5'
-                old_weight_filenamev = self.name + '_v_e' + str(self.best_epoch) + '_best_weights.h5'
+                old_weight_filename_d = self.name + '_d_e' + str(self.best_epoch) + '_best_weights.h5'
+                old_weight_filename_v = self.name + '_v_e' + str(self.best_epoch) + '_best_weights.h5'
                 #old_weight_filename_enc = self.name + '_enc_e' + str(self.best_epoch) + '_best_weights.h5'
                 #old_weight_filename_dec = self.name + '_dec_e' + str(self.best_epoch) + '_best_weights.h5'
 
@@ -535,8 +511,8 @@ class PredictiveModel:
                 self.save_weights(suffix='e' + str(self.best_epoch) + '_best_weights')
 
                 # Remove old best model
-                os.remove(os.path.join(self.checkpoint_path, old_weight_filenamed))
-                os.remove(os.path.join(self.checkpoint_path, old_weight_filenamev))
+                os.remove(os.path.join(self.checkpoint_path, old_weight_filename_d))
+                os.remove(os.path.join(self.checkpoint_path, old_weight_filename_v))
                 #os.remove(os.path.join(self.checkpoint_path, old_weight_filename_enc))
                 #os.remove(os.path.join(self.checkpoint_path, old_weight_filename_dec))
 
@@ -544,8 +520,7 @@ class PredictiveModel:
             if (epoch + 1) % print_freq == 0:
                 end_time = time.time()
                 tot_time = end_time - init_time
-                print("Epoch = %d,\t train_loss = %f,\t test_loss = %f,\t  epoch time [s] = %f" % (
-                epoch + 1, loss_train, loss_test, tot_time))
+                print("Epoch = %d,\t train_loss = %f,\t test_loss = %f,\t  epoch time [s] = %f" % (epoch + 1, loss_train, loss_test, tot_time))
                 init_time = end_time
 
             # Save weights

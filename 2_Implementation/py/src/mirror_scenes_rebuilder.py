@@ -51,12 +51,13 @@ if __name__ == '__main__':
     # Load the data
     data = load_h5(add_extension(in_path, ".h5"))
 
-    pcd, mesh = build_point_cloud(data=data['depth_map'],
-                                  alpha=data['alpha_map'],
-                                  fov=60,
-                                  img_size=(320, 240),
-                                  out_path=out_folder,
-                                  visualize=True)
+    obj = build_point_cloud(data=data['depth_map'],
+                            alpha=data['alpha_map'],
+                            fov=60,
+                            img_size=(320, 240),
+                            out_path=out_folder,
+                            f_mesh=False,
+                            visualize=True)
 
     end = time()
     minutes, seconds = divmod(end - start, 60)

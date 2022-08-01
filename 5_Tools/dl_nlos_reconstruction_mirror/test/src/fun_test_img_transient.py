@@ -60,8 +60,8 @@ def test_img(weight_names, data_path, P, freqs, fl_scale, fl_norm_perpixel, fil_
     for name in tqdm(load_names, desc="Testing"):
         with h5py.File(f"{data_path}/{name}", "r") as f:
             tr = f["data"][:]
-            gt_depth = f["depth_map"][:]
-            gt_alpha = f["alpha_map"][:]
+            gt_depth = f["depth_map"][:].T
+            gt_alpha = f["alpha_map"][:].T
 
         phi = np.transpose(utils.phi(freqs, dim_t, 0.01))
         tr = np.swapaxes(tr, 0, 1)
@@ -128,3 +128,5 @@ def test_img(weight_names, data_path, P, freqs, fl_scale, fl_norm_perpixel, fil_
         with h5py.File(f"C:/Users/DECaligM/Desktop/New folder/{name}_TEST.h5", "w") as f:
             f.create_dataset("depth_map", data=pred_depth)
             f.create_dataset("alpha_map", data=pred_alpha)
+            f.create_dataset("depth_map_gt", data=gt_depth)
+            f.create_dataset("alpha_map_gt", data=gt_alpha)
