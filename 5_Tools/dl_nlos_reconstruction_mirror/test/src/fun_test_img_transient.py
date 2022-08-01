@@ -33,7 +33,7 @@ def phi_remapping(v, d_max=4):
     return v_new
 
 
-def test_img(weight_names, data_path, P, freqs, fl_scale, fl_norm_perpixel, fil_dir, fil_den, fil_auto, test_files=None, dim_t=2000, return_vals=False):
+def test_img(weight_names, data_path, P, freqs, fl_scale, fl_norm_perpixel, fil_dir, fil_den, fil_auto, lr, n_layers, test_files=None, dim_t=2000, return_vals=False):
     ff = freqs.shape[0]
     dim_encoding = ff * 4
     test_names = pd.read_csv(test_files).to_numpy()
@@ -48,7 +48,7 @@ def test_img(weight_names, data_path, P, freqs, fl_scale, fl_norm_perpixel, fil_
     # Define the network and load the corresponding weights
     net = PredictiveModel.PredictiveModel(name='test_result_01', dim_b=dim_dataset, freqs=freqs, P=P,
                                           saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, fil_denoise_size=fil_den,
-                                          dim_encoding=dim_encoding, fil_encoder=fil_auto, lr=1e-05, n_layers=1)
+                                          dim_encoding=dim_encoding, fil_encoder=fil_auto, lr=lr, n_layers=n_layers)
 
     for name in weight_names:
         if name.find("v_e") != -1:
