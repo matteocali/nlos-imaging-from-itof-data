@@ -38,11 +38,13 @@ def arg_parser(argv):
     """
 
     arg_name = "train"  # Argument containing the name of the training attempt
-    arg_help = "{0} -n <name>".format(argv[0])  # Help string
+    arg_lr = 1e-04      # Argument containing the learning rate
+    arg_n_layers = 4    # Argument containing the number of layers in the network
+    arg_help = "{0} -n <name> -r <lr> -l <layers>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:", ["help", "name="])
+        opts, args = getopt.getopt(argv[1:], "hn:r:l:", ["help", "name=", "lr=", "layers="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -50,18 +52,26 @@ def arg_parser(argv):
     for opt, arg in opts:
         if opt in ("-n", "--name"):
             arg_name = arg  # Set the attempt name
+        elif opt in ("-r", "--lr"):
+            arg_lr = float(arg)  # Set the learning rate
+        elif opt in ("-l", "--layers"):
+            arg_n_layers = int(arg)
 
     print("Attempt name: ", arg_name)
+    print("Learning rate: ", arg_lr)
+    print("Number of layers: ", arg_n_layers)
     print()
 
-    return arg_name
+    return [arg_name, arg_lr, arg_n_layers]
 
 
 if __name__ == '__main__':
-    name_of_attempt = arg_parser(sys.argv)                      # String used to denominate the attempt.
+    name_of_attempt = arg_parser(sys.argv)[0]                   # String used to denominate the attempt.
     name_of_attempt = f"{str(date.today())}_{name_of_attempt}"  # Add the date to the name of the attempt
     fil_spat_size = 32                                          # Number of feature maps for the Spatial Feature Extractor model
     fil_dir_size = 32                                           # Number of feature maps for the Direct_CNN model
+    lr = arg_parser(sys.argv)[1]                                # Learning rate
+    n_layers = arg_parser(sys.argv)[2]                          # Number of layers in the network
     fil_encoder = 32                                            # Number of feature maps of encoder and decoder
 
     # Training and test set generators
@@ -71,7 +81,7 @@ if __name__ == '__main__':
     P = 3                     # Patch size
     dim_b = 1024              # Batch dimension
     dim_t = 2000              # Number of bins in the transient dimension
-    lr = 1e-03                # Learning rate
+
 
     # Additional string used to highlight if the approach was trained on two frequencies
     if fl_2freq:
@@ -102,7 +112,7 @@ if __name__ == '__main__':
                                        P=P)
 
     # Prepare the main model
-    net = PredictiveModel.PredictiveModel(name=name_of_attempt, dim_b=dim_b, lr=lr, freqs=freqs, P=P, saves_path='./saves',
+    net = PredictiveModel.PredictiveModel(name=name_of_attempt, dim_b=dim_b, lr=lr, n_layers=n_layers, freqs=freqs, P=P, saves_path='./saves',
                                           dim_t=dim_t, fil_size=fil_dir_size, fil_denoise_size=fil_spat_size,
                                           dim_encoding=dim_encoding, fil_encoder=fil_encoder)
     # Summaries of the various networks

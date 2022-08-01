@@ -2,14 +2,14 @@ import tensorflow as tf
 import tensorflow.keras.layers as layers
 import os
 import sys
+import time
 sys.path.append("../../utils/")
 sys.path.append("../")
 import Autoencoder_sameconv as Autoencoder_Interp
-import time
 
 
 class PredictiveModel:
-    def __init__(self, name, dim_b, lr, freqs, P, saves_path, dim_t=2000,
+    def __init__(self, name, dim_b, lr, n_layers, freqs, P, saves_path, dim_t=2000,
                  fil_size=8, fil_denoise_size=32, fil_z_size=32, dim_encoding=12, fil_encoder=32):
         """
         Initialize the Predictive model class
@@ -55,6 +55,7 @@ class PredictiveModel:
         self.fil_pred = fil_size                                   # number of filter for the Direct CNN
         self.fil_z_size = fil_z_size                               # number of filter for the transient reconstruction network
         self.freqs = tf.convert_to_tensor(freqs, dtype="float32")  # modulation frequencies
+        self.n_layers = n_layers                                   # number of layers in the direct cnn
 
         # Defining all parameters needed by the denoising network
         self.in_shape = (P, P, self.fn2)       # Shape of the input (batch size excluded)
@@ -83,6 +84,9 @@ class PredictiveModel:
         self.log_path_validation = os.path.join(self.log_path, 'validation')
         if not os.path.exists(self.log_path_validation):
             os.makedirs(self.log_path_validation)
+        self.log_path_img = os.path.join(self.log_path, 'img')
+        if not os.path.exists(self.log_path_img):
+            os.makedirs(self.log_path_img)
 
         # Create checkpoints path, if it does not exist
         self.checkpoint_path = os.path.join(self.net_path, 'checkpoints')
@@ -97,7 +101,7 @@ class PredictiveModel:
         '''
 
         # Define predictive models
-        #self.SpatialNet = self.def_SpatialNet()
+        self.SpatialNet = self.def_SpatialNet()
         self.DirectCNN = self.def_DirectCNN()
 
         # Define loss function and metrics
@@ -117,8 +121,8 @@ class PredictiveModel:
         Load weights from a file
         """
 
-        if weight_filename_d is not None:
-            self.SpatialNet.load_weights(weight_filename_d, by_name=True)
+        #if weight_filename_d is not None:
+            #self.SpatialNet.load_weights(weight_filename_d, by_name=True)
         if weight_filename_v is not None:
             self.DirectCNN.load_weights(weight_filename_v, by_name=True)
 
@@ -127,9 +131,9 @@ class PredictiveModel:
         Save weights to a file
         """
 
-        weight_filename_d = self.name + '_d_' + suffix + '.h5'
+        #weight_filename_d = self.name + '_d_' + suffix + '.h5'
         weight_filename_v = self.name + '_v_' + suffix + '.h5'
-        self.SpatialNet.save_weights(os.path.join(self.checkpoint_path, weight_filename_d))
+        #self.SpatialNet.save_weights(os.path.join(self.checkpoint_path, weight_filename_d))
         self.DirectCNN.save_weights(os.path.join(self.checkpoint_path, weight_filename_v))
 
     def A_compute(self, v):
@@ -204,7 +208,7 @@ class PredictiveModel:
         Define the DirectCNN model
         """
 
-        n_layers = 3  # Number of hidden layers
+        n_layers = self.n_layers  # Number of hidden layers
 
         # Define the input placeholder
         v_in = tf.keras.Input(shape=(None, None, self.fn2), batch_size=None, dtype='float32', name='v_in')
@@ -258,7 +262,6 @@ class PredictiveModel:
         # Separate the two output: depth_map and alpha_map
         depth_map = tf.slice(final_out, begin=[0, 0, 0, 0], size=[-1, -1, -1, 1])
         alpha_map = tf.slice(final_out, begin=[0, 0, 0, 1], size=[-1, -1, -1, 1])
-        #alpha_map = tf.nn.sigmoid(alpha_map)
 
         model_pred = tf.keras.Model(inputs=v_in, outputs=[depth_map, alpha_map], name=self.name)
         return model_pred
@@ -435,6 +438,7 @@ class PredictiveModel:
             tf.summary.scalar('loss_data', loss_trainw, step=init_epoch)
             tf.summary.scalar('loss_depth', loss_list_trainw[0][0], step=init_epoch)
             tf.summary.scalar('loss_alpha', loss_list_trainw[0][1], step=init_epoch)
+
         loss_train = loss_trainw
         loss_test = loss_testw
         print("Epoch = %d,\t train_loss = %f,\t test_loss = %f" % (init_epoch, loss_train, loss_test))
@@ -495,6 +499,7 @@ class PredictiveModel:
                 tf.summary.scalar('loss_data', loss_testw, step=epoch + 1)
                 tf.summary.scalar('loss_depth', loss_list_testw[0][0], step=epoch + 1)
                 tf.summary.scalar('loss_alpha', loss_list_testw[0][1], step=epoch + 1)
+
             loss_train = loss_trainw
             loss_test = loss_testw
 
@@ -511,7 +516,7 @@ class PredictiveModel:
                 self.save_weights(suffix='e' + str(self.best_epoch) + '_best_weights')
 
                 # Remove old best model
-                os.remove(os.path.join(self.checkpoint_path, old_weight_filename_d))
+                #os.remove(os.path.join(self.checkpoint_path, old_weight_filename_d))
                 os.remove(os.path.join(self.checkpoint_path, old_weight_filename_v))
                 #os.remove(os.path.join(self.checkpoint_path, old_weight_filename_enc))
                 #os.remove(os.path.join(self.checkpoint_path, old_weight_filename_dec))

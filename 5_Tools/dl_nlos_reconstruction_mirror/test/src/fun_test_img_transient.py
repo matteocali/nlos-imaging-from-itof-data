@@ -15,8 +15,6 @@ import utils
 
 font = {'size': 6}
 import PredictiveModel_hidden as PredictiveModel
-
-# import PredictiveModel_2freq_big as PredictiveModel
 matplotlib.rc('font', **font)
 
 
@@ -35,7 +33,7 @@ def phi_remapping(v, d_max=4):
     return v_new
 
 
-def test_img(weight_names, data_path, P, freqs, fl_scale, fl_norm_perpixel, fil_dir, fil_den, fil_auto, test_files=None, dim_t=2000):
+def test_img(weight_names, data_path, P, freqs, fl_scale, fl_norm_perpixel, fil_dir, fil_den, fil_auto, test_files=None, dim_t=2000, return_vals=False):
     ff = freqs.shape[0]
     dim_encoding = ff * 4
     test_names = pd.read_csv(test_files).to_numpy()
@@ -50,7 +48,7 @@ def test_img(weight_names, data_path, P, freqs, fl_scale, fl_norm_perpixel, fil_
     # Define the network and load the corresponding weights
     net = PredictiveModel.PredictiveModel(name='test_result_01', dim_b=dim_dataset, freqs=freqs, P=P,
                                           saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, fil_denoise_size=fil_den,
-                                          dim_encoding=dim_encoding, fil_encoder=fil_auto)
+                                          dim_encoding=dim_encoding, fil_encoder=fil_auto, lr=1e-05, n_layers=1)
 
     for name in weight_names:
         if name.find("v_e") != -1:
@@ -60,8 +58,10 @@ def test_img(weight_names, data_path, P, freqs, fl_scale, fl_norm_perpixel, fil_
     for name in tqdm(load_names, desc="Testing"):
         with h5py.File(f"{data_path}/{name}", "r") as f:
             tr = f["data"][:]
-            gt_depth = f["depth_map"][:].T
-            gt_alpha = f["alpha_map"][:].T
+            gt_depth = f["depth_map"][:]
+            gt_depth = np.swapaxes(gt_depth, 0, 1)
+            gt_alpha = f["alpha_map"][:]
+            gt_alpha = np.swapaxes(gt_alpha, 0, 1)
 
         phi = np.transpose(utils.phi(freqs, dim_t, 0.01))
         tr = np.swapaxes(tr, 0, 1)
@@ -125,8 +125,11 @@ def test_img(weight_names, data_path, P, freqs, fl_scale, fl_norm_perpixel, fil_
         pred_depth = np.squeeze(pred_depth)
         pred_alpha = np.squeeze(pred_alpha)
 
-        with h5py.File(f"C:/Users/DECaligM/Desktop/New folder/{name}_TEST.h5", "w") as f:
-            f.create_dataset("depth_map", data=pred_depth)
-            f.create_dataset("alpha_map", data=pred_alpha)
-            f.create_dataset("depth_map_gt", data=gt_depth)
-            f.create_dataset("alpha_map_gt", data=gt_alpha)
+        if not return_vals:
+            with h5py.File(f"C:/Users/DECaligM/Desktop/New folder/{name}_TEST.h5", "w") as f:
+                f.create_dataset("depth_map", data=pred_depth)
+                f.create_dataset("alpha_map", data=pred_alpha)
+                f.create_dataset("depth_map_gt", data=gt_depth)
+                f.create_dataset("alpha_map_gt", data=gt_alpha)
+        else:
+            return pred_depth, pred_alpha, gt_depth, gt_alpha
