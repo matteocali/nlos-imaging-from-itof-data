@@ -249,7 +249,7 @@ if __name__ == '__main__':
         num_elem = Back.shape[0]
 
         A_in, phi_in, A_g, phi_g, A_d, phi_d = Aphi_compute(v_real, v_real_no_d, v_real_d)
-        file_train = f"{out_dir}val_{dataset_name}_n{str(num_elem)}{add_str}.h5"
+        file_val = f"{out_dir}val_{dataset_name}_n{str(num_elem)}{add_str}.h5"
         with h5py.File(file_val, 'w') as f:
             f.create_dataset("name", data=dataset_name)
             f.create_dataset("transient", data=Back, compression="gzip")
@@ -282,7 +282,7 @@ if __name__ == '__main__':
         num_elem = Back.shape[0]
 
         A_in, phi_in, A_g, phi_g, A_d, phi_d = Aphi_compute(v_real, v_real_no_d, v_real_d)
-        file_train = f"{out_dir}test_{dataset_name}_n{str(num_elem)}{add_str}.h5"
+        file_test = f"{out_dir}test_{dataset_name}_n{str(num_elem)}{add_str}.h5"
         with h5py.File(file_test, 'w') as f:
             f.create_dataset("name", data=dataset_name)
             f.create_dataset("transient", data=Back, compression="gzip")

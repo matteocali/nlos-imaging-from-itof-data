@@ -218,6 +218,10 @@ class PredictiveModel:
         v_in = tf.keras.Input(shape=(None, None, self.fn2), batch_size=None, dtype='float32', name='v_in')
         ind_ = int((self.out_win - 1) / 2)  # Index keeping track of the middle value
         v_in_1x1 = tf.strided_slice(v_in, begin=[0, ind_, ind_, 0], end=[-1, -ind_, -ind_, -1], end_mask=1001)
+        if self.out_win == 1:
+            padding_val = "valid"
+        else:
+            padding_val = "same"
 
         '''
         # Two branches, one processing a 3x3 patch around the central pixel, and the other focusing only on the central pixel itself
@@ -244,7 +248,7 @@ class PredictiveModel:
         c_out = layers.Conv2D(filters=self.fil_pred,
                               kernel_size=self.out_win,
                               strides=1,
-                              padding="same",
+                              padding=padding_val,
                               data_format='channels_last',
                               activation='relu',
                               use_bias=True,
@@ -256,7 +260,7 @@ class PredictiveModel:
             c_out = layers.Conv2D(filters=self.fil_pred,
                                   kernel_size=self.out_win,
                                   strides=1,
-                                  padding="same",
+                                  padding=padding_val,
                                   data_format='channels_last',
                                   activation='relu',
                                   use_bias=True,
@@ -265,7 +269,7 @@ class PredictiveModel:
         final_out = layers.Conv2D(filters=2,
                                   kernel_size=self.out_win,
                                   strides=1,
-                                  padding="same",
+                                  padding=padding_val,
                                   data_format='channels_last',
                                   activation=None,
                                   use_bias=True,
@@ -273,10 +277,9 @@ class PredictiveModel:
                                   name=f'cd{n_layers + 1}')(c_out)
 
         # Separate the two output: depth_map and alpha_map
-        #depth_map = tf.slice(final_out, begin=[0, 0, 0, 0], size=[-1, -1, -1, 1])
-        #alpha_map = tf.slice(final_out, begin=[0, 0, 0, 1], size=[-1, -1, -1, 1])
-        depth_map = final_out[:, ind_:-ind_, ind_:-ind_, 0]
-        alpha_map = final_out[:, ind_:-ind_, ind_:-ind_, 1]
+
+        depth_map = tf.slice(final_out, begin=[0, 0, 0, 0], size=[-1, -1, -1, 1])
+        alpha_map = tf.slice(final_out, begin=[0, 0, 0, 1], size=[-1, -1, -1, 1])
 
         model_pred = tf.keras.Model(inputs=v_in, outputs=[depth_map, alpha_map], name=self.name)
         return model_pred
@@ -315,6 +318,10 @@ class PredictiveModel:
         pred_depth_map, pred_alpha_map = self.DirectCNN(v_nf)
         pred_depth_map = pred_depth_map
         pred_alpha_map = pred_alpha_map
+
+        # Extract just the single pixel from the gt
+        pred_depth_map = tf.slice(tf.squeeze(pred_depth_map, axis=-1), begin=[0, i_mid, i_mid], size=[-1, 1, 1])
+        pred_alpha_map = tf.slice(tf.squeeze(pred_alpha_map, axis=-1), begin=[0, i_mid, i_mid], size=[-1, 1, 1])
 
         # Compute the masked data
         pred_msk_depth = pred_depth_map * gt_alpha
