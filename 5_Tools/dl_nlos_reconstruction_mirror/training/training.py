@@ -37,14 +37,16 @@ def arg_parser(argv):
     :return: list containing the input and output path
     """
 
-    arg_name = "train"  # Argument containing the name of the training attempt
-    arg_lr = 1e-04      # Argument containing the learning rate
-    arg_n_layers = 4    # Argument containing the number of layers in the network
-    arg_help = "{0} -n <name> -r <lr> -l <layers>".format(argv[0])  # Help string
+    arg_name = "train"   # Argument containing the name of the training attempt
+    arg_lr = 1e-04       # Argument containing the learning rate
+    arg_n_layers = 4     # Argument containing the number of layers in the network
+    arg_loss_scale = 1   # Argument containing the loss scale
+    arg_kernel_size = 3  # Argument containing the kernel size
+    arg_help = "{0} -n <name> -r <lr> -l <layers> -s <scale> -k <kernel>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:r:l:", ["help", "name=", "lr=", "layers="])
+        opts, args = getopt.getopt(argv[1:], "hn:r:l:s:k:", ["help", "name=", "lr=", "layers=", "scale=", "kernel="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -56,23 +58,33 @@ def arg_parser(argv):
             arg_lr = float(arg)  # Set the learning rate
         elif opt in ("-l", "--layers"):
             arg_n_layers = int(arg)
+        elif opt in ("-s", "--scale"):
+            arg_loss_scale = int(arg)
+        elif opt in ("-k", "--kernel"):
+            arg_kernel_size = int(arg)
 
     print("Attempt name: ", arg_name)
     print("Learning rate: ", arg_lr)
     print("Number of layers: ", arg_n_layers)
+    print("Loss scale factor: ", arg_loss_scale)
+    print("Kernel size: ", arg_kernel_size)
     print()
 
-    return [arg_name, arg_lr, arg_n_layers]
+    return [arg_name, arg_lr, arg_n_layers, arg_loss_scale, arg_kernel_size]
 
 
 if __name__ == '__main__':
-    name_of_attempt = arg_parser(sys.argv)[0]                   # String used to denominate the attempt.
+    args = arg_parser(sys.argv)  # Get the arguments from the command line
+
+    name_of_attempt = args[0]                                   # String used to denominate the attempt.
     name_of_attempt = f"{str(date.today())}_{name_of_attempt}"  # Add the date to the name of the attempt
     fil_spat_size = 32                                          # Number of feature maps for the Spatial Feature Extractor model
     fil_dir_size = 32                                           # Number of feature maps for the Direct_CNN model
-    lr = arg_parser(sys.argv)[1]                                # Learning rate
-    n_layers = arg_parser(sys.argv)[2]                          # Number of layers in the network
+    lr = args[1]                                                # Learning rate
+    n_layers = args[2]                                          # Number of layers in the network
     fil_encoder = 32                                            # Number of feature maps of encoder and decoder
+    loss_scale = args[3]                                        # Loss scale factor
+    kernel_size = args[4]                                       # Kernel size
 
     # Training and test set generators
     fl_scale = True           # If True the normalization is performed
@@ -114,7 +126,7 @@ if __name__ == '__main__':
     # Prepare the main model
     net = PredictiveModel.PredictiveModel(name=name_of_attempt, dim_b=dim_b, lr=lr, n_layers=n_layers, freqs=freqs, P=P, saves_path='./saves',
                                           dim_t=dim_t, fil_size=fil_dir_size, fil_denoise_size=fil_spat_size,
-                                          dim_encoding=dim_encoding, fil_encoder=fil_encoder)
+                                          dim_encoding=dim_encoding, fil_encoder=fil_encoder, loss_scale_factor=loss_scale, kernel_size=kernel_size)
     # Summaries of the various networks
     #net.SpatialNet.summary()
     net.DirectCNN.summary()
