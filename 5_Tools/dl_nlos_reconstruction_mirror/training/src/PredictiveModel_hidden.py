@@ -61,13 +61,14 @@ class PredictiveModel:
         self.fil_z_size = fil_z_size                               # number of filter for the transient reconstruction network
         self.freqs = tf.convert_to_tensor(freqs, dtype="float32")  # modulation frequencies
         self.n_layers = n_layers                                   # number of layers in the direct cnn
-        self.loss_scale_factor = loss_scale_factor                  # scaling factor for the loss
+        self.loss_scale_factor = loss_scale_factor                 # scaling factor for the loss
+        self.kernel_size = kernel_size                             # kernel size for the convolutional layers
 
         # Defining all parameters needed by the denoising network
         self.in_shape = (P, P, self.fn2)       # Shape of the input (batch size excluded)
-        self.out_win = kernel_size             # Side of the window provided in output of the Spatial Feature Extractor
+        self.out_win = 3                       # Side of the window provided in output of the Spatial Feature Extractor
         self.padz = self.P - self.out_win + 2  # Padding needed
-        self.fl_denoise = not (P == 3)         # Whether to use the Spatial Feature Extractor
+        self.fl_denoise = False#not (P == 3)         # Whether to use the Spatial Feature Extractor
         self.k_size = 3                        # Kernel size for each layer of the denoiser network
         self.f_skip = True                     # Whether to use a skip connection or not
 
@@ -218,14 +219,14 @@ class PredictiveModel:
 
         # Define the input placeholder
         v_in = tf.keras.Input(shape=(None, None, self.fn2), batch_size=None, dtype='float32', name='v_in')
-        ind_ = int((self.out_win - 1) / 2)  # Index keeping track of the middle value
-        if self.out_win == 1:  # If the kernel size is 1, then no padding is needed
+        ind_ = int((self.kernel_size - 1) / 2)  # Index keeping track of the middle value
+        if self.kernel_size == 1:  # If the kernel size is 1, then no padding is needed
             paddings = tf.constant([[0, 0], [0, 0], [0, 0], [0, 0]])  # Padding for the convolutional layers
         else:
             paddings = tf.constant([[0, 0], [ind_, ind_], [ind_, ind_], [0, 0]])  # Padding for the convolutional layers
         padded_input = tf.pad(v_in, paddings, 'REFLECT', name="padded_input")  # Pad the input
         v_in_1x1 = tf.strided_slice(v_in, begin=[0, ind_, ind_, 0], end=[-1, -ind_, -ind_, -1], end_mask=1001)
-        if self.out_win == 1:
+        if self.kernel_size == 1:
             padding_val = "valid"
         else:
             padding_val = "same"
@@ -253,7 +254,7 @@ class PredictiveModel:
         c_out = tf.concat([out_1x1, out_3x3], axis=-1, name='cat1')  # Features concatenation
         '''
         c_out = layers.Conv2D(filters=self.fil_pred,
-                              kernel_size=self.out_win,
+                              kernel_size=self.kernel_size,
                               strides=1,
                               padding=padding_val,
                               data_format='channels_last',
@@ -265,7 +266,7 @@ class PredictiveModel:
         for i in range(n_layers):
             l_name = f"conv_{str(i + 1)}"
             c_out = layers.Conv2D(filters=self.fil_pred,
-                                  kernel_size=self.out_win,
+                                  kernel_size=self.kernel_size,
                                   strides=1,
                                   padding=padding_val,
                                   data_format='channels_last',
@@ -274,7 +275,7 @@ class PredictiveModel:
                                   trainable=True,
                                   name=l_name)(c_out)
         final_out = layers.Conv2D(filters=2,
-                                  kernel_size=self.out_win,
+                                  kernel_size=self.kernel_size,
                                   strides=1,
                                   padding=padding_val,
                                   data_format='channels_last',
@@ -286,7 +287,7 @@ class PredictiveModel:
         # Separate the two output: depth_map and alpha_map
         depth_map = tf.slice(final_out, begin=[0, 0, 0, 0], size=[-1, -1, -1, 1], name='depth_map')
         alpha_map = tf.slice(final_out, begin=[0, 0, 0, 1], size=[-1, -1, -1, 1], name='alpha_map')
-        if self.out_win != 1:  # If the kernel size is not 1, then remove the padding
+        if self.kernel_size != 1:  # If the kernel size is not 1, then remove the padding
             depth_map = depth_map[:, ind_:-ind_, ind_:-ind_, :]
             alpha_map = alpha_map[:, ind_:-ind_, ind_:-ind_, :]
 
@@ -313,32 +314,31 @@ class PredictiveModel:
         v_in = data_dict["raw_itof"]
         gt_depth = data_dict["gt_depth"]
         gt_alpha = data_dict["gt_alpha"]
+
+        # Process the output with the Direct CNN
+        pred_depth_map, pred_alpha_map = self.DirectCNN(v_in)
+        pred_depth_map = tf.squeeze(pred_depth_map, axis=-1)
+        pred_alpha_map = tf.squeeze(pred_alpha_map, axis=-1)
+
+        '''
         i_mid = int((self.P - 1) / 2)  # index keeping track of the middle position
 
         # Extract just the single pixel from the gt
         gt_depth = tf.slice(gt_depth, begin=[0, i_mid, i_mid], size=[-1, i_mid, i_mid])
         gt_alpha = tf.slice(gt_alpha, begin=[0, i_mid, i_mid], size=[-1, i_mid, i_mid])
-
-        if self.fl_denoise:
-            v_nf = self.SpatialNet(v_in)
-        else:
-            v_nf = v_in
-
-        # Process the output with the Direct CNN
-        pred_depth_map, pred_alpha_map = self.DirectCNN(v_nf)
-        pred_depth_map = pred_depth_map
-        pred_alpha_map = pred_alpha_map
-
-        # Extract just the single pixel from the gt
+        
+        # Extract just the single pixel from the predictions
         pred_depth_map = tf.slice(tf.squeeze(pred_depth_map, axis=-1), begin=[0, i_mid, i_mid], size=[-1, 1, 1])
         pred_alpha_map = tf.slice(tf.squeeze(pred_alpha_map, axis=-1), begin=[0, i_mid, i_mid], size=[-1, 1, 1])
+        '''
 
         # Compute the masked data
         pred_msk_depth = pred_depth_map * gt_alpha
 
         # Compute the loss
         loss_depth = tf.math.reduce_sum(tf.keras.losses.MAE(gt_depth, pred_msk_depth)) / tf.math.reduce_sum(gt_alpha)  # MAE loss on the masked depth
-        loss_alpha = tf.squeeze(tf.keras.losses.MAE(gt_alpha, pred_alpha_map), axis=-1)
+        #loss_alpha = tf.squeeze(tf.keras.losses.MAE(gt_alpha, pred_alpha_map), axis=-1)
+        loss_alpha = tf.math.abs(gt_alpha - pred_alpha_map)
         loss_alpha = tf.where(gt_alpha != 1, loss_alpha, loss_alpha * self.loss_scale_factor)  # Increase the loss where the mask should be 1
         #loss_alpha = tf.where((pred_alpha_map - gt_alpha) >= 0.2, loss_alpha, loss_alpha * self.loss_scale_factor)
         loss_alpha = tf.math.reduce_mean(loss_alpha)

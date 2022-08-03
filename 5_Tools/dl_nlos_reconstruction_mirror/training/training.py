@@ -44,11 +44,13 @@ def arg_parser(argv):
     arg_n_layers = 4     # Argument containing the number of layers in the network
     arg_loss_scale = 1   # Argument containing the loss scale
     arg_kernel_size = 3  # Argument containing the kernel size
-    arg_help = "{0} -n <name> -r <lr> -l <layers> -s <scale> -k <kernel>".format(argv[0])  # Help string
+    arg_train_dts = ""   # Argument containing the name of the training dataset
+    arg_val_dts = ""     # Argument containing the name of the validation dataset
+    arg_help = "{0} -n <name> -r <lr> -l <layers> -s <scale> -k <kernel> -t <train>, -v <validation>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:r:l:s:k:", ["help", "name=", "lr=", "layers=", "scale=", "kernel="])
+        opts, _ = getopt.getopt(argv[1:], "hn:r:l:s:k:t:v:", ["help", "name=", "lr=", "layers=", "scale=", "kernel=", "train=", "validation="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -64,15 +66,21 @@ def arg_parser(argv):
             arg_loss_scale = int(arg)
         elif opt in ("-k", "--kernel"):
             arg_kernel_size = int(arg)
+        elif opt in ("-t", "--train"):
+            arg_train_dts = arg
+        elif opt in ("-v", "--validation"):
+            arg_val_dts = arg
 
     print("Attempt name: ", arg_name)
     print("Learning rate: ", arg_lr)
     print("Number of layers: ", arg_n_layers)
     print("Loss scale factor: ", arg_loss_scale)
     print("Kernel size: ", arg_kernel_size)
+    print("Train dataset name: ", arg_train_dts)
+    print("Validation dataset name: ", arg_val_dts)
     print()
 
-    return [arg_name, arg_lr, arg_n_layers, arg_loss_scale, arg_kernel_size]
+    return [arg_name, arg_lr, arg_n_layers, arg_loss_scale, arg_kernel_size, arg_train_dts, arg_val_dts]
 
 
 if __name__ == '__main__':
@@ -88,11 +96,20 @@ if __name__ == '__main__':
     loss_scale = args[3]                                        # Loss scale factor
     kernel_size = args[4]                                       # Kernel size
 
+    # Training and validation data for dataset
+    train_filename = f"./data/{args[5]}.h5"
+    val_filename = f"./data/{args[6]}.h5"
+
+    # Extract the patch size from the dts name
+    dts_name = args[5]
+    dts_name = dts_name.split("_")
+    patch_str = [elm for elm in dts_name if "ps" in elm][0]
+
     # Training and test set generators
     fl_scale = True           # If True the normalization is performed
     fl_scale_perpixel = True  # If True the normalization is done pixel per pixel, otherwise each patch is normalized by the mean 20 MHz value
     fl_2freq = False          # If set, the training is done on only 2 frequencies (in this case 20 and 50 MHz)
-    P = 3                     # Patch size
+    P = int(patch_str[2:])    # Patch size
     dim_b = 1024              # Batch dimension
     dim_t = 2000              # Number of bins in the transient dimension
 
@@ -106,10 +123,6 @@ if __name__ == '__main__':
         str_freqs = ""
         freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
         dim_encoding = 12  # Dimension in the encoding domain
-
-    # Training and validation data for dataset
-    train_filename = str(Path(f"./data/train_n40200_s{str(P)}_nonorm{str_freqs}.h5"))
-    val_filename = str(Path(f"./data/val_n13400_s{str(P)}_nonorm{str_freqs}.h5"))
 
     # Put the loaded data in the right format for the network.
     train_loader = DataLoader.DataLoader(filename=train_filename,

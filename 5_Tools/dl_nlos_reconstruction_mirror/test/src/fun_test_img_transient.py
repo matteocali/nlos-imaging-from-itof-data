@@ -5,6 +5,7 @@ import matplotlib
 import scipy
 import scipy.signal
 import tensorflow as tf
+from matplotlib import pyplot as plt
 import pandas as pd
 import sys
 from tqdm import tqdm
@@ -34,7 +35,7 @@ def phi_remapping(v, d_max=4):
 
 
 def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fl_norm_perpixel, fil_dir, fil_den, fil_auto, lr, n_layers,
-             loss_scale, kernel_size, test_files=None, dim_t=2000, return_vals=False):
+             loss_scale, kernel_size, test_files=None, dim_t=2000, return_vals=False, plot_results=False):
     ff = freqs.shape[0]
     dim_encoding = ff * 4
     test_names = pd.read_csv(test_files).to_numpy()
@@ -127,8 +128,40 @@ def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fl_norm_perp
         pred_depth = np.squeeze(pred_depth)
         pred_alpha = np.squeeze(pred_alpha)
 
+        if plot_results:  # Plot the results
+            pred_depth_masked = pred_depth * gt_alpha
+            gt_depth_masked = gt_depth * gt_alpha
+
+            fig, ax = plt.subplots(2, 2)
+            fig.suptitle(name[:-3])
+            img0 = ax[0, 0].matshow(gt_depth_masked, cmap='jet')
+            img0.set_clim(np.min(gt_depth), np.max(gt_depth))
+            fig.colorbar(img0, ax=ax[0, 0])
+            ax[0, 0].set_title("Ground truth depth map")
+            ax[0, 0].set_xlabel("Column pixel")
+            ax[0, 0].set_ylabel("Row pixel")
+            img1 = ax[0, 1].matshow(pred_depth_masked, cmap='jet')
+            fig.colorbar(img1, ax=ax[0, 1])
+            img1.set_clim(np.min(gt_depth), np.max(gt_depth))
+            ax[0, 1].set_title("Predicted depth map")
+            ax[0, 1].set_xlabel("Column pixel")
+            ax[0, 1].set_ylabel("Row pixel")
+            img2 = ax[1, 0].matshow(pred_alpha, cmap='jet')
+            fig.colorbar(img2, ax=ax[1, 0])
+            ax[1, 0].set_title("Predicted alpha map")
+            ax[1, 0].set_xlabel("Column pixel")
+            ax[1, 0].set_ylabel("Row pixel")
+            img3 = ax[1, 1].matshow(gt_alpha, cmap='jet')
+            fig.colorbar(img3, ax=ax[1, 1])
+            ax[1, 1].set_title("Ground truth alpha map")
+            ax[1, 1].set_xlabel("Column pixel")
+            ax[1, 1].set_ylabel("Row pixel")
+            fig.tight_layout()
+            plt.savefig(f"{out_path}/{name[:-3]}_PLOTS.svg")
+            plt.close()
+
         if not return_vals:
-            with h5py.File(f"{out_path}/{name}_TEST.h5", "w") as f:
+            with h5py.File(f"{out_path}/{name[:-3]}_TEST.h5", "w") as f:
                 f.create_dataset("depth_map", data=pred_depth)
                 f.create_dataset("alpha_map", data=pred_alpha)
                 f.create_dataset("depth_map_gt", data=gt_depth)

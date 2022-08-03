@@ -83,8 +83,8 @@ if __name__ == '__main__':
     data_path_real = "../../Datasets/S3S4S5/*"                                                          # path to the real images
     data_path_synth = f"{win_server_path}/{dataset_folder}/final_dataset"                               # Path of the synthetic test set (same patch size as training and validation)
     test_file_csv = f"{win_server_path}/{git_folder_path}/dataset_creation/data_split/test_images.csv"  # path to the test file
-    weights_folder = f"../training/saves/{attempt_name}/checkpoints/"                                   # path to the weights
-    #weights_folder = f"{win_server_path}/{git_folder_path}/training/saves/{attempt_name}/checkpoints/"  # path to the weights
+    #weights_folder = f"../training/saves/{attempt_name}/checkpoints/"                                   # path to the weights
+    weights_folder = f"{win_server_path}/{git_folder_path}/training/saves/{attempt_name}/checkpoints/"  # path to the weights
     dim_t = 2000                                                                                        # number of bins in the transient dimension
     P = 3                                                                                               # patch size
     flag_norm_perpixel = True                                                                           # normalization per pixel
@@ -154,4 +154,5 @@ if __name__ == '__main__':
              fil_auto=fil_autoencoder,
              dim_t=dim_t,
              loss_scale=loss_scale,
-             kernel_size=kernel_size)  # test on transient images
+             kernel_size=kernel_size,
+             plot_results=True)  # test on transient images
