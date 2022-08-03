@@ -2,7 +2,7 @@ from pathlib import Path
 from random import seed as rnd_seed, sample as rnd_sample
 from lxml import etree as et
 from tqdm import trange, tqdm
-from numpy import nonzero, unique, zeros as np_zeros, where, sum as np_sum, swapaxes, ndarray, copy as np_copy, array, float32, zeros, count_nonzero
+from numpy import nonzero, unique, zeros as np_zeros, where, sum as np_sum, swapaxes, ndarray, copy as np_copy, array, float32, zeros, count_nonzero, empty, nanmax as np_nanmax, Inf, full
 import open3d as o3d
 
 from modules.utilities import create_folder, permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen, read_folders, save_h5, load_h5, read_files, k_matrix_calculator
@@ -446,6 +446,10 @@ def build_fermat_gt(gt_path: Path, out_path: Path, fov: int, exp_time: float) ->
         data_path = data_path + data_folder  # Put together (in the same list) all the file present in all the batches
 
     for file_path in tqdm(data_path, desc="Generating ground truth data"):  # For each file
+        num_of_discont = [1]  # Number of discontinuity to search for
+        exp_coeff = [0.3]  # Model the exponential falloff of the SPAD signal
+        sigma_blur = [1]  # Difference of Gaussian, standard deviation
+
         file_name = str(Path(file_path).name) + "_GT"  # Get the file name and add the suffix
         tr = transient_loader(file_path)  # Load the data and put them in standard form
         tr_samples = tr.size[0] * tr.size[1]
@@ -454,67 +458,45 @@ def build_fermat_gt(gt_path: Path, out_path: Path, fov: int, exp_time: float) ->
         if num_of_bin_center == 1:
             x = num_of_bin_center
         else:
-            assert (num_of_bin_center == tr_samples);
+            assert num_of_bin_center == tr_samples
+
+        all_disconts = empty((tr_samples, num_of_discont))
+
+        for i in range(tr_samples):
+            if num_of_bin_center > 1:
+                x = temp_bin_center[i, :]
+            y = tr[i, :]
+            y = y / np_nanmax(y)
         '''
-        discontsAll = nan(tr_samples, numOfDiscont);
+            # Convolve the transient with the DoG filter, and keep the maximum filter response
+            dgy = full((y.size, y.size), -Inf)
+            for exp_val in exp_coeff:
+                for sigma in sigma_blur:
+                    filter = generateFilter(exp_val, sigma)
+                    dgy_one = np_nanmax(conv(y, filter, 'same'), conv(y, filter(end:-1: 1), 'same'))
+                    dgy = np_nanmax(dgy, dgy_one)
 
-        if whetherVisualize
-            figure;
-        end
+            dgy = dgy / np_nanmax(dgy)
 
-        % parfor
-        for i = 1: tr_samples
-        fprintf(' detecting discontinuities: %d (%d) \n', i, tr_samples);
+            # Discontinuities correspond to larger filter responses
+            [~, locsPeak, ~, p] = findpeaks(dgy, x, 'MinPeakProminence', 0)
+            [~, indsP] = sort(p, 'descend');
+            locsPeak = locsPeak(indsP);
 
-        if numOfBinCenters > 1
-            X = temporalBinCenters(i,:);
-            end
-            Y = transients(i,:);
-            Y = Y / max(Y);
+            disconts = nan(1, num_of_discont)
+            if numel(locsPeak) >= num_of_discont:
+                disconts = locsPeak(1: num_of_discont);
+            else:
+                disconts(1: numel(locsPeak)) = locsPeak
 
-            % ----- convolve
-            transients
-            with DoG filters, and keep the maximum filter response -----
-            dgY = -Inf(size(Y));
-            for expCoeffOne = expCoeff
-            for sigmaBlurOne = sigmaBlur
-            filter = generateFilter(expCoeffOne, sigmaBlurOne);
-            if convolveTwoSides
-                dgYOne = max(conv(Y, filter, 'same'), conv(Y, filter(end:-1: 1), 'same'));
-                else
-                dgYOne = conv(Y, filter, 'same');
-            end
-            dgY = max(dgY, dgYOne);
-        end
-    end
-    dgY = dgY / max(dgY);
+            if whetherSortDisconts:
+                disconts = sort(disconts, 'ascend')
 
-    % ----- discontinuties
-    correspond
-    to
-    larger
-    filter
-    responses - ----
-    [~, locsPeak, ~, p] = findpeaks(dgY, X, 'MinPeakProminence', 0);
-    [~, indsP] = sort(p, 'descend');
-    locsPeak = locsPeak(indsP);
-
-    disconts = nan(1, numOfDiscont);
-    if numel(locsPeak) >= numOfDiscont
-        disconts = locsPeak(1: numOfDiscont);
-        else
-        disconts(1: numel(locsPeak)) = locsPeak;
-    end
-
-    if whetherSortDisconts
-        disconts = sort(disconts, 'ascend');
-    end
-
-    % ----- store
-    discont - ----
-    discontsAll(i,:) = disconts;
-        save_h5(file_path=out_path / file_name, data={"depth_map": d_map, "alpha_map": a_map}, fermat=True)  # Save the data
+            # store discont
+            all_disconts[i, :] = disconts
+            save_h5(file_path=out_path / file_name, data={"depth_map": d_map, "alpha_map": a_map}, fermat=True)  # Save the data
         '''
+
 
 def load_dataset(d_path: Path, out_path: Path) -> None:
     """
