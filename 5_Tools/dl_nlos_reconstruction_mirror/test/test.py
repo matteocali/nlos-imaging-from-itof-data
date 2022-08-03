@@ -8,6 +8,7 @@ import fnmatch
 import glob
 import os
 import getopt
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TensorFlow warnings
 
 """
 
@@ -106,9 +107,11 @@ if __name__ == '__main__':
     else:
         freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
 
+    out_path = f"./out/{attempt_name}"  # path to the output folder
+
     # Create needed directories
-    if not os.path.exists("./out/" + attempt_name):
-        os.mkdir("./out/" + attempt_name)
+    if not os.path.exists(out_path):
+        os.mkdir(out_path)
 
     # Search for the weight files to test on, the one with the best loss on the validation set
     search_str = "*best*"
@@ -138,6 +141,7 @@ if __name__ == '__main__':
 
     test_img(weight_names=weight_names,
              data_path=data_path,
+             out_path=out_path,
              test_files=test_file_csv,
              P=P,
              lr=lr,

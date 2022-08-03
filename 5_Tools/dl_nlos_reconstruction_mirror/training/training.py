@@ -1,4 +1,5 @@
 import numpy as np
+import os
 from pathlib import Path
 import getopt
 from datetime import date
@@ -8,6 +9,7 @@ sys.path.append("./data/")
 sys.path.append("../utils/")
 import DataLoader as DataLoader
 import PredictiveModel_hidden as PredictiveModel
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TensorFlow warnings
 
 
 """

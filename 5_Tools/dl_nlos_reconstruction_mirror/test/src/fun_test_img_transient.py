@@ -33,7 +33,7 @@ def phi_remapping(v, d_max=4):
     return v_new
 
 
-def test_img(weight_names, data_path, P, freqs, fl_scale, fl_norm_perpixel, fil_dir, fil_den, fil_auto, lr, n_layers,
+def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fl_norm_perpixel, fil_dir, fil_den, fil_auto, lr, n_layers,
              loss_scale, kernel_size, test_files=None, dim_t=2000, return_vals=False):
     ff = freqs.shape[0]
     dim_encoding = ff * 4
@@ -115,9 +115,9 @@ def test_img(weight_names, data_path, P, freqs, fl_scale, fl_norm_perpixel, fil_
         else:
             v_in = v_in[np.newaxis, :, :, :]
 
-        fl_denoise = not (net.P == net.out_win)  # If the two values are different, then the denoising network has been used
+        fl_denoise = False#not (net.P == net.out_win)  # If the two values are different, then the denoising network has been used
         # Make prediction
-        v_input = np.pad(v_in, pad_width=[[0, 0], [s_pad, s_pad], [s_pad, s_pad], [0, 0]], mode="edge")
+        v_input = v_in#np.pad(v_in, pad_width=[[0, 0], [s_pad, s_pad], [s_pad, s_pad], [0, 0]], mode="edge")
         if fl_denoise:
             v_in_v = net.SpatialNet(v_input)
         else:
@@ -128,7 +128,7 @@ def test_img(weight_names, data_path, P, freqs, fl_scale, fl_norm_perpixel, fil_
         pred_alpha = np.squeeze(pred_alpha)
 
         if not return_vals:
-            with h5py.File(f"C:/Users/DECaligM/Desktop/00001_5/{name}_TEST.h5", "w") as f:
+            with h5py.File(f"{out_path}/{name}_TEST.h5", "w") as f:
                 f.create_dataset("depth_map", data=pred_depth)
                 f.create_dataset("alpha_map", data=pred_alpha)
                 f.create_dataset("depth_map_gt", data=gt_depth)

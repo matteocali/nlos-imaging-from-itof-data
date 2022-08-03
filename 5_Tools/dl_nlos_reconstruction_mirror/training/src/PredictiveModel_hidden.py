@@ -3,6 +3,8 @@ import tensorflow.keras.layers as layers
 import os
 import sys
 import time
+from tensorflow.keras.utils import plot_model
+
 sys.path.append("../../utils/")
 sys.path.append("../")
 import Autoencoder_sameconv as Autoencoder_Interp
@@ -217,6 +219,11 @@ class PredictiveModel:
         # Define the input placeholder
         v_in = tf.keras.Input(shape=(None, None, self.fn2), batch_size=None, dtype='float32', name='v_in')
         ind_ = int((self.out_win - 1) / 2)  # Index keeping track of the middle value
+        if self.out_win == 1:  # If the kernel size is 1, then no padding is needed
+            paddings = tf.constant([[0, 0], [0, 0], [0, 0], [0, 0]])  # Padding for the convolutional layers
+        else:
+            paddings = tf.constant([[0, 0], [ind_, ind_], [ind_, ind_], [0, 0]])  # Padding for the convolutional layers
+        padded_input = tf.pad(v_in, paddings, 'REFLECT', name="padded_input")  # Pad the input
         v_in_1x1 = tf.strided_slice(v_in, begin=[0, ind_, ind_, 0], end=[-1, -ind_, -ind_, -1], end_mask=1001)
         if self.out_win == 1:
             padding_val = "valid"
@@ -253,10 +260,10 @@ class PredictiveModel:
                               activation='relu',
                               use_bias=True,
                               trainable=True,
-                              name="conv_0")(v_in)
+                              name="conv_0")(padded_input)
         # Convolutional layers leading to the prediction of the depth data
         for i in range(n_layers):
-            lname = f"conv_{str(i + 1)}"
+            l_name = f"conv_{str(i + 1)}"
             c_out = layers.Conv2D(filters=self.fil_pred,
                                   kernel_size=self.out_win,
                                   strides=1,
@@ -265,7 +272,7 @@ class PredictiveModel:
                                   activation='relu',
                                   use_bias=True,
                                   trainable=True,
-                                  name=lname)(c_out)
+                                  name=l_name)(c_out)
         final_out = layers.Conv2D(filters=2,
                                   kernel_size=self.out_win,
                                   strides=1,
@@ -274,14 +281,17 @@ class PredictiveModel:
                                   activation=None,
                                   use_bias=True,
                                   trainable=True,
-                                  name=f'cd{n_layers + 1}')(c_out)
+                                  name=f'conv_{n_layers + 1}')(c_out)
 
         # Separate the two output: depth_map and alpha_map
-
-        depth_map = tf.slice(final_out, begin=[0, 0, 0, 0], size=[-1, -1, -1, 1])
-        alpha_map = tf.slice(final_out, begin=[0, 0, 0, 1], size=[-1, -1, -1, 1])
+        depth_map = tf.slice(final_out, begin=[0, 0, 0, 0], size=[-1, -1, -1, 1], name='depth_map')
+        alpha_map = tf.slice(final_out, begin=[0, 0, 0, 1], size=[-1, -1, -1, 1], name='alpha_map')
+        if self.out_win != 1:  # If the kernel size is not 1, then remove the padding
+            depth_map = depth_map[:, ind_:-ind_, ind_:-ind_, :]
+            alpha_map = alpha_map[:, ind_:-ind_, ind_:-ind_, :]
 
         model_pred = tf.keras.Model(inputs=v_in, outputs=[depth_map, alpha_map], name=self.name)
+        plot_model(model_pred, "CNN_model.png", show_shapes=True)
         return model_pred
 
     def def_loss(self, data_dict):
