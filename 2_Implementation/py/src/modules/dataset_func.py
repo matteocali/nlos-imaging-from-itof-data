@@ -382,6 +382,7 @@ def generate_dataset_xml(tr_rot_list: list, n_classes: int, templates_folder: Pa
                     non_zero_pos = nonzero(mask)
 
                     elm_path = batch_path / file_name.replace(" ", "_")[:-3]
+                    print(elm_path)
                     if not elm_path.exists():  # Create the output folder if not already present
                         elm_path.mkdir(parents=True)
                     for row in unique(non_zero_pos[0]):
