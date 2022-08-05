@@ -388,7 +388,7 @@ def generate_dataset_xml(tr_rot_list: list, n_classes: int, templates_folder: Pa
                         for col in unique(non_zero_pos[1]):
                             if name != "Random":
                                 save_dts_xml(template_path=template_path,
-                                             file_path=elm_path / (file_name.replace(" ", "_")[:-3] + f"_r{row}_c{col}.xml"),
+                                             file_path=elm_path / (file_name[:-3] + f"_r{row}_c{col}.xml").replace(" ", "_"),
                                              # noinspection PyUnboundLocalVariable
                                              obj_file_name=obj_file_name,
                                              cam_pos=cam_pos,
@@ -398,7 +398,7 @@ def generate_dataset_xml(tr_rot_list: list, n_classes: int, templates_folder: Pa
                                              col=col)
                             else:
                                 save_dts_xml(template_path=template_path,
-                                             file_path=elm_path / (file_name.replace(" ", "_")[:-3] + f"_r{row}_c{col}.xml"),
+                                             file_path=elm_path / (file_name[:-3] + f"_r{row}_c{col}.xml").replace(" ", "_"),
                                              # noinspection PyUnboundLocalVariable
                                              obj_file_name_1=obj_file_name_1,
                                              # noinspection PyUnboundLocalVariable
