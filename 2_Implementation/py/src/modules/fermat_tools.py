@@ -1,14 +1,12 @@
 from os.path import dirname, exists
 from pathlib import Path
 from time import time, sleep
-
 from cv2 import fisheye, CV_16SC2, remap, INTER_LINEAR, undistort, initUndistortRectifyMap
 from numpy import ndarray, array, float64, float32, eye, divide, tile, arange, zeros_like, linalg, zeros, dot, asarray, \
     stack, reshape, flip, load, nanargmax, copy, where, delete, save, nonzero, cross, sqrt, concatenate, matmul, unique, \
     subtract, negative, roll, round as np_round, flip as np_flip
 from scipy import io
 from tqdm import tqdm
-
 from modules import transient_handler as tr
 from modules.transient_handler import extract_peak, active_beans_percentage, clear_tr_ratio, clear_tr_energy
 from modules.utilities import add_extension, spot_bitmap_gen, k_matrix_calculator, plt_3d_surfaces

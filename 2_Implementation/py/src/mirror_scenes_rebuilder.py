@@ -22,7 +22,7 @@ def arg_parser(argv):
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hi:o:d:f:t:", ["help", "input=", "output="])
+        opts, args = getopt.getopt(argv[1:], "hi:o:", ["help", "input=", "output="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
