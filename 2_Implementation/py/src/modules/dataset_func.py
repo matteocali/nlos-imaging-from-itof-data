@@ -381,15 +381,14 @@ def generate_dataset_xml(tr_rot_list: list, n_classes: int, templates_folder: Pa
                     mask = spot_bitmap_gen(img_size=list(img_shape), pattern=pattern)
                     non_zero_pos = nonzero(mask)
 
-                    elm_path = batch_path / file_name.replace(" ", "_")[:-3]
-                    print(elm_path)
+                    elm_path = batch_path / file_name.replace(" ", "_")[:-4]
                     if not elm_path.exists():  # Create the output folder if not already present
                         elm_path.mkdir(parents=True)
                     for row in unique(non_zero_pos[0]):
                         for col in unique(non_zero_pos[1]):
                             if name != "Random":
                                 save_dts_xml(template_path=template_path,
-                                             file_path=elm_path / (file_name[:-3] + f"_r{row}_c{col}.xml").replace(" ", "_"),
+                                             file_path=elm_path / (file_name[:-4] + f"_r{row}_c{col}.xml").replace(" ", "_"),
                                              # noinspection PyUnboundLocalVariable
                                              obj_file_name=obj_file_name,
                                              cam_pos=cam_pos,
@@ -399,7 +398,7 @@ def generate_dataset_xml(tr_rot_list: list, n_classes: int, templates_folder: Pa
                                              col=col)
                             else:
                                 save_dts_xml(template_path=template_path,
-                                             file_path=elm_path / (file_name[:-3] + f"_r{row}_c{col}.xml").replace(" ", "_"),
+                                             file_path=elm_path / (file_name[:-4] + f"_r{row}_c{col}.xml").replace(" ", "_"),
                                              # noinspection PyUnboundLocalVariable
                                              obj_file_name_1=obj_file_name_1,
                                              # noinspection PyUnboundLocalVariable
