@@ -127,6 +127,7 @@ if __name__ == '__main__':
                                                               # actually used after all the random permutations
 
     # BUILD THE XML FILE FOR EACH SCENE #
+    from modules.utilities import load_list
     print("\nGenerate all the .xml files:")
     dat.generate_dataset_xml(tr_rot_list=tr_rot_list,
                              n_classes=N_CLASSES,

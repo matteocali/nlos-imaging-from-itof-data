@@ -5,7 +5,7 @@ from tqdm import trange, tqdm
 from numpy import nonzero, unique, zeros as np_zeros, where, sum as np_sum, swapaxes, ndarray, copy as np_copy, array, float32, zeros, count_nonzero, empty, nanmax as np_nanmax, Inf, full
 import open3d as o3d
 from typing import Union
-from modules.utilities import create_folder, permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen, read_folders, save_h5, load_h5, read_files, k_matrix_calculator
+from modules.utilities import permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen, read_folders, save_h5, load_h5, read_files, k_matrix_calculator
 from modules.transient_handler import transient_loader, compute_distance_map
 from modules.fermat_tools import undistort_depthmap, compute_bin_center
 
@@ -295,7 +295,8 @@ def generate_dataset_xml(tr_rot_list: list, n_classes: int, templates_folder: Pa
     if not folder_path.exists():  # Create the output folder if not already present
         folder_path.mkdir(parents=True)
 
-    for b_index, batch in tqdm(enumerate(tr_rot_list), desc="Generate all the xml files batch by batch", leave=True):  # Cycle through each batch
+    for b_index, batch in tqdm(enumerate(tr_rot_list[4:]), desc="Generate all the xml files batch by batch", leave=True):  # Cycle through each batch
+        b_index += 4
         batch_path = Path(folder_path / f"batch0{b_index + 1}")
         if not batch_path.exists():  # Create the output folder if not already present
             batch_path.mkdir(parents=True)

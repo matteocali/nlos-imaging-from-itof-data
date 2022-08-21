@@ -336,7 +336,7 @@ class PredictiveModel:
         pred_msk_depth = pred_depth_map * gt_alpha
 
         # Compute the loss
-        loss_depth = tf.math.reduce_sum(tf.keras.losses.MAE(gt_depth, pred_msk_depth)) / tf.math.reduce_sum(gt_alpha)  # MAE loss on the masked depth
+        loss_depth = tf.math.reduce_sum(tf.math.abs(gt_depth - pred_msk_depth)) / tf.math.reduce_sum(gt_alpha)  # MAE loss on the masked depth
         #loss_alpha = tf.squeeze(tf.keras.losses.MAE(gt_alpha, pred_alpha_map), axis=-1)
         loss_alpha = tf.math.abs(gt_alpha - pred_alpha_map)
         loss_alpha = tf.where(gt_alpha != 1, loss_alpha, loss_alpha * self.loss_scale_factor)  # Increase the loss where the mask should be 1
