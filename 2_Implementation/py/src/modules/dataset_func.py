@@ -342,7 +342,7 @@ def generate_dataset_xml(tr_rot_list: list, n_classes: int, templates_folder: Pa
                                 f"cam_pos_({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_" \
                                 f"obj_pos_({round(obj_base_pos[0] + obj_tr_1[0], 2)}_{round(obj_base_pos[1] + obj_tr_1[1], 2)}_{round(obj_base_pos[2] + obj_tr_1[2], 2)})_({round(obj_base_pos[0] + obj_tr_2[0], 2)}_{round(obj_base_pos[1] + obj_tr_2[1], 2)}_{round(obj_base_pos[2] + obj_tr_2[2], 2)})_" \
                                 f"obj_rot_({obj_rot_1[0]}_{obj_rot_1[1]}_{obj_rot_1[2]})_({obj_rot_2[0]}_{obj_rot_2[1]}_{obj_rot_2[2]})_" \
-                                f"wall_roughness_{roughness_str}.xml"  # Set the output file name in a way that contains all the relevant info
+                                f"wall_{roughness_str}.xml"  # Set the output file name in a way that contains all the relevant info
 
                 # Convert camera position and rotation from blender to mitsuba coordinates system
                 cam_pos, cam_rot = blender2mitsuba_coord_mapping(cam_pos[0], cam_pos[1], cam_pos[2], cam_rot[0], cam_rot[1], cam_rot[2])
