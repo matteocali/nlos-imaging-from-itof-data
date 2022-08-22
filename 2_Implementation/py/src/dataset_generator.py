@@ -104,7 +104,7 @@ if __name__ == '__main__':
                     [i / 10 for i in range(15, 18)]]
 
     # BUILD THE FINAL SET OF ROTATIONS/TRANSLATIONS/POSITIONS #
-    '''
+
     print("Compute all the permutations of the camera and objects locations and rotations (batch by batch):")
     tr_rot_list, roughness_list = dat.generate_dataset_list(obj_tr_list=obj_tr_list,
                                                             obj_full_rot_list=obj_full_rot_list,
@@ -126,11 +126,8 @@ if __name__ == '__main__':
                               obj_base_pos=DEF_OBJ_POS,
                               wall_roughness=roughness_list)  # Export a .txt file containing the information of the dataset
                                                               # actually used after all the random permutations
-    '''
+
     # BUILD THE XML FILE FOR EACH SCENE #
-    from modules.utilities import load_list
-    tr_rot_list = load_list(perm_list_path / "tr_rot_list")
-    roughness_list = load_list(perm_list_path / "roughness_list")
     print("\nGenerate all the .xml files:")
     dat.generate_dataset_xml(tr_rot_list=tr_rot_list,
                              n_classes=N_CLASSES,

@@ -295,8 +295,7 @@ def generate_dataset_xml(tr_rot_list: list, n_classes: int, templates_folder: Pa
     if not folder_path.exists():  # Create the output folder if not already present
         folder_path.mkdir(parents=True)
 
-    for b_index, batch in tqdm(enumerate(tr_rot_list[4:]), desc="Generate all the xml files batch by batch", leave=True):  # Cycle through each batch
-        b_index += 4
+    for b_index, batch in tqdm(enumerate(tr_rot_list), desc="Generate all the xml files batch by batch", leave=True):  # Cycle through each batch
         batch_path = Path(folder_path / f"batch0{b_index + 1}")
         if not batch_path.exists():  # Create the output folder if not already present
             batch_path.mkdir(parents=True)
