@@ -72,7 +72,7 @@ if __name__ == '__main__':
             load_dataset(d_path=in_folder_dat, out_path=out_folder_dat)
 
         try:
-            fuse_dt_gt(gt_path=out_folder_gt, d_path=out_folder_dat, out_path=final_folder)
+            fuse_dt_gt(gt_path=out_folder_gt, d_path=out_folder_dat, out_path=final_folder, def_obj_pos=[0.9, 1.0, 1.65])
         except ValueError as e:
             print(f"Error: {e}")
             sys.exit(2)
