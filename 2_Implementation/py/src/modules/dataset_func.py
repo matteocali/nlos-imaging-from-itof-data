@@ -623,8 +623,15 @@ def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path, def_obj_pos: list) -
         gt = load_h5(gt_file)  # Load the gt file
 
         file_name = d_name_shortened.replace("-", "n").replace("(", "").replace(")", "").replace(".", "dot")  # Compose the name of the file
-
-        save_h5(file_path=out_path / file_name, data={"data": d["data"], "tr_itof": d["tr_itof"], "amp_itof": d["amp_itof"], "phase_itof": d["phase_itof"], "depth_map": swapaxes(gt["depth_map"], 0, 1), "alpha_map": swapaxes(gt["alpha_map"], 0, 1)}, fermat=False)  # Save the file
+        try:
+            save_h5(file_path=out_path / file_name,
+                    data={"data": d["data"], "tr_itof": d["tr_itof"], "amp_itof": d["amp_itof"],
+                          "phase_itof": d["phase_itof"], "depth_map": swapaxes(gt["depth_map"], 0, 1),
+                          "alpha_map": swapaxes(gt["alpha_map"], 0, 1)}, fermat=False)  # Save the file
+        except KeyError:
+            save_h5(file_path=out_path / file_name,
+                    data={"data": d["data"], "depth_map": swapaxes(gt["depth_map"], 0, 1),
+                          "alpha_map": swapaxes(gt["alpha_map"], 0, 1)}, fermat=False)  # Save the file
 
 
 def build_point_cloud(data: ndarray, out_path: Path, fov: int, img_size: tuple[int, int], alpha: ndarray = None, f_mesh: bool = True, visualize: bool = False) -> (o3d.geometry.PointCloud, o3d.geometry.TriangleMesh):
