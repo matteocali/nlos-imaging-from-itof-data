@@ -2,11 +2,15 @@ from pathlib import Path
 from random import seed as rnd_seed, sample as rnd_sample, shuffle as rnd_shuffle
 from lxml import etree as et
 from tqdm import trange, tqdm
-from numpy import nonzero, unique, zeros as np_zeros, where, sum as np_sum, swapaxes, moveaxis, ndarray, copy as np_copy, array, float32, zeros, count_nonzero, empty, matmul, nanmax as np_nanmax, Inf, full
+from numpy import nonzero, unique, zeros as np_zeros, where, sum as np_sum, swapaxes, moveaxis, ndarray, \
+    copy as np_copy, array, float32, zeros, count_nonzero, empty, matmul, nanmax as np_nanmax, Inf, full, convolve, \
+    flip as np_flip, sort as np_sort, nan, size as np_size, square as np_square, exp as np_exp, maximum
+from scipy.signal import find_peaks
 import open3d as o3d
 from typing import Union
-from modules.utilities import permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen, read_folders, save_h5, load_h5, read_files, k_matrix_calculator
-from modules.transient_handler import transient_loader, compute_distance_map, phi, amp_phi_compute
+from modules.utilities import permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen, \
+    read_folders, save_h5, load_h5, read_files, k_matrix_calculator
+from modules.transient_handler import transient_loader, compute_distance_map, phi, amp_phi_compute, rmv_first_reflection_img
 from modules.fermat_tools import undistort_depthmap, compute_bin_center
 
 
@@ -290,6 +294,8 @@ def generate_dataset_xml(tr_rot_list: list, n_classes: int, templates_folder: Pa
     :param obj_names: tuple that contains the name of every object that will be considered
     :param obj_base_pos: tuple that contains the base position of every object that will be considered
     :param roughness: tuple that contains the value of alpha (roughness) for the front wall material
+    :param img_shape: tuple that contains the shape of the image
+    :param pattern: tuple that contains the pattern of the emitter grid
     """
 
     if not folder_path.exists():  # Create the output folder if not already present
@@ -360,19 +366,18 @@ def generate_dataset_xml(tr_rot_list: list, n_classes: int, templates_folder: Pa
 
                 if img_shape is None and pattern is None:
                     if name != "Random":
+                        # noinspection PyUnboundLocalVariable
                         save_dts_xml(template_path=template_path,
                                      file_path=batch_path / file_name.replace(" ", "_"),
-                                     # noinspection PyUnboundLocalVariable
                                      obj_file_name=obj_file_name,
                                      cam_pos=cam_pos,
                                      cam_rot=cam_rot,
                                      roughness=roughness_str)
                     else:
+                        # noinspection PyUnboundLocalVariable
                         save_dts_xml(template_path=template_path,
                                      file_path=batch_path / file_name.replace(" ", "_"),
-                                     # noinspection PyUnboundLocalVariable
                                      obj_file_name_1=obj_file_name_1,
-                                     # noinspection PyUnboundLocalVariable
                                      obj_file_name_2=obj_file_name_2,
                                      cam_pos=cam_pos,
                                      cam_rot=cam_rot,
@@ -441,7 +446,96 @@ def build_mirror_gt(gt_path: Path, out_path: Path, fov: int, exp_time: float) ->
         save_h5(file_path=out_path / file_name, data={"depth_map": d_map, "alpha_map": a_map}, fermat=False)  # Save the data in the out_path folder as a h5 file
 
 
-def build_fermat_gt(gt_path: Path, out_path: Path, fov: int, exp_time: float) -> None:
+def gen_filter(exp_coeff: float, sigma: float) -> ndarray:
+    """
+    This function generates a Difference of Gaussian filter with exponential falloff
+    :param exp_coeff: exponential falloff
+    :param sigma: standard deviation of the gaussian kernel
+    :return: DoG filter with an exponential falloff
+    """
+
+    t = array([i/10 for i in range(-50, 50, 1)], dtype=float32).T
+    ind = where(t == 0)[0][0]
+    delta = zeros(t.shape)
+    delta[ind] = 1
+    deltas = zeros(t.shape)
+    deltas[ind + 1] = 1
+
+    pd = delta + deltas * (-np_exp(-exp_coeff * 0.001))
+    g = np_exp(-np_square(t) / sigma**2)
+    return convolve(pd, g, "same")
+
+
+def compute_discont(tr: ndarray, exp_time: float) -> ndarray:
+    """
+    This function detects path length discontinuities in each transient
+    This function computes the discontinuity map of the given transient
+    :param tr: n*m matrix, n: #transient, m: #temporal bins
+    :param exp_time: exposure time
+    :return: n*k matrix, storing discontinuities in transients, n: #transient, k: #discontinuities per transient
+    """
+
+    # PARAMETERS
+    num_of_discont = 1  # Number of discontinuity to search for
+    exp_coeff = [0.3]  # Model the exponential falloff of the SPAD signal
+    sigma_blur = [1]  # Difference of Gaussian, standard deviation
+    whether_sort_disconts = True  # Sort the discontinuity by their distance from the center of the image
+
+    # COMPUTE THE DISCONTINUITY
+    n_samples = tr.shape[0]
+    temp_bin_center = compute_bin_center(exp_time, tr.shape[0])
+    num_of_bin_center = 1
+    if num_of_bin_center == 1:
+        x = num_of_bin_center
+    else:
+        assert num_of_bin_center == n_samples
+
+    all_disconts = empty((n_samples, num_of_discont))
+
+    tr_vec = tr.reshape(tr.shape[0], tr.shape[1] * tr.shape[2])
+
+    for i in range(n_samples):
+        if num_of_bin_center > 1:
+            x = temp_bin_center[i]
+        y = tr_vec[i]
+        if np_nanmax(y) != 0:
+            y = y / np_nanmax(y)
+
+        # Convolve the transient with the DoG f, and keep the maximum f response
+        dgy = full(y.shape, -Inf)
+        for exp_val in exp_coeff:
+            for sigma in sigma_blur:
+                f = gen_filter(exp_val, sigma)
+                dgy_one = maximum(convolve(y, f, 'same'), convolve(y, np_flip(f), 'same'))
+                dgy = maximum(dgy, dgy_one)
+        if np_nanmax(dgy) != 0:
+            dgy = dgy / np_nanmax(dgy)
+
+        # Discontinuities correspond to larger f responses
+        # noinspection PyUnboundLocalVariable
+        locs_peak, peak_info = find_peaks(dgy, prominence=0)  # FIX THE LOCS INDEX SHOULD BE A VALUE OF X
+        p = peak_info["prominences"]
+        ind_p = np_sort(p)[::-1]  # Sort the prominence in descending order
+        if ind_p.shape[0] == 0:
+            ind_p = 0
+        locs_peak = locs_peak[ind_p]
+
+        disconts = full([1, num_of_discont], nan)
+        if np_size(locs_peak) >= num_of_discont:
+            disconts = locs_peak[1:num_of_discont]
+        else:
+            disconts[1:np_size(locs_peak)] = locs_peak
+
+        if whether_sort_disconts:
+            disconts = np_sort(disconts)
+
+        # store discont
+        all_disconts[i, :] = disconts
+
+    return all_disconts
+
+
+def build_fermat_gt(gt_path: Path, out_path: Path, exp_time: float) -> None:
     """
     Build the fermat ground truth.
     Load all the output from mitsuba, put them in standard form. From them extracts:
@@ -449,7 +543,6 @@ def build_fermat_gt(gt_path: Path, out_path: Path, fov: int, exp_time: float) ->
     Finally save the obtained data in the out_path folder as a h5 file
     :param gt_path: Path to the folder containing the output from mitsuba
     :param out_path: Path to the folder where the output will be saved
-    :param fov: Field of view of the camera
     :param exp_time: Exposure time of the camera
     """
 
@@ -463,56 +556,14 @@ def build_fermat_gt(gt_path: Path, out_path: Path, fov: int, exp_time: float) ->
         data_path = data_path + data_folder  # Put together (in the same list) all the file present in all the batches
 
     for file_path in tqdm(data_path, desc="Generating ground truth data"):  # For each file
-        num_of_discont = [1]  # Number of discontinuity to search for
-        exp_coeff = [0.3]  # Model the exponential falloff of the SPAD signal
-        sigma_blur = [1]  # Difference of Gaussian, standard deviation
-
         file_name = str(Path(file_path).name) + "_GT"  # Get the file name and add the suffix
-        tr = transient_loader(file_path)  # Load the data and put them in standard form
-        tr_samples = tr.size[0] * tr.size[1]
-        temp_bin_center = compute_bin_center(exp_time, tr.shape[2])
-        num_of_bin_center = len(temp_bin_center)
-        if num_of_bin_center == 1:
-            x = num_of_bin_center
-        else:
-            assert num_of_bin_center == tr_samples
+        tr = transient_loader(file_path)[..., 1]  # Load the data and put them in standard form (only green channel)
+        tr = rmv_first_reflection_img(tr, verbose=False)  # Remove the first reflection from the transient
 
-        all_disconts = empty((tr_samples, num_of_discont))
+        all_disconts = compute_discont(tr, exp_time)  # Compute the discontinuity
 
-        for i in range(tr_samples):
-            if num_of_bin_center > 1:
-                x = temp_bin_center[i, :]
-            y = tr[i, :]
-            y = y / np_nanmax(y)
-        '''
-            # Convolve the transient with the DoG filter, and keep the maximum filter response
-            dgy = full((y.size, y.size), -Inf)
-            for exp_val in exp_coeff:
-                for sigma in sigma_blur:
-                    filter = generateFilter(exp_val, sigma)
-                    dgy_one = np_nanmax(conv(y, filter, 'same'), conv(y, filter(end:-1: 1), 'same'))
-                    dgy = np_nanmax(dgy, dgy_one)
+        save_h5(file_path=out_path / file_name, data={"discont_loc": all_disconts}, fermat=True)  # Save the data
 
-            dgy = dgy / np_nanmax(dgy)
-
-            # Discontinuities correspond to larger filter responses
-            [~, locsPeak, ~, p] = findpeaks(dgy, x, 'MinPeakProminence', 0)
-            [~, indsP] = sort(p, 'descend');
-            locsPeak = locsPeak(indsP);
-
-            disconts = nan(1, num_of_discont)
-            if numel(locsPeak) >= num_of_discont:
-                disconts = locsPeak(1: num_of_discont);
-            else:
-                disconts(1: numel(locsPeak)) = locsPeak
-
-            if whetherSortDisconts:
-                disconts = sort(disconts, 'ascend')
-
-            # store discont
-            all_disconts[i, :] = disconts
-            save_h5(file_path=out_path / file_name, data={"depth_map": d_map, "alpha_map": a_map}, fermat=True)  # Save the data
-        '''
 
 
 def load_dataset(d_path: Path, out_path: Path, freqs: ndarray = None) -> None:
@@ -537,11 +588,10 @@ def load_dataset(d_path: Path, out_path: Path, freqs: ndarray = None) -> None:
         tr = transient_loader(file_path)[:, :, :, 1]  # Load the data and put them in standard form (only green channel is considered)
 
         if freqs is not None:  # If the frequencies are provided, compute the iToF amplitude and phase
-            phi_data = phi(freqs)
-            tr = swapaxes(moveaxis(tr, 0, -1), 0, 1)
-            tr_phi = matmul(tr, phi_data.T)
-            amp, phs = amp_phi_compute(tr_phi)  # Move the transient length from index 0 to the last one in the ndarray
-                 # Reshape the array in order to match the required layout [col, row, beans])
+            phi_data = phi(freqs)  # Compute the phi function, required to compute the iToF style output
+            tr = swapaxes(moveaxis(tr, 0, -1), 0, 1)  # Reshape the tr data to match the layout that will be used in the following
+            tr_phi = matmul(tr, phi_data.T)  # Compute the iToF transient data
+            amp, phs = amp_phi_compute(tr_phi)  # Compute the amplitude and phase of the iToF transient data
 
             save_h5(file_path=out_path / file_name, data={"data": tr, "tr_itof": tr_phi, "amp_itof": amp, "phase_itof": phs}, fermat=False)  # Save the data in the out_path folder as a h5 file
         else:

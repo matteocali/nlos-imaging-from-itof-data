@@ -362,20 +362,22 @@ def rmv_first_reflection_transient(transient: ndarray, file_path: Path = None, s
     return glb_images
 
 
-def rmv_first_reflection_img(images, file_path=None, store=False):
+def rmv_first_reflection_img(images, file_path=None, store=False, verbose=True):
     """
     Function that given the transient images remove the first reflection leaving only the global component
     :param images: input transient images
     :param file_path: path of the np dataset
     :param store: if you want to save the np dataset (if already saved set it to false in order to load it)
+    :param verbose: if you want to print the progress
     :return: Transient images of only the global component as a np array
     """
 
     if file_path and not store:  # If already exists a npy file containing all the transient images load it instead of processing everything again
         return load(str(file_path))
 
-    print("Extracting the first peak (channel by channel):")
-    start = time()
+    if verbose:
+        print("Extracting the first peak (channel by channel):")
+        start = time()
 
     mono = len(images.shape) == 3  # Check id=f the images are Mono or RGBA
 
@@ -385,12 +387,13 @@ def rmv_first_reflection_img(images, file_path=None, store=False):
         peaks = nanargmax(images[:, :, :], axis=0)  # Find the index of the maximum value in the third dimension
 
     # Extract the position of the first zero after the first peak and remove the first reflection
-    print("Remove the first peak (channel by channel):")
-    sleep(0.1)
+    if verbose:
+        print("Remove the first peak (channel by channel):")
+        sleep(0.1)
 
     glb_images = copy(images)
     if not mono:
-        for channel_i in trange(images.shape[3] - 1):
+        for channel_i in trange(images.shape[3] - 1, leave=False):
             for pixel_r in range(images.shape[1]):
                 for pixel_c in range(images.shape[2]):
                     zeros_pos = where(images[:, pixel_r, pixel_c, channel_i] == 0)[0]
@@ -400,7 +403,7 @@ def rmv_first_reflection_img(images, file_path=None, store=False):
                     else:
                         glb_images[:int(valid_zero_indexes[0]), pixel_r, pixel_c, channel_i] = 0
     else:
-        for pixel_r in trange(images.shape[1]):
+        for pixel_r in trange(images.shape[1], leave=False):
             for pixel_c in range(images.shape[2]):
                 zeros_pos = where(images[:, pixel_r, pixel_c] == 0)[0]
                 valid_zero_indexes = zeros_pos[where(zeros_pos > peaks[pixel_r, pixel_c])]
@@ -409,11 +412,15 @@ def rmv_first_reflection_img(images, file_path=None, store=False):
                 else:
                     glb_images[:int(valid_zero_indexes[0]), pixel_r, pixel_c] = 0
 
-    end = time()
-    print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
+    if verbose:
+        end = time()
+        # noinspection PyUnboundLocalVariable
+        print("Process concluded in %.2f sec\n" % (round((end - start), 2)))
 
     if file_path and store:
         save(str(file_path), glb_images)  # Save the loaded images as a numpy array
+        return glb_images
+    else:
         return glb_images
 
 
