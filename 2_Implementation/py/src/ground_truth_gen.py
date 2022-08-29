@@ -3,6 +3,7 @@ import os
 import sys
 from pathlib import Path
 from time import time
+from numpy import array, float32
 
 from modules.dataset_func import build_mirror_gt, load_dataset, fuse_dt_gt
 
@@ -69,7 +70,7 @@ if __name__ == '__main__':
             build_mirror_gt(gt_path=in_folder_gt, out_path=out_folder_gt, fov=60, exp_time=0.01)
 
         if not out_folder_dat.exists():
-            load_dataset(d_path=in_folder_dat, out_path=out_folder_dat)
+            load_dataset(d_path=in_folder_dat, out_path=out_folder_dat, freqs=array((20e06, 50e06, 60e06), dtype=float32))
 
         try:
             fuse_dt_gt(gt_path=out_folder_gt, d_path=out_folder_dat, out_path=final_folder, def_obj_pos=[0.9, 1.0, 1.65])

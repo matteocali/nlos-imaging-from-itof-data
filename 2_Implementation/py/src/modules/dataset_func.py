@@ -2,11 +2,11 @@ from pathlib import Path
 from random import seed as rnd_seed, sample as rnd_sample, shuffle as rnd_shuffle
 from lxml import etree as et
 from tqdm import trange, tqdm
-from numpy import nonzero, unique, zeros as np_zeros, where, sum as np_sum, swapaxes, ndarray, copy as np_copy, array, float32, zeros, count_nonzero, empty, nanmax as np_nanmax, Inf, full
+from numpy import nonzero, unique, zeros as np_zeros, where, sum as np_sum, swapaxes, moveaxis, ndarray, copy as np_copy, array, float32, zeros, count_nonzero, empty, matmul, nanmax as np_nanmax, Inf, full
 import open3d as o3d
 from typing import Union
 from modules.utilities import permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen, read_folders, save_h5, load_h5, read_files, k_matrix_calculator
-from modules.transient_handler import transient_loader, compute_distance_map
+from modules.transient_handler import transient_loader, compute_distance_map, phi, amp_phi_compute
 from modules.fermat_tools import undistort_depthmap, compute_bin_center
 
 
@@ -515,12 +515,14 @@ def build_fermat_gt(gt_path: Path, out_path: Path, fov: int, exp_time: float) ->
         '''
 
 
-def load_dataset(d_path: Path, out_path: Path) -> None:
+def load_dataset(d_path: Path, out_path: Path, freqs: ndarray = None) -> None:
     """
     Load the dataset and save it in the out_path folder
     :param d_path: folder containing the dataset (raw output of mitsuba)
     :param out_path: folder where the dataset will be saved after processing
+    :param freqs: frequencies used by the iToF sensor
     """
+
     if not out_path.exists():  # Create out_path if it doesn't exist
         out_path.mkdir(parents=True)
 
@@ -533,7 +535,17 @@ def load_dataset(d_path: Path, out_path: Path) -> None:
     for file_path in tqdm(data_path, desc="Loading dataset"):  # For each file
         file_name = str(Path(file_path).name)  # Get the file name
         tr = transient_loader(file_path)[:, :, :, 1]  # Load the data and put them in standard form (only green channel is considered)
-        save_h5(file_path=out_path / file_name, data={"data": tr}, fermat=True)  # Save the data in the out_path folder as a h5 file
+
+        if freqs is not None:  # If the frequencies are provided, compute the iToF amplitude and phase
+            phi_data = phi(freqs)
+            tr = swapaxes(moveaxis(tr, 0, -1), 0, 1)
+            tr_phi = matmul(tr, phi_data.T)
+            amp, phs = amp_phi_compute(tr_phi)  # Move the transient length from index 0 to the last one in the ndarray
+                 # Reshape the array in order to match the required layout [col, row, beans])
+
+            save_h5(file_path=out_path / file_name, data={"data": tr, "tr_itof": tr_phi, "amp_itof": amp, "phase_itof": phs}, fermat=False)  # Save the data in the out_path folder as a h5 file
+        else:
+            save_h5(file_path=out_path / file_name, data={"data": tr}, fermat=True)  # Save the data in the out_path folder as a h5 file
 
 
 def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path, def_obj_pos: list) -> None:
@@ -612,7 +624,7 @@ def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path, def_obj_pos: list) -
 
         file_name = d_name_shortened.replace("-", "n").replace("(", "").replace(")", "").replace(".", "dot")  # Compose the name of the file
 
-        save_h5(file_path=out_path / file_name, data={"data": d["data"], "depth_map": swapaxes(gt["depth_map"], 0, 1), "alpha_map": swapaxes(gt["alpha_map"], 0, 1)}, fermat=False)  # Save the file
+        save_h5(file_path=out_path / file_name, data={"data": d["data"], "tr_itof": d["tr_itof"], "amp_itof": d["amp_itof"], "phase_itof": d["phase_itof"], "depth_map": swapaxes(gt["depth_map"], 0, 1), "alpha_map": swapaxes(gt["alpha_map"], 0, 1)}, fermat=False)  # Save the file
 
 
 def build_point_cloud(data: ndarray, out_path: Path, fov: int, img_size: tuple[int, int], alpha: ndarray = None, f_mesh: bool = True, visualize: bool = False) -> (o3d.geometry.PointCloud, o3d.geometry.TriangleMesh):

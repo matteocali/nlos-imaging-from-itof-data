@@ -576,6 +576,14 @@ def phi(freqs: ndarray, exp_time: float = 0.01, dim_t: int = 2000) -> ndarray:
     return concatenate([cos(phi_arg), sin(phi_arg)], axis=0)
 
 
+def amp_phi_compute(v_in):
+    n_fr = int(v_in.shape[-1] / 2)
+    # Compute useful additional fields
+    amp_in = np.sqrt(v_in[:, :, :n_fr] ** 2 + v_in[:, :, n_fr:] ** 2)
+    phi_in = np.arctan2(v_in[:, :, :n_fr], v_in[:, :, n_fr:])
+    return amp_in, phi_in
+
+
 def compute_focal(fov: float, row_pixel: int) -> float:
     """
     Function to compute the focal distance
