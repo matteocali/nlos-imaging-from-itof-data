@@ -517,6 +517,7 @@ def compute_discont(tr: ndarray, exp_time: float) -> ndarray:
         locs_peak, peak_info = find_peaks(dgy, prominence=0)  # FIX THE LOCS INDEX SHOULD BE A VALUE OF X
         p = peak_info["prominences"]
         ind_p = np_sort(p)[::-1]  # Sort the prominence in descending order
+        ind_p = ind_p.astype(int)
         if ind_p.shape[0] == 0:
             ind_p = 0
         if locs_peak.shape[0] == 0:
