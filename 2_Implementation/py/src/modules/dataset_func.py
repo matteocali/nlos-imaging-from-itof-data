@@ -10,8 +10,9 @@ import open3d as o3d
 from typing import Union
 from modules.utilities import permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen, \
     read_folders, save_h5, load_h5, read_files, k_matrix_calculator
-from modules.transient_handler import transient_loader, compute_distance_map, phi, amp_phi_compute, rmv_first_reflection_img
-from modules.fermat_tools import undistort_depthmap, compute_bin_center
+from modules.transient_handler import transient_loader, grid_transient_loader, compute_distance_map, phi, \
+    amp_phi_compute, rmv_first_reflection_img
+from modules.fermat_tools import undistort_depthmap, compute_bin_center, prepare_fermat_data
 
 
 def generate_dataset_file(tx_rt_list: list, folder_path: Path, obj_names: tuple, obj_base_pos: tuple, wall_roughness: list) -> None:
@@ -492,7 +493,7 @@ def compute_discont(tr: ndarray, exp_time: float) -> ndarray:
 
     all_disconts = empty((n_samples, num_of_discont))
 
-    tr_vec = tr.reshape(tr.shape[0], tr.shape[1] * tr.shape[2])
+    tr_vec = tr.reshape(tr.shape[0], tr.shape[1])
 
     for i in range(n_samples):
         if num_of_bin_center > 1:
@@ -518,13 +519,16 @@ def compute_discont(tr: ndarray, exp_time: float) -> ndarray:
         ind_p = np_sort(p)[::-1]  # Sort the prominence in descending order
         if ind_p.shape[0] == 0:
             ind_p = 0
-        locs_peak = locs_peak[ind_p]
+        if locs_peak.shape[0] == 0:
+            locs_peak = [0]
+        else:
+            locs_peak = locs_peak[ind_p]
 
         disconts = full([1, num_of_discont], nan)
         if np_size(locs_peak) >= num_of_discont:
-            disconts = locs_peak[1:num_of_discont]
+            disconts = locs_peak[:num_of_discont]
         else:
-            disconts[1:np_size(locs_peak)] = locs_peak
+            disconts[:np_size(locs_peak)] = locs_peak
 
         if whether_sort_disconts:
             disconts = np_sort(disconts)
@@ -535,7 +539,7 @@ def compute_discont(tr: ndarray, exp_time: float) -> ndarray:
     return all_disconts
 
 
-def build_fermat_gt(gt_path: Path, out_path: Path, exp_time: float) -> None:
+def build_fermat_gt(gt_path: Path, out_path: Path, exp_time: float, img_size: list, grid_size: list, fov: float) -> None:
     """
     Build the fermat ground truth.
     Load all the output from mitsuba, put them in standard form. From them extracts:
@@ -544,6 +548,9 @@ def build_fermat_gt(gt_path: Path, out_path: Path, exp_time: float) -> None:
     :param gt_path: Path to the folder containing the output from mitsuba
     :param out_path: Path to the folder where the output will be saved
     :param exp_time: Exposure time of the camera
+    :param img_size: Image size [column, row]
+    :param grid_size: Pattern shape of the emitter [column, row]
+    :param fov: Field of view of the camera (horizontal)
     """
 
     if not out_path.exists():  # Create out_path if it doesn't exist
@@ -557,13 +564,17 @@ def build_fermat_gt(gt_path: Path, out_path: Path, exp_time: float) -> None:
 
     for file_path in tqdm(data_path, desc="Generating ground truth data"):  # For each file
         file_name = str(Path(file_path).name) + "_GT"  # Get the file name and add the suffix
-        tr = transient_loader(file_path)[..., 1]  # Load the data and put them in standard form (only green channel)
-        tr = rmv_first_reflection_img(tr, verbose=False)  # Remove the first reflection from the transient
+        tr = grid_transient_loader(transient_path=file_path)  # Load the data and put them in standard form
+        tr, _ = prepare_fermat_data(data=tr,
+                                    grid_size=grid_size,
+                                    img_size=img_size,
+                                    fov=fov,
+                                    data_clean=True,
+                                    exp_time=exp_time)   # Clean the data and put them in standard form for Fermat
 
         all_disconts = compute_discont(tr, exp_time)  # Compute the discontinuity
 
-        save_h5(file_path=out_path / file_name, data={"discont_loc": all_disconts}, fermat=True)  # Save the data
-
+        save_h5(file_path=out_path / file_name, data={"tr": tr, "discont_loc": all_disconts}, fermat=True)  # Save the data
 
 
 def load_dataset(d_path: Path, out_path: Path, freqs: ndarray = None) -> None:
@@ -598,7 +609,7 @@ def load_dataset(d_path: Path, out_path: Path, freqs: ndarray = None) -> None:
             save_h5(file_path=out_path / file_name, data={"data": tr}, fermat=True)  # Save the data in the out_path folder as a h5 file
 
 
-def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path, def_obj_pos: list) -> None:
+def fuse_dt_gt_mirror(d_path: Path, gt_path: Path, out_path: Path, def_obj_pos: list) -> None:
     """
     Fuse the dataset and the ground truth together in the same h5 file
     :param d_path: folder containing the dataset (already processed and in h5 form)
@@ -672,7 +683,7 @@ def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path, def_obj_pos: list) -
         d = load_h5(d_file)  # Load the dataset file
         gt = load_h5(gt_file)  # Load the gt file
 
-        file_name = d_name_shortened.replace("-", "n").replace("(", "").replace(")", "").replace(".", "dot")  # Compose the name of the file
+        file_name = d_name[:d_name.find(".h5")].replace("-", "n").replace("(", "").replace(")", "").replace(".", "dot")  # Compose the name of the file
         try:
             save_h5(file_path=out_path / file_name,
                     data={"data": d["data"], "tr_itof": d["tr_itof"], "amp_itof": d["amp_itof"],
@@ -683,6 +694,47 @@ def fuse_dt_gt(d_path: Path, gt_path: Path, out_path: Path, def_obj_pos: list) -
                     data={"data": d["data"], "depth_map": swapaxes(gt["depth_map"], 0, 1),
                           "alpha_map": swapaxes(gt["alpha_map"], 0, 1)}, fermat=False)  # Save the file
 
+
+def fuse_dt_gt_fermat(d_path: Path, gt_path: Path, out_path: Path, img_size: list, grid_size: list) -> None:
+    """
+    Fuse the dataset and the ground truth together in the same h5 file
+    :param d_path: folder containing the dataset (already processed and in h5 form)
+    :param gt_path: folder containing the ground truth (already processed and in h5 form)
+    :param out_path: folder where the fused dataset will be saved
+    :param img_size: Image size [column, row]
+    :param grid_size: Pattern shape of the emitter [column, row]
+    """
+
+    if not out_path.exists():  # Create out_path if it doesn't exist
+        out_path.mkdir(parents=True)
+
+    d_files_name = [Path(i).name for i in read_files(d_path, "h5")]  # Get the list of files in d_path (only name)
+    gt_files_name = [Path(i).name for i in read_files(gt_path, "h5")]  # Get the list of files in gt_path (only name)
+
+    if len(d_files_name) != len(gt_files_name):
+        raise ValueError(
+            "The number of files in the dataset and the ground truth folder are different")  # Raise an error if the number of files is different
+
+    for d_name in tqdm(d_files_name, desc="Fusing dataset and ground truth"):  # For each file in d_path
+        d_name_shortened = d_name[:d_name.find(".h5")]  # Remove the wall information from the name and also the xml extension
+
+        if d_name not in gt_files_name:  # If the gt file doesn't exist
+            raise ValueError("The ground truth file is missing")  # If the gt file doesn't exist, raise an error
+
+        d_file = d_path / d_name  # Compose the path of the dataset file
+        gt_file = gt_path / d_name  # Compose the path of the gt file
+        d = load_h5(d_file)  # Load the dataset file
+        gt = load_h5(gt_file)  # Load the gt file
+
+        tr = d["data"]  # Get the measured data
+        mask = spot_bitmap_gen(img_size=img_size,
+                               pattern=tuple(grid_size))  # Define the mask that identify the location of the illuminated spots
+        mskd_tr = tr[mask]  # Get the measured data corresponding to the illuminated spots
+        reshaped_tr = mskd_tr.flatten(order="F")  # Flatten the array column by column
+
+        file_name = d_name_shortened.replace("-", "n").replace("(", "").replace(")", "").replace(".", "dot")  # Compose the name of the file
+        save_h5(file_path=out_path / file_name,
+                data={"tr": reshaped_tr, "discont_gt": gt["discont_loc"]}, fermat=False)  # Save the file
 
 def build_point_cloud(data: ndarray, out_path: Path, fov: int, img_size: tuple[int, int], alpha: ndarray = None, f_mesh: bool = True, visualize: bool = False) -> (o3d.geometry.PointCloud, o3d.geometry.TriangleMesh):
     """

@@ -123,9 +123,6 @@ if __name__ == '__main__':
                                              np_path=arg_out / "np_transient.npy",
                                              store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
 
-        for i in range(transient.shape[0]):
-            transient[i, :, :] = tr.clean_transient_tail(transient=transient[i, :, :], n_samples=20)
-
         modules.fermat_tools.np2mat(data=transient,
                                     file_path=arg_out / "cube",
                                     data_grid_size=arg_spot_size,

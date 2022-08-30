@@ -5,7 +5,7 @@ from pathlib import Path
 from time import time
 from numpy import array, float32
 
-from modules.dataset_func import build_mirror_gt, build_fermat_gt, load_dataset, fuse_dt_gt
+from modules.dataset_func import build_mirror_gt, build_fermat_gt, load_dataset, fuse_dt_gt_mirror, fuse_dt_gt_fermat
 
 
 def arg_parser(argv):
@@ -69,7 +69,12 @@ if __name__ == '__main__':
             build_mirror_gt(gt_path=in_folder_gt, out_path=out_folder_gt, fov=60, exp_time=0.01)
     elif type_gt == "fermat":
         if not out_folder_gt.exists():
-            build_fermat_gt(gt_path=in_folder_gt, out_path=out_folder_gt, exp_time=0.01)
+            build_fermat_gt(gt_path=in_folder_gt,
+                            out_path=out_folder_gt,
+                            exp_time=0.01,
+                            fov=60,
+                            img_size=[320, 240],
+                            grid_size=[32, 24])
     else:
         print("Wrong type provided\nPossibilities are: mirror, fermat")
         sys.exit(2)
@@ -78,7 +83,12 @@ if __name__ == '__main__':
         load_dataset(d_path=in_folder_dat, out_path=out_folder_dat, freqs=array((20e06, 50e06, 60e06), dtype=float32))
 
     try:
-        fuse_dt_gt(gt_path=out_folder_gt, d_path=out_folder_dat, out_path=final_folder, def_obj_pos=[0.9, 1.0, 1.65])
+        if type_gt == "mirror":
+            fuse_dt_gt_mirror(d_path=out_folder_dat, gt_path=out_folder_gt, out_path=final_folder,
+                              def_obj_pos=[0.9, 1.0, 1.65])
+        elif type_gt == "fermat":
+            fuse_dt_gt_fermat(d_path=out_folder_dat, gt_path=out_folder_gt, out_path=final_folder,
+                              img_size=[320, 240], grid_size=[32, 24])
     except ValueError as e:
         print(f"Error: {e}")
         sys.exit(2)

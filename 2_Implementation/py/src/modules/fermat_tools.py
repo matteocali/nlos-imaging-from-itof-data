@@ -12,39 +12,36 @@ from modules.transient_handler import extract_peak, active_beans_percentage, cle
 from modules.utilities import add_extension, spot_bitmap_gen, k_matrix_calculator, plt_3d_surfaces
 
 
-def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list, fov: float, store_glb: bool = False, data_clean: bool = False, cl_method: str = None, cl_threshold: int = None, show_plt: bool = False, exp_time: float = 0.01, laser_pos: list = None) -> None:
+def prepare_fermat_data(data: ndarray, grid_size: list, img_size: list, fov: float, data_clean: bool,
+                        cl_method: str = None, cl_threshold: int = None, exp_time: float = 0.01, show_plt: bool = False,
+                        file_path: Path = None) -> (ndarray, ndarray):
     """
-    Function to save a .mat file in the format required from the Fermat flow Matlab script
+    Function to prepare the transient data for the Fermat Flow algorithm
     :param data: ndarray containing the transient measurements (n*m matrix, n transient measurements with m temporal bins)
-    :param file_path: file path and name where to save the .mat file
-    :param data_grid_size: [n1, n2], with n1 * n2 = n, grid size of sensing points on the LOS wall (n = number of the transient measurements)
-    :param img_shape: size of the image [<n_row>, <n_col>]
+    :param grid_size: [n1, n2], with n1 * n2 = n, grid size of sensing points on the LOS wall (n = number of the transient measurements)
+    :param img_size: size of the image [<n_col>, <n_row>]
     :param fov: horizontal field of view of the camera
-    :param store_glb: boolean to indicate if the global transient should be stored as a .npy or not
     :param data_clean: boolean that indicate if the data should be cleaned or not
     :param cl_method: method used to clean the data (None = no cleaning, "balanced" = balanced histogram thresholding, "otsu" = otsu histogram thresholding)
     :param cl_threshold: threshold used to clean the data (in the energy domain)
-    :param show_plt: boolean that indicate if the data should be plotted or not
     :param exp_time: exposure time used, required to compute "temporalBinCenters"
-    :param laser_pos: position of the laser, if none it is confocal with the camera (1*3 vector)
+    :param show_plt: boolean that indicate if the data should be plotted or not
+    :param file_path: file path and name where to save the .mat file
+    :return: data = processed transient data, det_locs = locations of the sensing points
     """
 
-    np_file_path = dirname(file_path) + "\\glb_np_transient.npy"
-    file_path = str(add_extension(str(file_path), ".mat"))  # If not already present add the .h5 extension to the file path
+    mask = spot_bitmap_gen(img_size=img_size,
+                           pattern=tuple(grid_size))  # Define the mask that identify the location of the illuminated spots
 
-    # Define all the required vectors for the .mat file
-    data_grid_size = array(data_grid_size, dtype=float64)  # Convert the data_grid_size from a list to a ndarray
-
-    mask = spot_bitmap_gen(img_size=img_shape,
-                           pattern=tuple(data_grid_size))  # Define the mask that identify the location of the illuminated spots
-
-    k = k_matrix_calculator(h_fov=fov, img_shape=img_shape)  # Define the intrinsic camera matrix needed to map the dots on the LOS wall
-    transient_image = build_matrix_from_dot_projection_data(transient=data, mask=mask)  # Put all the transient data in the right spot following the mask
+    k = k_matrix_calculator(h_fov=fov,
+                            img_shape=img_size)  # Define the intrinsic camera matrix needed to map the dots on the LOS wall
+    transient_image = build_matrix_from_dot_projection_data(transient=data,
+                                                            mask=mask)  # Put all the transient data in the right spot following the mask
     depthmap = compute_los_points_coordinates(images=transient_image,
                                               mask=mask,
                                               k_matrix=k,
                                               channel=1,
-                                              exp_time=0.01)  # Compute the mapping of the coordinate of the illuminated spots to the LOS wall (ignor the z coordinate)
+                                              exp_time=exp_time)  # Compute the mapping of the coordinate of the illuminated spots to the LOS wall (ignor the z coordinate)
     rt_depthmap = roto_transl(coordinates_matrix=copy(depthmap))  # Roto-translate the coordinates point in order to move from the camera coordinates system to the world one and also move the plane to be on the plane z = 0
 
     flip_x_rt_depthmap = copy(rt_depthmap)
@@ -60,11 +57,6 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
                         mask=mask,
                         legends=["Original plane", "Roto-translated plane", "Flipped roto-translated plane"])
 
-    if laser_pos is None:   # If laser_pos is not provided it means that the laser is confocal with the camera
-        src_loc = array((), dtype=float32)
-    else:
-        src_loc = array(laser_pos, dtype=float32)
-
     # Data cleaning
     if data_clean:
         for i in range(data.shape[0]):
@@ -74,7 +66,8 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
         if cl_threshold is not None:
             data = clear_tr_energy(data, threshold=cl_threshold)  # Remove noise based on the global energy
 
-    if store_glb:
+    if file_path is not None:
+        np_file_path = dirname(file_path) + "\\glb_np_transient.npy"
         data = rmv_first_reflection_fermat_transient(transient=data,
                                                      file_path=np_file_path,
                                                      store=(not exists(np_file_path)))  # Remove the direct component from all the transient data
@@ -82,9 +75,63 @@ def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list
         data = rmv_first_reflection_fermat_transient(transient=data)  # Remove the direct component from all the transient data
 
     data = reshape_fermat_transient(transient=data[:, :, 1],
-                                    grid_shape=(int(data_grid_size[1]), int(data_grid_size[0])),
+                                    grid_shape=(int(grid_size[1]), int(grid_size[0])),
                                     flip_x=False,
                                     flip_y=False)  # Reshape the transient data in order to be in the same format used in the Fermat Flow algorithm
+
+    return data, det_locs
+
+
+def np2mat(data: ndarray, file_path: Path, data_grid_size: list, img_shape: list, fov: float, store_glb: bool = False,
+           data_clean: bool = False, cl_method: str = None, cl_threshold: int = None, show_plt: bool = False,
+           exp_time: float = 0.01, laser_pos: list = None) -> None:
+    """
+    Function to save a .mat file in the format required from the Fermat flow Matlab script
+    :param data: ndarray containing the transient measurements (n*m matrix, n transient measurements with m temporal bins)
+    :param file_path: file path and name where to save the .mat file
+    :param data_grid_size: [n1, n2], with n1 * n2 = n, grid size of sensing points on the LOS wall (n = number of the transient measurements)
+    :param img_shape: size of the image [<n_col>, <n_row>]
+    :param fov: horizontal field of view of the camera
+    :param store_glb: boolean to indicate if the global transient should be stored as a .npy or not
+    :param data_clean: boolean that indicate if the data should be cleaned or not
+    :param cl_method: method used to clean the data (None = no cleaning, "balanced" = balanced histogram thresholding, "otsu" = otsu histogram thresholding)
+    :param cl_threshold: threshold used to clean the data (in the energy domain)
+    :param show_plt: boolean that indicate if the data should be plotted or not
+    :param exp_time: exposure time used, required to compute "temporalBinCenters"
+    :param laser_pos: position of the laser, if none it is confocal with the camera (1*3 vector)
+    """
+
+    # Define all the required vectors for the .mat file
+    if store_glb:
+        data, det_locs = prepare_fermat_data(data=data,
+                                             grid_size=data_grid_size,
+                                             img_size=img_shape,
+                                             fov=fov,
+                                             data_clean=data_clean,
+                                             cl_method=cl_method,
+                                             cl_threshold=cl_threshold,
+                                             exp_time=exp_time,
+                                             show_plt=show_plt,
+                                             file_path=file_path)  # Prepare the data for the Fermat Flow algorithm
+    else:
+        data, det_locs = prepare_fermat_data(data=data,
+                                             grid_size=data_grid_size,
+                                             img_size=img_shape,
+                                             fov=fov,
+                                             data_clean=data_clean,
+                                             cl_method=cl_method,
+                                             cl_threshold=cl_threshold,
+                                             exp_time=exp_time,
+                                             show_plt=show_plt)  # Prepare the data for the Fermat Flow algorithm
+
+    file_path = str(add_extension(str(file_path), ".mat"))  # If not already present add the .h5 extension to the file path
+
+    data_grid_size = array(data_grid_size, dtype=float64)  # Convert the data_grid_size from a list to a ndarray
+
+    if laser_pos is None:   # If laser_pos is not provided it means that the laser is confocal with the camera
+        src_loc = array((), dtype=float32)
+    else:
+        src_loc = array(laser_pos, dtype=float32)
 
     temp_bin_centers = compute_bin_center(exp_time, data.shape[1])  # To build the temp_bin_centers it is required to build a vector where each cell contains the center of the correspondent temporal bin, so the first cell contains half the exposure time
 
