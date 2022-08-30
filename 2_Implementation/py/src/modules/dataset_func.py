@@ -737,6 +737,7 @@ def fuse_dt_gt_fermat(d_path: Path, gt_path: Path, out_path: Path, img_size: lis
         save_h5(file_path=out_path / file_name,
                 data={"tr": reshaped_tr, "discont_gt": gt["discont_loc"]}, fermat=False)  # Save the file
 
+
 def build_point_cloud(data: ndarray, out_path: Path, fov: int, img_size: tuple[int, int], alpha: ndarray = None, f_mesh: bool = True, visualize: bool = False) -> (o3d.geometry.PointCloud, o3d.geometry.TriangleMesh):
     """
     Build a point cloud (and mesh) from a depth map
