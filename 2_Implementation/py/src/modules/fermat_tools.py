@@ -357,7 +357,7 @@ def rmv_first_reflection_fermat_transient(transient: ndarray, file_path: Path = 
                     shifted_transient = delete(glb_images[pixel, :, channel_i], [where(glb_images[pixel, :, channel_i] == -1)])
                     glb_images_shifted[pixel, :shifted_transient.shape[0], channel_i] = shifted_transient
     else:
-        for pixel in tqdm(range(transient.shape[1])):
+        for pixel in tqdm(range(transient.shape[0])):
             zeros_pos = where(transient[pixel, :] == 0)[0]
             valid_zero_indexes = zeros_pos[where(zeros_pos > peaks[pixel])]
             if valid_zero_indexes.size == 0:

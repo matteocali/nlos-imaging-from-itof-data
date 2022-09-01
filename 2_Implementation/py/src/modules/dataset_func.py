@@ -1,17 +1,19 @@
 from pathlib import Path
 from random import seed as rnd_seed, sample as rnd_sample, shuffle as rnd_shuffle
+
 from lxml import etree as et
 from tqdm import trange, tqdm
 from numpy import nonzero, unique, zeros as np_zeros, where, sum as np_sum, swapaxes, moveaxis, ndarray, \
     copy as np_copy, array, float32, zeros, count_nonzero, empty, matmul, nanmax as np_nanmax, Inf, full, convolve, \
-    flip as np_flip, sort as np_sort, nan, size as np_size, square as np_square, exp as np_exp, maximum
+    flip as np_flip, sort as np_sort, argsort as np_argsort, nan, size as np_size, square as np_square, exp as np_exp, \
+    maximum, all as np_all
 from scipy.signal import find_peaks
 import open3d as o3d
 from typing import Union
 from modules.utilities import permute_list, load_list, save_list, blender2mitsuba_coord_mapping, spot_bitmap_gen, \
     read_folders, save_h5, load_h5, read_files, k_matrix_calculator
 from modules.transient_handler import transient_loader, grid_transient_loader, compute_distance_map, phi, \
-    amp_phi_compute, rmv_first_reflection_img
+    amp_phi_compute
 from modules.fermat_tools import undistort_depthmap, compute_bin_center, prepare_fermat_data
 
 
@@ -455,7 +457,8 @@ def gen_filter(exp_coeff: float, sigma: float) -> ndarray:
     :return: DoG filter with an exponential falloff
     """
 
-    t = array([i/10 for i in range(-50, 50, 1)], dtype=float32).T
+    t = array([i/10 for i in range(-50, 51, 1)], dtype=float32)
+    t = t.reshape(t.size, 1)
     ind = where(t == 0)[0][0]
     delta = zeros(t.shape)
     delta[ind] = 1
@@ -464,7 +467,7 @@ def gen_filter(exp_coeff: float, sigma: float) -> ndarray:
 
     pd = delta + deltas * (-np_exp(-exp_coeff * 0.001))
     g = np_exp(-np_square(t) / sigma**2)
-    return convolve(pd, g, "same")
+    return convolve(pd[:, 0], g[:, 0], "same")
 
 
 def compute_discont(tr: ndarray, exp_time: float) -> ndarray:
@@ -484,10 +487,10 @@ def compute_discont(tr: ndarray, exp_time: float) -> ndarray:
 
     # COMPUTE THE DISCONTINUITY
     n_samples = tr.shape[0]
-    temp_bin_center = compute_bin_center(exp_time, tr.shape[0])
+    temp_bin_center = compute_bin_center(exp_time, tr.shape[1])
     num_of_bin_center = 1
     if num_of_bin_center == 1:
-        x = num_of_bin_center
+        x = array(temp_bin_center, dtype=float32)
     else:
         assert num_of_bin_center == n_samples
 
@@ -497,7 +500,7 @@ def compute_discont(tr: ndarray, exp_time: float) -> ndarray:
 
     for i in range(n_samples):
         if num_of_bin_center > 1:
-            x = temp_bin_center[i]
+            x = temp_bin_center[i, :]
         y = tr_vec[i]
         if np_nanmax(y) != 0:
             y = y / np_nanmax(y)
@@ -515,13 +518,19 @@ def compute_discont(tr: ndarray, exp_time: float) -> ndarray:
         # Discontinuities correspond to larger f responses
         # noinspection PyUnboundLocalVariable
         locs_peak, peak_info = find_peaks(dgy, prominence=0)  # FIX THE LOCS INDEX SHOULD BE A VALUE OF X
+        if locs_peak.size != 0:
+            # noinspection PyUnboundLocalVariable
+            locs_peak = x[locs_peak]
         p = peak_info["prominences"]
-        ind_p = np_sort(p)[::-1]  # Sort the prominence in descending order
-        ind_p = ind_p.astype(int)
-        if ind_p.shape[0] == 0:
+        if p.size != 0 and np_all(p == p[0]):
+            ind_p = array([i for i in range(0, p.size)], dtype=int)
+        else:
+            ind_p = np_argsort(p)[::-1]  # Sort the prominence in descending order
+
+        if ind_p.size == 0:
             ind_p = 0
-        if locs_peak.shape[0] == 0:
-            locs_peak = [0]
+        if locs_peak.size == 0:
+            locs_peak = [nan]
         else:
             locs_peak = locs_peak[ind_p]
 
@@ -738,7 +747,8 @@ def fuse_dt_gt_fermat(d_path: Path, gt_path: Path, out_path: Path, img_size: lis
                 data={"tr": reshaped_tr, "discont_gt": gt["discont_loc"]}, fermat=False)  # Save the file
 
 
-def build_point_cloud(data: ndarray, out_path: Path, fov: int, img_size: tuple[int, int], alpha: ndarray = None, f_mesh: bool = True, visualize: bool = False) -> (o3d.geometry.PointCloud, o3d.geometry.TriangleMesh):
+def build_point_cloud(data: ndarray, out_path: Path, fov: int, img_size: tuple[int, int], alpha: ndarray = None,
+                      f_mesh: bool = True, visualize: bool = False) -> (o3d.geometry.PointCloud, o3d.geometry.TriangleMesh):
     """
     Build a point cloud (and mesh) from a depth map
     :param data: depth map
