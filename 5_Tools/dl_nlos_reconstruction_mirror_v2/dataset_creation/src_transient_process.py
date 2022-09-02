@@ -42,7 +42,7 @@ def arg_parser(argv):
     :return: list containing the input and output path
     """
 
-    arg_name = "dts"                                                 # Argument containing the name of the dataset
+    arg_name = "dts"                                                       # Argument containing the name of the dataset
     arg_data_path = "../../../../mitsuba_renders/nlos_scenes/datasets/" \
                     "depth_map_ground_truth_far/final_dataset/"            # Argument containing the path where the raw data are located
     arg_out_path = "../training/data/"                                     # Argument containing the path of the output folder
@@ -99,9 +99,9 @@ if __name__ == '__main__':
     np.random.seed(2019283)                                    # set the random seed
     fl_normalize_transient = False                             # whether to normalize the transient information
     f_ran = True                                               # whether to use random or grid sampling
-    n_patches = 200                                            # number of pixels taken from each image
+    n_patches = 500                                            # number of pixels taken from each image
     s = args[4]                                                # size of each input patch
-    add_str = f"_ps{s}"                                         # part of the dataset name containing the patch size
+    add_str = f"_ps{s}"                                        # part of the dataset name containing the patch size
     max_imgs = 1000                                            # maximum number of images to be used (if grater than the actual number, all the dataset will be used)
     train_slice = 0.6                                          # percentage of images belonging to training dataset
     val_slice = round((1 - train_slice) / 2, 1)                # percentage of images belonging to validation dataset
