@@ -34,10 +34,9 @@ def phi_remapping(v, d_max=4):
     return v_new
 
 
-def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fl_norm_perpixel, fil_dir, fil_den, fil_auto, lr, n_layers,
-             loss_scale, kernel_size, test_files=None, dim_t=2000, return_vals=False, plot_results=False):
+def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fl_norm_perpixel, fil_dir, lr, test_files=None,
+             dim_t=2000, return_vals=False, plot_results=False):
     ff = freqs.shape[0]
-    dim_encoding = ff * 4
     test_names = pd.read_csv(test_files).to_numpy()
     names = [file for file in os.listdir(data_path) if file.endswith(".h5")]
     load_names = []
@@ -49,9 +48,7 @@ def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fl_norm_perp
 
     # Define the network and load the corresponding weights
     net = PredictiveModel.PredictiveModel(name='test_result_01', dim_b=dim_dataset, freqs=freqs, P=P,
-                                          saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, fil_denoise_size=fil_den,
-                                          dim_encoding=dim_encoding, fil_encoder=fil_auto, lr=lr, n_layers=n_layers,
-                                          loss_scale_factor=loss_scale, kernel_size=kernel_size)
+                                          saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, lr=lr)
 
     for name in weight_names:
         if name.find("v_e") != -1:
@@ -123,6 +120,10 @@ def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fl_norm_perp
             v_in_v = net.SpatialNet(v_input)
         else:
             v_in_v = v_input
+
+        tmp = np.zeros([v_in_v.shape[0], v_in_v.shape[1] + 10, v_in_v.shape[2] + 10, v_in_v.shape[3]])
+        tmp[:, 5:-5, 5:-5, :] = v_in_v
+        v_in_v = tmp
 
         [pred_depth, pred_alpha] = net.DirectCNN(v_in_v)
         pred_depth = np.squeeze(pred_depth)

@@ -35,14 +35,11 @@ def arg_parser(argv):
 
     arg_name = "test"   # Argument containing the name of the training attempt
     arg_lr = 1e-04       # Argument containing the learning rate
-    arg_n_layers = 4     # Argument containing the number of layers in the network
-    arg_loss_scale = 1   # Argument containing the loss scale
-    arg_kernel_size = 3  # Argument containing the kernel size
-    arg_help = "{0} -n <name> -r <lr> -l <layers> -s <scale> -k <kernel>".format(argv[0])  # Help string
+    arg_help = "{0} -n <name> -r <lr>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:r:l:s:k:", ["help", "name=", "lr=", "layers=", "scale=", "kernel="])
+        opts, args = getopt.getopt(argv[1:], "hn:r:", ["help", "name=", "lr="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -52,39 +49,27 @@ def arg_parser(argv):
             arg_name = arg  # Set the attempt name
         elif opt in ("-r", "--lr"):
             arg_lr = float(arg)  # Set the learning rate
-        elif opt in ("-l", "--layers"):
-            arg_n_layers = int(arg)
-        elif opt in ("-s", "--scale"):
-            arg_loss_scale = int(arg)
-        elif opt in ("-k", "--kernel"):
-            arg_kernel_size = int(arg)
 
     print("Attempt name: ", arg_name)
     print("Learning rate: ", arg_lr)
-    print("Number of layers: ", arg_n_layers)
-    print("Loss scale factor: ", arg_loss_scale)
-    print("Kernel size: ", arg_kernel_size)
     print()
 
-    return [arg_name, arg_lr, arg_n_layers, arg_loss_scale, arg_kernel_size]
+    return [arg_name, arg_lr]
 
 
 if __name__ == '__main__':
     args = arg_parser(sys.argv) # Get the arguments
 
     attempt_name = args[0]                                                                              # name of the stored approach weights
-    lr = args[1]                                                                                        # learning rate
-    n_layers = args[2]                                                                                  # number of layers in the network
-    loss_scale = args[3]                                                                                # loss scale factor
-    kernel_size = args[4]                                                                                     # kernel size for the convolutional layers
+    lr = args[1]                                                                                    # kernel size for the convolutional layers
     win_server_path = "Z:/decaligm"                                                                     # path to the server
     git_folder_path = "thesis-nlos-for-itof/5_Tools/dl_nlos_reconstruction_mirror"                      # path to the git folder
     dataset_folder = "mitsuba_renders/nlos_scenes/datasets/depth_map_ground_truth_far"                  # path to the dataset folder
     data_path_real = "../../Datasets/S3S4S5/*"                                                          # path to the real images
     data_path_synth = f"{win_server_path}/{dataset_folder}/final_dataset"                               # Path of the synthetic test set (same patch size as training and validation)
     test_file_csv = f"{win_server_path}/{git_folder_path}/dataset_creation/data_split/test_images.csv"  # path to the test file
-    #weights_folder = f"../training/saves/{attempt_name}/checkpoints/"                                   # path to the weights
-    weights_folder = f"{win_server_path}/{git_folder_path}/training/saves/{attempt_name}/checkpoints/"  # path to the weights
+    weights_folder = f"../training/saves/{attempt_name}/checkpoints/"                                   # path to the weights
+    #weights_folder = f"{win_server_path}/{git_folder_path}/training/saves/{attempt_name}/checkpoints/"  # path to the weights
     dim_t = 2000                                                                                        # number of bins in the transient dimension
     P = 3                                                                                               # patch size
     flag_norm_perpixel = True                                                                           # normalization per pixel
@@ -145,14 +130,9 @@ if __name__ == '__main__':
              test_files=test_file_csv,
              P=P,
              lr=lr,
-             n_layers=n_layers,
              freqs=freqs,
              fl_scale=flag_scale,
              fl_norm_perpixel=flag_norm_perpixel,
              fil_dir=fil_direct,
-             fil_den=fil_denoise,
-             fil_auto=fil_autoencoder,
              dim_t=dim_t,
-             loss_scale=loss_scale,
-             kernel_size=kernel_size,
              plot_results=True)  # test on transient images
