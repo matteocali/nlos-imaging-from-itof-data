@@ -113,17 +113,8 @@ def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fl_norm_perp
         else:
             v_in = v_in[np.newaxis, :, :, :]
 
-        fl_denoise = False#not (net.P == net.out_win)  # If the two values are different, then the denoising network has been used
         # Make prediction
-        v_input = v_in#np.pad(v_in, pad_width=[[0, 0], [s_pad, s_pad], [s_pad, s_pad], [0, 0]], mode="edge")
-        if fl_denoise:
-            v_in_v = net.SpatialNet(v_input)
-        else:
-            v_in_v = v_input
-
-        tmp = np.zeros([v_in_v.shape[0], v_in_v.shape[1] + 10, v_in_v.shape[2] + 10, v_in_v.shape[3]])
-        tmp[:, 5:-5, 5:-5, :] = v_in_v
-        v_in_v = tmp
+        v_in_v = np.pad(v_in, pad_width=[[0, 0], [s_pad, s_pad], [s_pad, s_pad], [0, 0]], mode="reflect")
 
         [pred_depth, pred_alpha] = net.DirectCNN(v_in_v)
         pred_depth = np.squeeze(pred_depth)
