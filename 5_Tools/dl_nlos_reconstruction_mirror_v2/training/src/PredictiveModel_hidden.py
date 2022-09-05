@@ -47,14 +47,6 @@ class PredictiveModel:
         self.fil_pred = fil_size                                   # number of filter for the Direct CNN
         self.freqs = tf.convert_to_tensor(freqs, dtype="float32")  # modulation frequencies
 
-        # Defining all parameters needed by the denoising network
-        self.in_shape = (P, P, self.fn2)       # Shape of the input (batch size excluded)
-        self.out_win = 3                       # Side of the window provided in output of the Spatial Feature Extractor
-        self.padz = self.P - self.out_win + 2  # Padding needed
-        self.fl_denoise = False                # Whether to use the Spatial Feature Extractor
-        self.k_size = 3                        # Kernel size for each layer of the denoiser network
-        self.f_skip = True                     # Whether to use a skip connection or not
-
         # Create saves directory if it does not exist
         if not os.path.exists(saves_path):
             os.makedirs(saves_path)
@@ -84,7 +76,6 @@ class PredictiveModel:
             os.makedirs(self.checkpoint_path)
 
         # Define predictive models
-        # self.SpatialNet = self.def_SpatialNet()
         self.DirectCNN = self.def_DirectCNN()
 
         # Define loss function and metrics
