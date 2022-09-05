@@ -42,12 +42,11 @@ def arg_parser(argv):
     :return: list containing the input and output path
     """
 
-    arg_name = "dts"                                                       # Argument containing the name of the dataset
-    arg_data_path = "../../../../mitsuba_renders/nlos_scenes/datasets/" \
-                    "depth_map_ground_truth_far/final_dataset/"            # Argument containing the path where the raw data are located
-    arg_out_path = "../training/data/"                                     # Argument containing the path of the output folder
-    arg_shuffle = True                                                     # Argument containing the flag for shuffling the dataset
-    arg_patch_size = 3                                                     # Argument containing the patch size
+    arg_name = "dts"                    # Argument containing the name of the dataset
+    arg_data_path = ""                  # Argument containing the path where the raw data are located
+    arg_out_path = "../training/data/"  # Argument containing the path of the output folder
+    arg_shuffle = True                  # Argument containing the flag for shuffling the dataset
+    arg_patch_size = 11                 # Argument containing the patch size
     arg_help = "{0} -n <name> -i <input> -o <output> -s <shuffle> -p <patch>".format(argv[0])      # Help string
 
     try:

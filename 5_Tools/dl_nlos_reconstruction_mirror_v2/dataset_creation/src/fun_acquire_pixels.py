@@ -45,6 +45,29 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=True, s=3, fl_no
     # Given the image size, build a mask_out to choose which pixels to get the ground truth from.
     # This can be done either with a grid or randomly
 
+    # 1) GRID
+    if not f_ran:
+        mask_out = np.zeros((dim_x - 2 * pad_s, dim_y - 2 * pad_s), dtype=np.int32)
+        num_x = np.sqrt(num_pixels * dim_x / dim_y)
+        num_y = np.sqrt(num_pixels * dim_y / dim_x)
+        st_x = int(dim_x / num_x)
+        st_y = int(dim_y / num_y)
+        for i in range(0, dim_x, st_x):
+            for j in range(0, dim_y, st_y):
+                mask_out[i + pad_s, j + pad_s] = 1
+        num_pixels = np.sum(mask_out)
+
+    v_real = np.zeros((num_images, num_pixels, s, s, nf), dtype=np.float32)
+    gt_depth_real = np.zeros((num_images, num_pixels, s, s), dtype=np.float32)
+    gt_alpha_real = np.zeros((num_images, num_pixels, s, s), dtype=np.float32)
+    v_real_no_d = np.zeros((num_images, num_pixels, s, s, nf), dtype=np.float32)
+    v_real_d = np.zeros((num_images, num_pixels, s, s, nf), dtype=np.float32)
+    peak_val = np.zeros((num_images, num_pixels, s, s), dtype=np.float32)
+    peak_ind = np.zeros((num_images, num_pixels, s, s), dtype=np.int32)
+    Back = np.zeros((num_images, num_pixels, dim_t), dtype=np.float32)
+    Back_nod = np.zeros((num_images, num_pixels, dim_t), dtype=np.float32)
+    Fit_Parameters = np.zeros((num_images, num_pixels, s, s, 8), dtype=np.float32)
+
     count = 0
 
     for k, image in enumerate(images):
@@ -54,18 +77,6 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=True, s=3, fl_no
             temp = h["data"][:]  # load the transient data
             gt_depth = h["depth_map"][:]  # load the ground truth depth data
             gt_alpha = h["alpha_map"][:].astype(int)  # load the ground truth alpha map data
-
-        # 1) GRID
-        if not f_ran:
-            mask_out = np.zeros((dim_x - 2 * pad_s, dim_y - 2 * pad_s), dtype=np.int32)
-            num_x = np.sqrt(num_pixels * dim_x / dim_y)
-            num_y = np.sqrt(num_pixels * dim_y / dim_x)
-            st_x = int(dim_x / num_x)
-            st_y = int(dim_y / num_y)
-            for i in range(0, dim_x, st_x):
-                for j in range(0, dim_y, st_y):
-                    mask_out[i + pad_s, j + pad_s] = 1
-            num_pixels = np.sum(mask_out)
 
         # 1) NOT GRID if the pixels are chosen randomly create the mask_out, different each time
         if f_ran:
@@ -93,21 +104,17 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=True, s=3, fl_no
             mask_in = np.invert(np.copy(mask_in).astype(bool)).astype(int)  # invert the mask_in
             mask = np.multiply(mask_in, mask_out)  # multiply the two masks to get the final mask_in
 
-            num_pixels = np.sum(mask)  # number of pixels to get the ground truth from
+            diff = int(num_pixels / 2) - num_sample  # difference between the number of pixels to sample and the number of pixels sampled
+            if diff > 0:
+                indexes = np.where(mask == 0)
+                p = np.random.permutation(len(indexes[0]))  # permute the positions of the ones
+                indexes[0] = indexes[0][p][:diff]  # select the first diff ones
+                indexes[1] = indexes[1][p][:diff]  # select the first diff ones
+                mask[tuple(indexes)] = 1  # set the ones to zero in the mask according to the permutation
 
         # Compute the v_values for the patch around each pixels
-        ind = np.where(mask > 0)
+        ind = list(np.where(mask == 0))
 
-        v_real = np.zeros((num_images, num_pixels, s, s, nf), dtype=np.float32)
-        gt_depth_real = np.zeros((num_images, num_pixels, s, s), dtype=np.float32)
-        gt_alpha_real = np.zeros((num_images, num_pixels, s, s), dtype=np.float32)
-        v_real_no_d = np.zeros((num_images, num_pixels, s, s, nf), dtype=np.float32)
-        v_real_d = np.zeros((num_images, num_pixels, s, s, nf), dtype=np.float32)
-        peak_val = np.zeros((num_images, num_pixels, s, s), dtype=np.float32)
-        peak_ind = np.zeros((num_images, num_pixels, s, s), dtype=np.int32)
-        Back = np.zeros((num_images, num_pixels, dim_t), dtype=np.float32)
-        Back_nod = np.zeros((num_images, num_pixels, dim_t), dtype=np.float32)
-        Fit_Parameters = np.zeros((num_images, num_pixels, s, s, 8), dtype=np.float32)
 
         # 1) COMPUTATION OF v_real, v_real_no_d AND v_real_d
         for i in range(ind[0].shape[0]):
