@@ -4,6 +4,7 @@ import sys
 from utils import phi as phi_func
 from fct_aux import find_ind_peaks_vec
 import time
+from tqdm import tqdm
 
 """
 The script takes in input a transient dataset, chooses randomly or from a grid a set of pixels of the image and performs the fitting.
@@ -70,7 +71,7 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=True, s=3, fl_no
 
     count = 0
 
-    for k, image in enumerate(images):
+    for k, image in tqdm(enumerate(images)):
         start = time.time()
         # Load the transient data
         with h5py.File(image, "r") as h:
@@ -113,7 +114,7 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=True, s=3, fl_no
                 mask[tuple(indexes)] = 1  # set the ones to zero in the mask according to the permutation
 
         # Compute the v_values for the patch around each pixels
-        ind = list(np.where(mask == 0))
+        ind = list(np.where(mask > 0))
 
 
         # 1) COMPUTATION OF v_real, v_real_no_d AND v_real_d
@@ -255,7 +256,7 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=True, s=3, fl_no
         ending = time.time()
         minutes, seconds = divmod(ending - start, 60)
         hours, minutes = divmod(minutes, 60)
-        print(" Total time for an image is %d:%02d:%02d" % (hours, minutes, seconds))
+        #print(" Total time for an image is %d:%02d:%02d" % (hours, minutes, seconds))
         count += 1
         if count == max_img:
             break
