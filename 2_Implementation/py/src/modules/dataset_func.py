@@ -672,8 +672,7 @@ def fuse_dt_gt_mirror(d_path: Path, gt_path: Path, out_path: Path, def_obj_pos: 
             if 0.0 in obj_pos2:
                 indexes = [index for index, elm in enumerate(obj_pos2) if elm == 0.0]
                 for index in indexes:
-                    if index != 0:
-                        obj_pos2[index] = -0.0
+                    obj_pos2[index] = -0.0
             # noinspection PyUnboundLocalVariable
             gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
             if gt_name not in gt_files_name:
