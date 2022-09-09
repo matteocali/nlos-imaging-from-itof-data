@@ -12,7 +12,7 @@ sys.path.append("../training/src/")
 sys.path.append("../utils/")  # Adds higher directory to python modules path
 import utils
 import PredictiveModel_hidden as PredictiveModel
-import csv
+
 
 
 # Function for transient data prediction on single pixels
