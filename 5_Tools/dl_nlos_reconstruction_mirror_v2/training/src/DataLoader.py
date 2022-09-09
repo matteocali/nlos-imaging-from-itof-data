@@ -184,8 +184,8 @@ class DataLoader:
             else:
                 dict_data["v_scale"] = None
             self.b += 1
-            # Return next batch
 
+            # Return next batch
             return dict_data  # return also the coefficients of normalization so that I can use them later
         
         else:   # If the file is finished...

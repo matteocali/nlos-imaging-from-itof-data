@@ -62,7 +62,6 @@ def max_d(dim_t=2000):
 
 def phi(freqs, dim_t=2000, exp_time=0.01):
     pi = math.pi
-    # 0.00249827
     min_t = 0
     max_t = 2 * exp_time / c() * dim_t
     step_t = (max_t - min_t) / dim_t

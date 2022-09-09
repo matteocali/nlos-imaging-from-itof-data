@@ -238,7 +238,7 @@ class PredictiveModel:
         return loss, loss_list
 
     # Training loop
-    def training_loop(self, train_w_loader=0, test_w_loader=0, final_epochs=2000, init_epoch=0, print_freq=5,
+    def training_loop(self, train_w_loader=None, test_w_loader=None, final_epochs=2000, init_epoch=0, print_freq=5,
                       save_freq=5, pretrain_filenamev=None):
 
         if train_w_loader is None:

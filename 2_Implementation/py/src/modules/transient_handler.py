@@ -575,7 +575,8 @@ def phi(freqs: ndarray, exp_time: float = 0.01, dim_t: int = 2000) -> ndarray:
     """
 
     c = 3e8
-    min_t = 0.1 / c
+    #min_t = 0.1 / c
+    min_t = 0
     max_t = 2*exp_time / c*dim_t
     step_t = (max_t - min_t) / dim_t
     times = arange(dim_t) * step_t

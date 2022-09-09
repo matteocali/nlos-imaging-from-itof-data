@@ -1,12 +1,13 @@
 from pathlib import Path
 from random import seed as rnd_seed, sample as rnd_sample, shuffle as rnd_shuffle
 
+import matplotlib.pyplot as plt
 from lxml import etree as et
 from tqdm import trange, tqdm
 from numpy import nonzero, unique, zeros as np_zeros, where, sum as np_sum, swapaxes, moveaxis, ndarray, \
     copy as np_copy, array, float32, zeros, count_nonzero, empty, matmul, nanmax as np_nanmax, Inf, full, convolve, \
     flip as np_flip, sort as np_sort, argsort as np_argsort, nan, size as np_size, square as np_square, exp as np_exp, \
-    maximum, all as np_all
+    maximum, all as np_all, nanmin as np_nanmin
 from scipy.signal import find_peaks
 import open3d as o3d
 from typing import Union
@@ -797,3 +798,34 @@ def build_point_cloud(data: ndarray, out_path: Path, fov: int, img_size: tuple[i
         o3d.io.write_triangle_mesh(str(out_path / "mesh.ply"), rec_mesh)  # Save the mesh
 
     return objs
+
+
+def ampl_ratio_hists(dts_path: Path, out_path: Path) -> None:
+    """
+    Build the histogram of the amplification ratio
+    :param dts_path: path of the dataset
+    :param out_path: path of the output folder
+    :return: None
+    """
+
+    if not (out_path.parent / "ampl_ratios").exists():  # If the output list doesn't exist
+        dts_files = read_files(dts_path, "h5")  # Get the list of files in dts_path
+
+        if len(dts_files) == 0:  # If there are no files in dts_path
+            raise ValueError("The dataset folder is empty")  # Raise an error
+
+        ampl_ratios = []  # Create a list to store the amplification ratio
+
+        for dts_file in tqdm(dts_files, desc="Computing amplification ratio"):  # For each file in dts_path
+            dts = load_h5(dts_file)  # Load the file
+            amp = dts["amp_itof"]    # Get the amplitude data
+            amp_ratio = swapaxes(amp[..., 0] / amp[..., 1], 0, 1)
+            ampl_ratios.append(np_nanmax(amp_ratio) - np_nanmin(amp_ratio))  # Compute the amplification ratio and store it
+
+        save_list(ampl_ratios, out_path.parent / "ampl_ratios")  # Save the amplification ratio
+    else:
+        ampl_ratios = load_list(out_path.parent / "ampl_ratios")
+
+    plt.hist(ampl_ratios)
+    plt.title("Amplitude ratio hists")
+    plt.savefig(out_path)

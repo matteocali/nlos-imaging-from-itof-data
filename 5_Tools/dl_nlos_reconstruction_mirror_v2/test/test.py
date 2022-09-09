@@ -4,6 +4,7 @@ sys.path.append("./src/")
 sys.path.append("../utils/") 
 sys.path.append("../itraining/src/")
 from src.fun_test_img_transient import test_img
+from src.fun_test_synth import test_synth
 import fnmatch
 import glob
 import os
@@ -61,21 +62,24 @@ if __name__ == '__main__':
     args = arg_parser(sys.argv) # Get the arguments
 
     attempt_name = args[0]                                                                              # name of the stored approach weights
-    lr = args[1]                                                                                    # kernel size for the convolutional layers
+    lr = args[1]                                                                                        # kernel size for the convolutional layers
     win_server_path = "Z:/decaligm"                                                                     # path to the server
-    git_folder_path = "thesis-nlos-for-itof/5_Tools/dl_nlos_reconstruction_mirror"                      # path to the git folder
-    dataset_folder = "mitsuba_renders/nlos_scenes/datasets/depth_map_ground_truth_far"                  # path to the dataset folder
+    win_server_path_2 = "Y:/matteo"                                                                     # path to the server
+    git_folder_path = "thesis-nlos-for-itof/5_Tools/dl_nlos_reconstruction_mirror_v2"                   # path to the git folder
+    dataset_folder = "datasets/mirror"                                                                  # path to the dataset folder
     data_path_real = "../../Datasets/S3S4S5/*"                                                          # path to the real images
-    data_path_synth = f"{win_server_path}/{dataset_folder}/final_dataset"                               # Path of the synthetic test set (same patch size as training and validation)
-    test_file_csv = f"{win_server_path}/{git_folder_path}/dataset_creation/data_split/test_images.csv"  # path to the test file
-    weights_folder = f"../training/saves/{attempt_name}/checkpoints/"                                   # path to the weights
-    #weights_folder = f"{win_server_path}/{git_folder_path}/training/saves/{attempt_name}/checkpoints/"  # path to the weights
+    data_path_synth = f"{win_server_path_2}/{dataset_folder}/mirror_dts"                                # Path of the synthetic test set (same patch size as training and validation)
+    processed_dts_folder = f"{win_server_path}/{git_folder_path}/training/data/val_balanced_dts_fixed_cam_n33500_ps11_nonorm.h5"                        # Path of the processed test set (same patch size as training and validation)
+    #test_file_csv = f"{win_server_path}/{git_folder_path}/dataset_creation/data_split/test_images.csv"  # path to the test file
+    test_file_csv = f"{win_server_path}/{git_folder_path}/dataset_creation/data_split/val_images.csv"
+    #weights_folder = f"../training/saves/{attempt_name}/checkpoints/"                                  # path to the weights
+    weights_folder = f"{win_server_path}/{git_folder_path}/training/saves/{attempt_name}/checkpoints/"  # path to the weights
     dim_t = 2000                                                                                        # number of bins in the transient dimension
-    P = 11                                                                                 # patch size
-    flag_norm_perpixel = True                                                                         # normalization per pixel
-    flag_scale = True                                                                               # whether to apply scaling on the inputs
-    flag_plot = False                                                                                # whether to plot and save the results
-    flag_epoch = False                                                                               # whether to test on a specific epoch
+    P = 11                                                                                              # patch size
+    flag_norm_perpixel = True                                                                           # normalization per pixel
+    flag_scale = True                                                                                   # whether to apply scaling on the inputs
+    flag_plot = False                                                                                   # whether to plot and save the results
+    flag_epoch = False                                                                                  # whether to test on a specific epoch
     fl_test_img = True
     fil_direct = 32
     num_epoch = 40000                                                                                   # epoch to test on
@@ -87,6 +91,9 @@ if __name__ == '__main__':
     if attempt_name[-5:] == "2freq":
         freqs = np.array((20e06, 50e06), dtype=np.float32)
         str_freqs = "_2freq"
+    elif attempt_name[-9:] == "multifrew":
+        freqs = np.array((20e06, 50e06, 80e06), dtype=np.float32)
+        str_freqs = "_multifreq"
     else:
         freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
 
@@ -122,15 +129,29 @@ if __name__ == '__main__':
     else:
         data_path = data_path_real
 
-    test_img(weight_names=weight_names,
-             data_path=data_path,
-             out_path=out_path,
-             test_files=test_file_csv,
-             P=P,
-             lr=lr,
-             freqs=freqs,
-             fl_scale=flag_scale,
-             fl_norm_perpixel=flag_norm_perpixel,
-             fil_dir=fil_direct,
-             dim_t=dim_t,
-             plot_results=True)  # test on transient images
+    test_type = "patch"
+    if test_type == "img":
+        test_img(weight_names=weight_names,
+                 data_path=data_path,
+                 out_path=out_path,
+                 test_files=test_file_csv,
+                 P=P,
+                 lr=lr,
+                 freqs=freqs,
+                 fl_scale=flag_scale,
+                 fl_norm_perpixel=flag_norm_perpixel,
+                 fil_dir=fil_direct,
+                 dim_t=dim_t,
+                 plot_results=True)  # test on transient images
+    elif test_type == "patch":
+        test_synth(fl_test_img=False,
+                   processed_dts_path=processed_dts_folder,
+                   test_files=test_file_csv,
+                   dts_path=data_path,
+                   weight_names=weight_names,
+                   P=P,
+                   freqs=freqs,
+                   lr=lr,
+                   fl_scale=flag_scale,
+                   fil_dir=fil_direct,
+                   dim_t=dim_t)

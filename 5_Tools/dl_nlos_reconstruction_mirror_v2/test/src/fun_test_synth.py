@@ -2,307 +2,145 @@ import numpy as np
 import os
 import tensorflow as tf
 import h5py
-import math
+import pandas as pd
 import matplotlib
 import scipy
-import glob
+from datetime import date
+from tqdm import tqdm
 import matplotlib.pyplot as plt
-import cv2
 import sys
 sys.path.append("../training/src/")
-sys.path.append("../utils/") # Adds higher directory to python modules path
-import DataLoader
-import GenerativeModel
+sys.path.append("../utils/")  # Adds higher directory to python modules path
 import utils
-import depth_estimation
-font = {'size'   : 6}
 import PredictiveModel_hidden as PredictiveModel
-#import PredictiveModel_hidden_2 as PredictiveModel
-matplotlib.rc('font', **font)
-import random
 import csv
-from fun_metrics_computation_transient import metrics_computation_transient
+
 
 # Function for transient data prediction on single pixels
 # It also presents the comparison with the pixels from iToF2dToF
 
 
-def test_synth(name,weights_path,attempt_name,Sname,P,freqs,fl_test_img=False,fl_scale=False,fil_dir=8,fil_den=32,fil_auto=32,fl_newhidden=True, dim_t=2000):
-
-    # index pointing at the middle element of the patch
-    mind = int((P-1)/2)
-
+def test_synth(weight_names, P, freqs, lr, fl_scale=False, fil_dir=8, dim_t=2000, fl_test_img=False, test_files=None, dts_path=None, processed_dts_path=None):
     ff = freqs.shape[0]
-    dim_encoding = ff*4
-    with h5py.File(name,"r") as f:
-        v_in = f["raw_itof"][:]
-        v_in_d = f["direct_itof"][:]
-        v_in_g = f["global_itof"][:]
-        xd = f["transient"][:]
-        xg = f["transient_global"][:]
-    
-    dim_dataset = v_in.shape[0]
-    dim_x = v_in.shape[1]
-    dim_y = v_in.shape[2]
-    dim_t_data = xg.shape[-1]
-    
-    if dim_t != dim_t_data:
-        xd_new = np.zeros((dim_dataset,dim_t),dtype=np.float32)
-        xg_new = np.zeros((dim_dataset,dim_t),dtype=np.float32)
-        xd_new[...,:dim_t_data] = xd
-        xg_new[...,:dim_t_data] = xg
-        xd = xd_new
-        xg = xg_new
+    mid = int((P - 1) / 2)  # index pointing at the middle element of the patch
 
-    # SCALING
-    if fl_scale:
-        v_a = np.sqrt( v_in[...,0]**2 + v_in[...,ff]**2 ) 
-        v_a = np.mean(v_a,axis=(1,2))
-        v_a_max = v_a[:,np.newaxis,np.newaxis,np.newaxis]
-        scale = np.copy(np.squeeze(v_a_max))
-            
-        # Scale all factors
-        v_in /= v_a_max
-        v_in_d /= v_a_max
-        v_in_g /= v_a_max
-        v_a_max = np.squeeze(v_a_max)
-        v_a_max = v_a_max[...,np.newaxis]
-        xd /= v_a_max
-        xg /= v_a_max     
+    if processed_dts_path is not None and not fl_test_img:
+        with h5py.File(processed_dts_path, "r") as f:
+            v_in = f["raw_itof"][:]
+            gt_alpha = f["gt_alpha"][:]
+            gt_depth = f["gt_depth"][:]
+
+        dim_dataset = v_in.shape[0]
+
+        # SCALING
+        if fl_scale:
+            v_a = np.sqrt(v_in[..., 0]**2 + v_in[..., ff]**2)
+            v_a = v_a[..., np.newaxis]
+
+            # Scale all factors
+            v_in /= v_a
+
+        # Load the model
+        net = PredictiveModel.PredictiveModel(name=f'test_patches_{date.today()}', dim_b=dim_dataset, freqs=freqs, P=P,
+                                              saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, lr=lr)
+
+        # Load the weights
+        net.DirectCNN.load_weights(weight_names[0])
 
 
+        # Make prediction
+        #v_input = tf.convert_to_tensor(v_in,dtype="float32")
+        v_in_v = np.copy(v_in)
+        [pred_depth, pred_alpha] = net.DirectCNN(v_in_v)
 
+        # Compute metrics
+        print("METRICS:\n")
+        print("Mae computation")
 
- 
-    net = PredictiveModel.PredictiveModel(name='DeepBVE_nf_std', dim_b=dim_dataset, freqs=freqs, P=P,
-                                          saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, fil_denoise_size=fil_den,
-                                          dim_encoding=dim_encoding, fil_encoder=fil_auto)
+        # Extract just the single pixel from the gt
+        gt_alpha = tf.convert_to_tensor(gt_alpha, dtype="float32")
+        gt_depth = tf.convert_to_tensor(gt_depth, dtype="float32")
+        gt_depth = tf.slice(gt_depth, begin=[0, mid, mid], size=[-1, 1, 1])
+        gt_alpha = tf.slice(gt_alpha, begin=[0, mid, mid], size=[-1, 1, 1])
 
+        # Process the output with the Direct CNN
+        pred_depth = tf.squeeze(pred_depth, axis=-1)
+        pred_alpha = tf.squeeze(pred_alpha, axis=-1)
 
-    if P != 3:
-        net.SpatialNet.load_weights(weights_path[0])
-    net.decoder.load_weights(weights_path[1])
-    net.encoder.load_weights(weights_path[2])
-    net.predv_encoding.load_weights(weights_path[3])
-    net.DirectCNN.load_weights(weights_path[4])
+        alpha_mae = np.mean(np.abs(pred_alpha - gt_alpha))
+        depth_mae = np.mean(np.abs((pred_depth * gt_alpha) - gt_depth))
 
-
-    fl_denoise = not(net.P==net.out_win)   #If the two values are different, then the denoising network has been used
-        
-    # Ground truth global itof component
-    v_in_g = v_in_g[:,mind,mind,:]
-
-
-    # Make prediction
-    #v_input = tf.convert_to_tensor(v_in,dtype="float32")
-    v_input = np.copy(v_in)
-    if fl_denoise:
-        v_in_v = net.SpatialNet(v_input)
-    else: 
-        v_in_v = v_input
-
-    if fl_newhidden: 
-        [v_out_g, v_out_d, v_free] = net.DirectCNN(v_in_v)
-        if v_out_g.shape[-1] != v_out_d.shape[-1]:
-            v_out_g = v_in[:,mind,mind,:]-np.squeeze(v_out_d)
-        phid = np.arctan2(v_out_d[:,:,:,ff:],v_out_d[:,:,:,:ff])
-        phid = np.where(np.isnan(phid),0.,phid)   # Needed for the first epochs to correct the output in case of a 0/0
-        phid = phid%(2*math.pi)
-        v_out_d = np.squeeze(v_out_d)
-        v_out_g = np.squeeze(v_out_g)
-        v_free = np.squeeze(v_free)
-
-        # Network prediction
-        v_gd = np.concatenate((v_free,v_out_g),axis=-1)
-        x_CNN = net.decoder(v_gd)
-        x_CNN = np.squeeze(x_CNN)
-        
-        # Autoencoder prediction
-        v_enc = net.encoder(xg)
-        v_enc = np.squeeze(v_enc)
-        v_enc = np.concatenate((v_enc,v_in_g),axis=-1)
-        x_auto = net.decoder(v_enc)
-        x_auto = np.squeeze(x_auto)
-
-    else:
-        [v_out_g, v_out_d,  phid] = net.DirectCNN(v_in_v)
-
-        v_out_d = np.squeeze(v_out_d)
-        v_out_g = np.squeeze(v_out_g)
-
-
-    
-        # Network prediction
-        v_gd = np.concatenate((v_out_d,v_out_g),axis=-1)
-        x_CNN = net.decoder(v_gd)
-        x_CNN = np.squeeze(x_CNN)
-
-        # Autoencoder prediction
-        v_enc = net.encoder(xg)
-        v_enc = np.squeeze(v_enc)
-        x_auto = net.decoder(v_enc)
-        x_auto = np.squeeze(x_auto)
-    
-    # Fix shape of output to match input by adding zeroes at the beginning
-    shape_diff = xg.shape[-1] - x_CNN.shape[-1]
-    missing = np.zeros((x_CNN.shape[0],shape_diff),dtype=np.float32)
-    x_auto = np.concatenate((missing,x_auto),axis=-1)
-    x_CNN = np.concatenate((missing,x_CNN),axis=-1)
-    
-
-    #metrics_computation_transient(xd, xg, x_auto, v_out_d, v_in[:,mind,mind,:])
-    ####
-    print("PATCHES: SCALED")
-    print("\n")
-
-    metrics_computation_transient(xd, xg, x_CNN, v_out_d, v_in[:,mind,mind,:],freqs=freqs)
-
-    # Bring everything back to the original scale
-    scale = scale[:,np.newaxis]
-    xd *= scale
-    xg *= scale
-    x_out_g1= x_CNN*scale
-    v_out_d *= scale
-    scale = scale[...,np.newaxis,np.newaxis]
-    v_in *= scale
-
-
-    print("PATCHES: UNSCALED")
-    print("\n")
-
-    metrics_computation_transient(xd, xg, x_out_g1, v_out_d, v_in[:,mind,mind,:])
+        print("  - Alpha mae: ", alpha_mae)
+        print("  - Depth mae: ", depth_mae)
 
 
     # Perform the inference on full images
-    if fl_test_img:
-        # Load a particular set of images (trainin/validation/test)
-        files = []
-        with open("../dataset_creation/data_split/test_images.csv", "r") as csvfile:
-            wr = csv.reader(csvfile)
-            for row in wr:
-                files.append(os.path.basename(row[0]))
-        img_path = "../../dataset_rec/"
-        img_names = []
-        for fil in files:
-            img_names.append(img_path+fil)
-        num_img = len(img_names)
-        #img_names = glob.glob(img_path+"*.h5")
-        #random.shuffle(img_names)
-        s_pad = int((P-1)/2)
-        MAE_tot = 0
-        MAE_base = 0
-        mean_v = 0
-        mean_vd = 0
-        query_name = "twalls_TOF_11_rec.h5"
+    if dts_path is not None and test_files is not None and fl_test_img:
+        files_names = pd.read_csv(test_files, header=None).to_numpy()
+        names = [file for file in os.listdir(dts_path) if file.endswith(".h5")]
+        load_names = []
+        for name in names:
+            if os.path.basename(name) in files_names:
+                load_names.append(name)
 
+        dim_dataset = len(load_names)
 
+        # Define the network and load the corresponding weights
+        net = PredictiveModel.PredictiveModel(name=f'test_img_as_patches_{date.today()}', dim_b=dim_dataset,
+                                              freqs=freqs, P=P, saves_path='./saves', dim_t=dim_t,
+                                              fil_size=fil_dir, lr=lr)
 
-        for el,name in enumerate(img_names):
-            print(os.path.basename(name))
-            #if os.path.basename(name) != query_name:
-            #    continue
-            with h5py.File(name,"r") as f:
-                for key in f.keys():
-                    image = f[key][:]
-            #image = image[30:61,30:61]
+        # Load the weights
+        net.DirectCNN.load_weights(weight_names[0])
 
-            #image = image[200:301,0:101,:]
-            dim_x = image.shape[0]
-            dim_y = image.shape[1]
-            dim_t = image.shape[2]
-            phi = np.transpose(utils.phi(freqs,dim_t))
-           
+        for name in tqdm(load_names, desc="Testing"):
+            with h5py.File(f"{dts_path}/{name}", "r") as f:
+                tr = f["data"][:]
+                tr = np.swapaxes(tr, 0, 1)
+                gt_depth = f["depth_map"][:]
+                gt_depth = np.swapaxes(gt_depth, 0, 1)
+                gt_alpha = f["alpha_map"][:]
+                gt_alpha = np.swapaxes(gt_alpha, 0, 1)
 
+            # Fix first peak before the computation
+            tr_dim_0 = tr.shape[0]
+            tr_dim_1 = tr.shape[1]
+            tr = tr.reshape((tr_dim_0 * tr_dim_1, tr.shape[2]))
+            ind_maxima = np.argmax(tr, axis=-1)
+            val_maxima = np.zeros(ind_maxima.shape, dtype=np.float32)
+            ind_end_direct = np.zeros(ind_maxima.shape, dtype=np.int32)
 
+            for j in range(tr.shape[0]):
+                zeros_pos = np.where(tr[j] == 0)[0]  # find the index of the zeros
+                ind_end_direct[j] = zeros_pos[np.where(zeros_pos > ind_maxima[j])][0]  # find the index of the zeros after the first peak
+            for j in range(ind_maxima.shape[0]):
+                val_maxima[j] = np.sum(tr[j, :ind_end_direct[j]])  # compute the value of the first peak considering the sum of the values before the global
+            for j in range(tr.shape[0]):
+                tr[j, :ind_end_direct[j]] = 0  # set the values before the global to zero
+            for j in range(tr.shape[0]):
+                tr[j, ind_maxima[j]] = val_maxima[j]  # set the value of the first peak to the value computed before
 
-            # Compute the IQ components
-            ind_maxima = np.argmax(image,axis=-1)
-            val_maxima = np.zeros(ind_maxima.shape,dtype=np.float32)
-            for i in range(image.shape[0]):
-                for j in range(image.shape[1]):
-                    val_maxima[i,j] = np.sum(image[i,j,:ind_maxima[i,j]+5])
-                    image[i,j,:ind_maxima[i,j]+5] = 0
-                    image[i,j,ind_maxima[i,j]] = val_maxima[i,j]
+            tr = tr.reshape((tr_dim_0, tr_dim_1, tr.shape[1]))
 
-            v_im = image@phi
+            phi = np.transpose(utils.phi(freqs, dim_t, 0.01))
+            v_in = np.matmul(tr, phi)
 
+            # SCALING
+            if fl_scale:
+                v_a = np.sqrt(v_in[..., 0] ** 2 + v_in[..., ff] ** 2)
+                v_a = v_a[..., np.newaxis]
 
-            # Split the direct and global components
+                # Scale all factors
+                v_in /= v_a
 
-            im_d = np.zeros(image.shape,dtype=np.float32)
-            im_g = np.zeros(image.shape,dtype=np.float32)
-            
+            # Add padding to the image
+            v_in = np.pad(v_in, pad_width=[[mid, mid], [mid, mid], [0, 0]], mode="reflect")
 
-            for i in range(dim_x):
-                for j in range(dim_y):
-                    im_d[i,j,:np.argmax(image[i,j,:])+5] = image[i,j,:np.argmax(image[i,j,:])+5]
-                    im_g[i,j,np.argmax(image[i,j,:])+5:] = image[i,j,np.argmax(image[i,j,:])+5:]
-
-            # Compute the v vectors corresponding to direct and global components
-
-            v_im_d = im_d@phi
-            v_im_g = im_g@phi
-            mean_v += np.mean(np.abs(v_im))
-            mean_vd += np.mean(np.abs(v_im_d))
-
-            # Compute phase and amplitude metrics of all v vectors
-
-            A_im = np.sqrt(v_im[...,:3]**2 + v_im[...,3:]**2)
-            A_im_g = np.sqrt(v_im_g[...,:3]**2 + v_im_g[...,3:]**2)
-            A_im_d = np.sqrt(v_im_d[...,:3]**2 + v_im_d[...,3:]**2)
-
-            phi_im = np.arctan2(v_im[...,3:],v_im[...,:3])
-            phi_im_g = np.arctan2(v_im_g[...,3:],v_im_g[...,:3])
-            phi_im_d = np.arctan2(v_im_d[...,3:],v_im_d[...,:3])
-
-            # Pad the input before giving it to the network
-            v_im_input = v_im[np.newaxis,...]
-            v_im_input = tf.convert_to_tensor(np.pad(v_im_input,pad_width=[[0,0],[s_pad,s_pad],[s_pad,s_pad],[0,0]],mode="edge"),dtype="float32")
-
-            # Inference
-            if fl_denoise:
-                v_im_input = net.SpatialNet(v_im_input)
-            
-
-            [v_im_g_out, v_im_d_out,  phi_im_d_out] = net.DirectCNN(v_im_input)
-            phi_im_d_out = np.squeeze(phi_im_d_out.numpy())
-            A_im_d_out = np.sqrt(v_im_d_out[...,:3]**2+v_im_d_out[...,3:]**2)
-            A_im_d_out = np.squeeze(A_im_d_out)
-
-            ####
-            for i in range(3):
-                plt.figure()
-                plt.title("ampl")
-                plt.imshow(A_im_d[...,i]-A_im_d_out[...,i],cmap="jet")
-                plt.colorbar()
-                plt.figure()
-                plt.title("phase")
-                plt.imshow(phi_im_d[...,i]-phi_im_d_out[...,i],cmap="jet")
-                plt.colorbar()
-                plt.figure()
-                plt.title("vdiff")
-                plt.imshow(np.squeeze(v_im_d[...,i]-v_im_d_out[...,i]),cmap="jet")
-                plt.colorbar()
-            plt.show()
-            
-            ####
-
-            # Computation of a few error metrics on the ouput values
-            v_im_d_out = np.squeeze(v_im_d_out)
-            print("Shapes")
-            print(v_im.shape,v_im_d.shape,v_im_d_out.shape)
-            print("MAE between prediction and ground truth: ", np.mean(np.abs(v_im_d_out-v_im_d)))
-            print("MAE between input and ground truth: ", np.mean(np.abs(v_im-v_im_d)))
-            MAE_tot += np.mean(np.abs(v_im_d_out-v_im_d))
-            MAE_base += np.mean(np.abs(v_im-v_im_d))
-        MAE_tot/=num_img
-        MAE_base/=num_img
-        mean_v/=num_img
-        mean_vd/=num_img
-        print("Num images ",num_img) 
-        print("Network MAE: ", MAE_tot)
-        print("Baseline MAE: ", MAE_base)
-        print("Mean absolute v: ", mean_v)
-        print("Mean absolute vd: ", mean_vd)
-
-
+            # Split the images into patches
+            pred_alpha_img = np.zeros((v_in.shape[0] - P + 1, v_in.shape[1] - P + 1), dtype=np.float32)
+            pred_depth_img = np.zeros((v_in.shape[0] - P + 1, v_in.shape[1] - P + 1), dtype=np.float32)
+            for i in range(mid, v_in.shape[0] - mid):
+                for j in range(mid, v_in.shape[1] - mid):
+                    pred_depth, pred_alpha = tf.squeeze(net.DirectCNN(v_in[np.newaxis, i - mid:i + mid + 1, j - mid:j + mid + 1, ...])).numpy()
+                    pred_alpha_img[i - mid, j - mid] = pred_alpha
+                    pred_depth_img[i - mid, j - mid] = pred_depth

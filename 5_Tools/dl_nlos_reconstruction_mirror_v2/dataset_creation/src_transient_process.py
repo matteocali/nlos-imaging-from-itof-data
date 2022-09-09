@@ -45,7 +45,7 @@ def arg_parser(argv):
     arg_name = "dts"                    # Argument containing the name of the dataset
     arg_data_path = ""                  # Argument containing the path where the raw data are located
     arg_out_path = "../training/data/"  # Argument containing the path of the output folder
-    arg_shuffle = True                  # Argument containing the flag for shuffling the dataset
+    arg_shuffle = True                 # Argument containing the flag for shuffling the dataset
     arg_patch_size = 11                 # Argument containing the patch size
     arg_help = "{0} -n <name> -i <input> -o <output> -s <shuffle> -p <patch>".format(argv[0])      # Help string
 
@@ -68,7 +68,10 @@ def arg_parser(argv):
             if arg_out_path[-1] != "/":
                 arg_out_path += "/"
         elif opt in ("-s", "--shuffle"):
-            arg_shuffle = bool(arg)
+            if arg_shuffle == "True":
+                arg_shuffle = True
+            else:
+                arg_shuffle = False
         elif opt in ("-p", "--patch"):
             arg_patch_size = int(arg)
 
@@ -105,8 +108,11 @@ if __name__ == '__main__':
     train_slice = 0.6                                          # percentage of images belonging to training dataset
     val_slice = round((1 - train_slice) / 2, 1)                # percentage of images belonging to validation dataset
     freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)  # frequencies used by the iToF sensor
+    #freqs = np.array((list(range(int(20e06), int(400e06), int(20e06)))), dtype=np.float32)  # frequencies used by the iToF sensor
     if freqs.shape[0] == 2:
         add_str += "_2freq"
+    if freqs.shape[0] > 3:
+        add_str += "_multifreq"
 
     # Choose which datasets you want to build
     flag_new_shuffle = args[3]  # whether to shuffle again the images and create new training validation and test datasets
@@ -203,13 +209,13 @@ if __name__ == '__main__':
         train_files = np.asarray(train_files)
         train_files = [data_dir + file for file in train_files]
         print("Training dataset:")
-        Back, Back_nod, gt_depth_real, gt_alpha_real, _, _, _, v_real, v_real_no_d, v_real_d, _, Back_fit = acquire_pixels(images=train_files,
-                                                                                                                           num_pixels=n_patches,
-                                                                                                                           max_img=max_imgs,
-                                                                                                                           f_ran=f_ran,
-                                                                                                                           s=s,
-                                                                                                                           fl_normalize_transient=fl_normalize_transient,
-                                                                                                                           freqs=freqs)
+        Back, Back_nod, gt_depth_real, gt_alpha_real, _, _, _, v_real, v_real_no_d, v_real_d, _, Back_fit, mask = acquire_pixels(images=train_files,
+                                                                                                                                 num_pixels=n_patches,
+                                                                                                                                 max_img=max_imgs,
+                                                                                                                                 f_ran=f_ran,
+                                                                                                                                 s=s,
+                                                                                                                                 fl_normalize_transient=fl_normalize_transient,
+                                                                                                                                 freqs=freqs)
         num_elem = Back.shape[0]
 
         A_in, phi_in, A_g, phi_g, A_d, phi_d = Aphi_compute(v_real, v_real_no_d, v_real_d)
@@ -231,19 +237,20 @@ if __name__ == '__main__':
             f.create_dataset("amplitude_global", data=A_g)
             f.create_dataset("phase_global", data=phi_g)
             f.create_dataset("freqs", data=freqs)
+            f.create_dataset("mask", data=mask)
 
     # VALIDATION IMAGES
     if fl_get_val:
         val_files = np.asarray(val_files)
         val_files = [data_dir + fil for fil in val_files]
         print("\nValidation dataset:")
-        Back, Back_nod, gt_depth_real, gt_alpha_real, _, _, _, v_real, v_real_no_d, v_real_d, _, Back_fit = acquire_pixels(images=val_files,
-                                                                                                                           num_pixels=n_patches,
-                                                                                                                           max_img=max_imgs,
-                                                                                                                           f_ran=f_ran,
-                                                                                                                           s=s,
-                                                                                                                           fl_normalize_transient=fl_normalize_transient,
-                                                                                                                           freqs=freqs)
+        Back, Back_nod, gt_depth_real, gt_alpha_real, _, _, _, v_real, v_real_no_d, v_real_d, _, Back_fit, mask = acquire_pixels(images=val_files,
+                                                                                                                                 num_pixels=n_patches,
+                                                                                                                                 max_img=max_imgs,
+                                                                                                                                 f_ran=f_ran,
+                                                                                                                                 s=s,
+                                                                                                                                 fl_normalize_transient=fl_normalize_transient,
+                                                                                                                                 freqs=freqs)
 
         num_elem = Back.shape[0]
 
@@ -265,19 +272,20 @@ if __name__ == '__main__':
             f.create_dataset("amplitude_global", data=A_g)
             f.create_dataset("phase_global", data=phi_g)
             f.create_dataset("freqs", data=freqs)
+            f.create_dataset("mask", data=mask)
 
     # TEST IMAGES
     if fl_get_test:
         test_files = np.asarray(test_files)
         test_files = [data_dir + fil for fil in test_files]
         print("\nTest dataset:")
-        Back, Back_nod, gt_depth_real, gt_alpha_real, _, _, _, v_real, v_real_no_d, v_real_d, _, Back_fit = acquire_pixels(images=test_files,
-                                                                                                                           num_pixels=n_patches,
-                                                                                                                           max_img=max_imgs,
-                                                                                                                           f_ran=f_ran,
-                                                                                                                           s=s,
-                                                                                                                           fl_normalize_transient=fl_normalize_transient,
-                                                                                                                           freqs=freqs)
+        Back, Back_nod, gt_depth_real, gt_alpha_real, _, _, _, v_real, v_real_no_d, v_real_d, _, Back_fit, mask = acquire_pixels(images=test_files,
+                                                                                                                                 num_pixels=n_patches,
+                                                                                                                                 max_img=max_imgs,
+                                                                                                                                 f_ran=f_ran,
+                                                                                                                                 s=s,
+                                                                                                                                 fl_normalize_transient=fl_normalize_transient,
+                                                                                                                                 freqs=freqs)
         num_elem = Back.shape[0]
 
         A_in, phi_in, A_g, phi_g, A_d, phi_d = Aphi_compute(v_real, v_real_no_d, v_real_d)
@@ -298,6 +306,7 @@ if __name__ == '__main__':
             f.create_dataset("amplitude_global",data=A_g)
             f.create_dataset("phase_global", data=phi_g)
             f.create_dataset("freqs", data=freqs)
+            f.create_dataset("mask", data=mask)
 
     end_time = time.time()
     minutes, seconds = divmod(end_time - start_time, 60)

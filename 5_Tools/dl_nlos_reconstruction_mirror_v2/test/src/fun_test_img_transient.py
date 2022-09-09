@@ -37,7 +37,7 @@ def phi_remapping(v, d_max=4):
 def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fl_norm_perpixel, fil_dir, lr, test_files=None,
              dim_t=2000, return_vals=False, plot_results=False):
     ff = freqs.shape[0]
-    test_names = pd.read_csv(test_files).to_numpy()
+    test_names = pd.read_csv(test_files, header=None).to_numpy()
     names = [file for file in os.listdir(data_path) if file.endswith(".h5")]
     load_names = []
     for name in names:
@@ -124,31 +124,65 @@ def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fl_norm_perp
             pred_depth_masked = pred_depth * gt_alpha
             gt_depth_masked = gt_depth * gt_alpha
 
-            fig, ax = plt.subplots(2, 2)
+            pred_alpha_masked_ones = pred_alpha * gt_alpha
+            num_ones = np.sum(gt_alpha)
+            alpha_mae_obj = np.sum(np.abs(pred_alpha_masked_ones - gt_alpha)) / num_ones
+            pred_alpha_masked_zeros = pred_alpha * (1 - gt_alpha)
+            num_zeros = np.sum(1 - gt_alpha)
+            alpha_mae_bkg = np.sum(np.abs(pred_alpha_masked_zeros - np.zeros(gt_alpha.shape, dtype=np.float32))) / num_zeros
+            alpha_mae = np.sum(alpha_mae_obj + alpha_mae_bkg) / 2
+
+            pred_depth_masked_ones = pred_depth * gt_alpha
+            depth_mae_obj = np.sum(np.abs(pred_depth_masked_ones - gt_alpha)) / num_ones
+            pred_depth_masked_zeros = pred_depth * (1 - gt_alpha)
+            depth_mae_bkg = np.sum(np.abs(pred_depth_masked_zeros - np.zeros(gt_alpha.shape, dtype=np.float32))) / num_zeros
+            depth_mae = np.sum(depth_mae_obj + depth_mae_bkg) / 2
+
+            fig, ax = plt.subplots(2, 3, figsize=(15, 10), constrained_layout=True)
             fig.suptitle(name[:-3])
             img0 = ax[0, 0].matshow(gt_depth_masked, cmap='jet')
             img0.set_clim(np.min(gt_depth), np.max(gt_depth))
-            fig.colorbar(img0, ax=ax[0, 0])
+            cax = fig.add_axes([ax[0, 0].get_position().x1 + 0.005, ax[0, 0].get_position().y0, 0.015, ax[0, 0].get_position().height])
+            fig.colorbar(img0, cax=cax)
             ax[0, 0].set_title("Ground truth depth map")
             ax[0, 0].set_xlabel("Column pixel")
             ax[0, 0].set_ylabel("Row pixel")
             img1 = ax[0, 1].matshow(pred_depth_masked, cmap='jet')
-            fig.colorbar(img1, ax=ax[0, 1])
+            cax = fig.add_axes([ax[0, 1].get_position().x1 + 0.005, ax[0, 1].get_position().y0, 0.015, ax[0, 1].get_position().height])
+            fig.colorbar(img1, cax=cax)
             img1.set_clim(np.min(gt_depth), np.max(gt_depth))
             ax[0, 1].set_title("Predicted depth map")
             ax[0, 1].set_xlabel("Column pixel")
             ax[0, 1].set_ylabel("Row pixel")
-            img2 = ax[1, 0].matshow(pred_alpha, cmap='jet')
-            fig.colorbar(img2, ax=ax[1, 0])
-            ax[1, 0].set_title("Predicted alpha map")
+            img2 = ax[0, 2].matshow(np.abs(gt_depth_masked - pred_depth_masked), cmap='jet')
+            cax = fig.add_axes([ax[0, 2].get_position().x1 + 0.005, ax[0, 2].get_position().y0, 0.015, ax[0, 2].get_position().height])
+            fig.colorbar(img1, cax=cax)
+            img2.set_clim(np.min(gt_depth), np.max(gt_depth))
+            ax[0, 2].text(25, 25, "MAE: " + str(round(depth_mae, 3)), ha='left', va='center', fontsize=6, color='white')
+            ax[0, 2].set_title("Absolute difference of depth map")
+            ax[0, 2].set_xlabel("Column pixel")
+            ax[0, 2].set_ylabel("Row pixel")
+            img3 = ax[1, 0].matshow(gt_alpha, cmap='jet')
+            cax = fig.add_axes([ax[1, 0].get_position().x1 + 0.005, ax[1, 0].get_position().y0, 0.015, ax[1, 0].get_position().height])
+            fig.colorbar(img3, cax=cax)
+            ax[1, 0].set_title("Ground truth alpha map")
             ax[1, 0].set_xlabel("Column pixel")
             ax[1, 0].set_ylabel("Row pixel")
-            img3 = ax[1, 1].matshow(gt_alpha, cmap='jet')
-            fig.colorbar(img3, ax=ax[1, 1])
-            ax[1, 1].set_title("Ground truth alpha map")
+            img4 = ax[1, 1].matshow(pred_alpha, cmap='jet')
+            cax = fig.add_axes([ax[1, 1].get_position().x1 + 0.005, ax[1, 1].get_position().y0, 0.015, ax[1, 1].get_position().height])
+            fig.colorbar(img4, cax=cax)
+            img4.set_clim(np.min(gt_alpha), np.max(gt_alpha))
+            ax[1, 1].set_title("Predicted alpha map")
             ax[1, 1].set_xlabel("Column pixel")
             ax[1, 1].set_ylabel("Row pixel")
-            fig.tight_layout()
+            img5 = ax[1, 2].matshow(np.abs(gt_alpha - pred_alpha), cmap='jet')
+            ax[1, 2].text(25, 25, "MAE: " + str(round(alpha_mae, 3)), ha='left', va='center', fontsize=6, color='white')
+            cax = fig.add_axes([ax[1, 2].get_position().x1 + 0.005, ax[1, 2].get_position().y0, 0.015, ax[1, 2].get_position().height])
+            fig.colorbar(img5, cax=cax)
+            ax[1, 2].set_title("Absolute difference of alpha map")
+            ax[1, 2].set_xlabel("Column pixel")
+            ax[1, 2].set_ylabel("Row pixel")
+            #fig.tight_layout()
             plt.savefig(f"{out_path}/{name[:-3]}_PLOTS.svg")
             plt.close()
 

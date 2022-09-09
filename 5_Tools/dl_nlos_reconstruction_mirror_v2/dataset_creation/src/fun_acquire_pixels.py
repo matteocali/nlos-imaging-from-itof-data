@@ -41,6 +41,7 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=True, s=3, fl_no
     num_images = len(images)
     with h5py.File(images[0], "r") as h:
         temp = h["data"][:]
+
     [dim_x, dim_y, dim_t] = temp.shape
 
     # Given the image size, build a mask_out to choose which pixels to get the ground truth from.
@@ -48,6 +49,7 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=True, s=3, fl_no
 
     # 1) GRID
     if not f_ran:
+
         mask_out = np.zeros((dim_x - 2 * pad_s, dim_y - 2 * pad_s), dtype=np.int32)
         num_x = np.sqrt(num_pixels * dim_x / dim_y)
         num_y = np.sqrt(num_pixels * dim_y / dim_x)
@@ -78,6 +80,9 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=True, s=3, fl_no
             temp = h["data"][:]  # load the transient data
             gt_depth = h["depth_map"][:]  # load the ground truth depth data
             gt_alpha = h["alpha_map"][:].astype(int)  # load the ground truth alpha map data
+
+        if not f_ran:
+            temp = np.pad(temp, pad_width=[[pad_s, pad_s], [pad_s, pad_s], [0, 0]], mode="reflect")
 
         # 1) NOT GRID if the pixels are chosen randomly create the mask_out, different each time
         if f_ran:
@@ -167,12 +172,13 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=True, s=3, fl_no
         back = np.zeros((num_pixels, s, s, dim_t), dtype=np.float32)  # backscattering vector [num_pixels, s, s, dim_t]
         gt_depth_patches = np.zeros((num_pixels, s, s), dtype=np.float32)  # depthground truth vector [num_pixels, s, s]
         gt_alpha_patches = np.zeros((num_pixels, s, s), dtype=np.float32)  # alpha ground truth vector [num_pixels, s, s]
+
         for i in range(s):
             for j in range(s):
                 back[:, i, j, :] = temp[ind[0][:] + i - pad_s, ind[1][:] + j - pad_s]
                 gt_depth_patches[:, i, j] = gt_depth[ind[0][:] + i - pad_s, ind[1][:] + j - pad_s]
                 gt_alpha_patches[:, i, j] = gt_alpha[ind[0][:] + i - pad_s, ind[1][:] + j - pad_s]
-
+        
         # fix first peak before continuing
         # The first peak can be scattered over more than one bin, so we just sum the bins and put them all in the same one
         ind_maxima = np.argmax(back, axis=-1)
@@ -247,9 +253,12 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=True, s=3, fl_no
                         a1_c[i, l, m] = np.sum(back_nod[i, l, m, :ind])
 
         Back[count, ...] = back[:, pad_s, pad_s, :]
+        
         gt_depth_real[count, ...] = gt_depth_patches
         gt_alpha_real[count, ...] = gt_alpha_patches
+        
         Back_nod[count, ...] = back_nod[:, pad_s, pad_s, :]
+        
         b2_[b2_ == 0] = 5
         Fit_Parameters[count, ..., 7] = b2_
 
@@ -265,10 +274,14 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=True, s=3, fl_no
             sys.exit()
     max_ind = count
 
+
     Back = Back[:max_ind, ...]
+    
     gt_depth_real = gt_depth_real[:max_ind, ...]
     gt_alpha_real = gt_alpha_real[:max_ind, ...]
+    
     Back_nod = Back_nod[:max_ind, ...]
+
     peak_ind = peak_ind[:max_ind, ...]
     peak_val = peak_val[:max_ind, ...]
     Fit_Parameters = Fit_Parameters[:max_ind, ...]
@@ -276,10 +289,13 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=True, s=3, fl_no
     v_real_no_d = v_real_no_d[:max_ind, ...]
     v_real_d = v_real_d[:max_ind, ...]
 
+
     Back = np.reshape(Back, (Back.shape[0] * Back.shape[1], dim_t))
+    
     gt_depth_real = np.reshape(gt_depth_real, (gt_depth_real.shape[0] * gt_depth_real.shape[1], s, s))
     gt_alpha_real = np.reshape(gt_alpha_real, (gt_alpha_real.shape[0] * gt_alpha_real.shape[1], s, s))
     Back_nod = np.reshape(Back_nod, (Back_nod.shape[0] * Back_nod.shape[1], dim_t))
+
     Fit_Data = None
     peak_ind = np.reshape(peak_ind, (peak_ind.shape[0] * peak_ind.shape[1], s, s))
     peak_val = np.reshape(peak_val, (peak_val.shape[0] * peak_val.shape[1], s, s))
@@ -291,19 +307,20 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, f_ran=True, s=3, fl_no
     v_real_d.shape[0] * v_real_d.shape[1], v_real_d.shape[2], v_real_d.shape[3], v_real_d.shape[4]))
 
     # Random shuffling of all arrays
-    ran_ind = np.random.permutation(v_real.shape[0])
-    Back = Back[ran_ind, ...]
-    gt_depth_real = gt_depth_real[ran_ind, ...]
-    gt_alpha_real = gt_alpha_real[ran_ind, ...]
-    Back_nod = Back_nod[ran_ind, ...]
-    peak_ind = peak_ind[ran_ind, ...]
-    peak_val = peak_val[ran_ind, ...]
-    v_real = v_real[ran_ind, ...]
-    v_real_no_d = v_real_no_d[ran_ind, ...]
-    v_real_d = v_real_d[ran_ind, ...]
+    if f_ran:
+        ran_ind = np.random.permutation(v_real.shape[0])
+        Back = Back[ran_ind, ...]
+        gt_depth_real = gt_depth_real[ran_ind, ...]
+        gt_alpha_real = gt_alpha_real[ran_ind, ...]
+        Back_nod = Back_nod[ran_ind, ...]
+        peak_ind = peak_ind[ran_ind, ...]
+        peak_val = peak_val[ran_ind, ...]
+        v_real = v_real[ran_ind, ...]
+        v_real_no_d = v_real_no_d[ran_ind, ...]
+        v_real_d = v_real_d[ran_ind, ...]
 
     fi = time.time()
     minutes, seconds = divmod(fi - st, 60)
     hours, minutes = divmod(minutes, 60)
     print(" The overall computation time for the dataset is %d:%02d:%02d" % (hours, minutes, seconds))
-    return Back, Back_nod, gt_depth_real, gt_alpha_real, Fit_Parameters, peak_ind, peak_val, v_real, v_real_no_d, v_real_d, phi, Fit_Data
+    return Back, Back_nod, gt_depth_real, gt_alpha_real, Fit_Parameters, peak_ind, peak_val, v_real, v_real_no_d, v_real_d, phi, Fit_Data, mask
