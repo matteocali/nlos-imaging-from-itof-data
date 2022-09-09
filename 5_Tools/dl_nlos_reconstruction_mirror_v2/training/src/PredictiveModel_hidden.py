@@ -9,7 +9,7 @@ sys.path.append("../../utils/")
 
 
 class PredictiveModel:
-    def __init__(self, name, dim_b, lr, freqs, P, saves_path, dim_t=2000, fil_size=8):
+    def __init__(self, name, dim_b, lr, freqs, P, saves_path, loss_name, dim_t=2000, fil_size=8, single_layers=None):
         """
         Initialize the Predictive model class
         Inputs:
@@ -30,6 +30,12 @@ class PredictiveModel:
 
             fil_size:           dtype='int'
                                 Number of feature maps for the Direct CNN
+
+            loss_name:          dtype='string'
+                                Name of the loss function to use
+
+            single_layers:      dtype='int'
+                                Number of single layers to add to the Direct CNN
         """
 
         # Initializing the flags and other input parameters
@@ -43,6 +49,8 @@ class PredictiveModel:
         self.fl_2freq = (self.fn == 2)                             # whether we are training with 2 frequencies or not
         self.fil_pred = fil_size                                   # number of filter for the Direct CNN
         self.freqs = tf.convert_to_tensor(freqs, dtype="float32")  # modulation frequencies
+        self.loss_name = loss_name                                 # name of the loss function
+        self.single_layers = single_layers                         # number of single layers to add to the Direct CNN
 
         # Create saves directory if it does not exist
         if not os.path.exists(saves_path):
@@ -102,20 +110,6 @@ class PredictiveModel:
         weight_filename_v = self.name + '_v_' + suffix + '.h5'
         self.DirectCNN.save_weights(os.path.join(self.checkpoint_path, weight_filename_v))
 
-    def A_compute(self, v):
-        """
-        Compute the amplitude of the phasors given the raw measurements
-        """
-
-        A = tf.math.sqrt(tf.math.square(v[..., :self.fn]) + tf.math.square(v[..., self.fn:]))
-        return A
-
-    def ambiguity_compute(self):
-        """
-        Compute the ambiguity range values at the three different frequencies
-        """
-
-        return self.c / (2 * self.freqs)
 
     def def_DirectCNN(self):
         """
@@ -146,6 +140,18 @@ class PredictiveModel:
                                   use_bias=True,
                                   trainable=True,
                                   name=l_name)(c_out)
+        if self.single_layers is not None:
+            for i in range(self.single_layers):
+                l_name = f"conv_{str(i + 5)}"
+                c_out = layers.Conv2D(filters=self.fil_pred,
+                                      kernel_size=1,
+                                      strides=1,
+                                      padding='valid',
+                                      data_format='channels_last',
+                                      activation='relu',
+                                      use_bias=True,
+                                      trainable=True,
+                                      name=l_name)(c_out)
         final_out = layers.Conv2D(filters=2,
                                   kernel_size=3,
                                   strides=1,
@@ -154,7 +160,7 @@ class PredictiveModel:
                                   activation=None,
                                   use_bias=True,
                                   trainable=True,
-                                  name=f'conv_5')(c_out)
+                                  name=f'conv_final')(c_out)
 
         # Separate the two output: depth_map and alpha_map
         depth_map = tf.slice(final_out, begin=[0, 0, 0, 0], size=[-1, -1, -1, 1], name='depth_map')
@@ -174,11 +180,16 @@ class PredictiveModel:
         """
 
         # Choose what kind of loss and networks to use according to the dataset we are using.
-        loss, loss_list = self.loss_data(data_dict)
+        if self.loss_name == "mae":
+            loss, loss_list = self.loss_data_mae(data_dict)
+        elif self.loss_name == "b_cross_entropy":
+            loss, loss_list = self.loss_data_cross_entropy(data_dict)
+        else:
+            loss, loss_list = self.loss_data_mae(data_dict)
         return loss, loss_list
 
     # Loss computed on the transient dataset
-    def loss_data(self, data_dict):
+    def loss_data_mae(self, data_dict):
         # Load the needed data
         v_in = data_dict["raw_itof"]
         gt_depth = data_dict["gt_depth"]
@@ -201,6 +212,34 @@ class PredictiveModel:
         loss_depth = tf.math.reduce_sum(tf.math.abs(gt_depth - pred_msk_depth)) / tf.math.reduce_sum(gt_alpha)  # MAE loss on the masked depth
         loss_alpha = tf.math.abs(gt_alpha - pred_alpha_map)
         loss_alpha = tf.math.reduce_mean(loss_alpha)
+        final_loss = loss_depth + loss_alpha
+
+        # Keep track of the losses
+        loss_list = [[loss_depth, loss_alpha]]
+        return final_loss, loss_list
+
+    def loss_data_cross_entropy(self, data_dict):
+        # Load the needed data
+        v_in = data_dict["raw_itof"]
+        gt_depth = data_dict["gt_depth"]
+        gt_alpha = data_dict["gt_alpha"]
+
+        # Extract just the single pixel from the gt
+        i_mid = int((self.P - 1) / 2)  # index keeping track of the middle position
+        gt_depth = tf.slice(gt_depth, begin=[0, i_mid, i_mid], size=[-1, 1, 1])
+        gt_alpha = tf.slice(gt_alpha, begin=[0, i_mid, i_mid], size=[-1, 1, 1])
+
+        # Process the output with the Direct CNN
+        pred_depth_map, pred_alpha_map = self.DirectCNN(v_in)
+        pred_depth_map = tf.squeeze(pred_depth_map, axis=-1)
+        pred_alpha_map = tf.squeeze(pred_alpha_map, axis=-1)
+
+        # Compute the masked data
+        pred_msk_depth = pred_depth_map * gt_alpha
+
+        # Compute the loss
+        loss_depth = tf.math.reduce_sum(tf.math.abs(gt_depth - pred_msk_depth)) / tf.math.reduce_sum(gt_alpha)  # MAE loss on the masked depth
+        loss_alpha = tf.losses.BinaryCrossentropy(from_logits=True)(gt_alpha, pred_alpha_map)
         final_loss = loss_depth + loss_alpha
 
         # Keep track of the losses

@@ -41,11 +41,14 @@ def arg_parser(argv):
     arg_lr = 1e-04       # Argument containing the learning rate
     arg_train_dts = ""   # Argument containing the name of the training dataset
     arg_val_dts = ""     # Argument containing the name of the validation dataset
-    arg_help = "{0} -n <name> -r <lr> -t <train>, -v <validation>".format(argv[0])  # Help string
+    arg_filter = 32      # Argument containing the number of the filter to be used
+    arg_loss = "mae"     # Argument containing the loss function to be used
+    arg_n_layer = None   # Argument containing the number of layers to be used
+    arg_help = "{0} -n <name> -r <lr> -t <train>, -v <validation>, -f <filter>, -l <loss>, -s <n_layers>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, _ = getopt.getopt(argv[1:], "hn:r:t:v:", ["help", "name=", "lr=", "train=", "validation="])
+        opts, _ = getopt.getopt(argv[1:], "hn:r:t:v:f:l:s:", ["help", "name=", "lr=", "train=", "validation=", "filter=", "loss=", "n_layers="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -59,14 +62,23 @@ def arg_parser(argv):
             arg_train_dts = arg  # Set the training dataset
         elif opt in ("-v", "--validation"):
             arg_val_dts = arg  # Set the validation dataset
+        elif opt in ("-f", "--filter"):
+            arg_filter = int(arg)  # Set the number of filters
+        elif opt in ("-l", "--loss"):
+            arg_loss = arg  # Set the loss function
+        elif opt in ("-s", "--n_layers"):
+            arg_n_layer = int(arg)
 
     print("Attempt name: ", arg_name)
     print("Learning rate: ", arg_lr)
+    print("Filter size: ", arg_filter)
+    print("Loss function: ", arg_loss)
+    print("Number of layers: ", arg_n_layer)
     print("Train dataset name: ", arg_train_dts)
     print("Validation dataset name: ", arg_val_dts)
     print()
 
-    return [arg_name, arg_lr, arg_train_dts, arg_val_dts]
+    return [arg_name, arg_lr, arg_train_dts, arg_val_dts, arg_filter, arg_loss, arg_n_layer]
 
 
 if __name__ == '__main__':
@@ -74,8 +86,10 @@ if __name__ == '__main__':
 
     name_of_attempt = args[0]                                   # String used to denominate the attempt.
     name_of_attempt = f"{str(date.today())}_{name_of_attempt}"  # Add the date to the name of the attempt
-    fil_dir_size = 32                                           # Number of feature maps for the Direct_CNN model
+    fil_dir_size = args[4]                                      # Number of feature maps for the Direct_CNN model
     lr = args[1]                                                # Learning rate
+    loss_fn = args[5]                                           # Loss function
+    n_single_layer = args[6]                                    # Number of single layer networks
 
     # Training and validation data for dataset
     train_filename = f"./data/{args[2]}.h5"
@@ -120,7 +134,8 @@ if __name__ == '__main__':
 
     # Prepare the main model
     net = PredictiveModel.PredictiveModel(name=name_of_attempt, dim_b=dim_b, lr=lr, freqs=freqs, P=P,
-                                          saves_path='./saves', dim_t=dim_t, fil_size=fil_dir_size)
+                                          saves_path='./saves', dim_t=dim_t, fil_size=fil_dir_size,
+                                          loss_name=loss_fn, single_layers=n_single_layer)
     # Summaries of the various networks
     net.DirectCNN.summary()
 
