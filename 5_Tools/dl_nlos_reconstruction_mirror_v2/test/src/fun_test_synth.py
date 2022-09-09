@@ -3,10 +3,8 @@ import os
 import tensorflow as tf
 import h5py
 import pandas as pd
-import matplotlib
 from datetime import date
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 import sys
 sys.path.append("../training/src/")
 sys.path.append("../utils/")  # Adds higher directory to python modules path

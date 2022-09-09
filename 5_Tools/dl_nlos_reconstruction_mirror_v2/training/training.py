@@ -16,7 +16,6 @@ Main file for all trainings.
 All flags for training and the number of feature maps for each network can be set from here
 
 Flags:
--fl_scale_perpixel  Controls the normalization by the 20 MHz component. If the flag is True the normalization is done pixel per pixel, otherwise each patch is normalized by the mean 20 MHz value
 -fl_2freq           If set, the training is done on only 2 frequencies (in this case 20 and 50 MHz)
 
 Parameters:
@@ -89,7 +88,6 @@ if __name__ == '__main__':
 
     # Training and test set generators
     fl_scale = True           # If True the normalization is performed
-    fl_scale_perpixel = True  # If True the normalization is done pixel per pixel, otherwise each patch is normalized by the mean 20 MHz value
     fl_2freq = False          # If set, the training is done on only 2 frequencies (in this case 20 and 50 MHz)
     fl_multi_freq = False     # If set, the training is done on all frequencies
     P = int(patch_str[2:])    # Patch size
@@ -113,13 +111,11 @@ if __name__ == '__main__':
                                          freqs=freqs,
                                          dim_batch=dim_b,
                                          fl_scale=fl_scale,
-                                         fl_scale_perpixel=fl_scale_perpixel,
                                          P=P)
     val_loader = DataLoader.DataLoader(filename=val_filename,
                                        freqs=freqs,
                                        dim_batch=dim_b,
                                        fl_scale=fl_scale,
-                                       fl_scale_perpixel=fl_scale_perpixel,
                                        P=P)
 
     # Prepare the main model

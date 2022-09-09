@@ -35,7 +35,7 @@ class DataLoader:
                      |__________________|
     """
 
-    def __init__(self, filename, freqs, dim_batch=256, N_batches=None, P=None, fl_scale=True, fl_scale_perpixel=True):
+    def __init__(self, filename, freqs, dim_batch=256, N_batches=None, P=None, fl_scale=True):
         """
         Initialize the data loader class
         Inputs:
@@ -57,10 +57,6 @@ class DataLoader:
                                 Custom P value for the output patches, if P=None use P = P_data
                                 Note: The custom P value for the output patches must be <= than the P value of the original dataset (P_data)
 
-            fl_scale_perpixel:  dtype='bool', shape=(1,)
-                                How to perform the scaling. If set to 'True', the scaling is done by the amplitude at 20MHz pixel per pixel, 
-                                otherwise the mean amplitude at 20 MHz is used for each patch. 
-
             fl_log_scale:       dtype='bool', shape=(1,)
                                 Whether to apply a logarithmic scaling to the input patches according to their 20 amplitude mean
             
@@ -71,8 +67,6 @@ class DataLoader:
         self.b = 0
         self.f = h5py.File(self.filename, "r")
         self.fl_scale = fl_scale  # whether to perform any scaling on the inputs
-        self.fl_scale_perpixel = fl_scale_perpixel  # whether to normalize the v vectors pixel per pixel or for the mean inside the window
-        self.fl_load_transient = True  # flag for loading transient data
 
         # Load characteristics of dataset
         temp_v_in = self.f["raw_itof"]
@@ -133,6 +127,7 @@ class DataLoader:
                               Moreover, not all of them may be needed for training (as the amplitude ones for example)
                               They are all built during the data loading procedure.
         """
+
         # Open h5 file
         if self.b == 0:
             self.f = h5py.File(self.filename, 'r')
@@ -158,31 +153,11 @@ class DataLoader:
             if self.fl_scale:
                 v_in = dict_data["raw_itof"]
                 v_a = tf.math.sqrt(tf.math.square(v_in[..., 0]) + tf.math.square(v_in[..., self.n_fr]))
-                if self.fl_scale_perpixel:
-                    v_a_max = tf.expand_dims(v_a, axis=-1)
-                else:
-                    v_a = tf.math.reduce_mean(v_a, axis=[1, 2])
-                    v_a_max = tf.expand_dims(v_a, axis=-1)
-                    v_a_max = tf.expand_dims(v_a_max, axis=-1)
-                    v_a_max = tf.expand_dims(v_a_max, axis=-1)
-                    v_a_max = tf.where(v_a_max == 0, 1., v_a_max)
+                v_a = tf.expand_dims(v_a, axis=-1)
             
-                # Scale all factors
-                dict_data["raw_itof"] /= v_a_max
-                if self.fl_load_transient:
-                    dict_data["direct_itof"] /= v_a_max
-                    dict_data["global_itof"] /= v_a_max
-                    dict_data["v_scale"] = v_a_max  # save the scaling factor
-                    # Needed for tackling both scaling cases. Recall that the transient is only for the central pixel, not the whole patch 
-                    if v_a_max.shape[1] > 1:
-                        mid = int((self.P-1) / 2)
-                        v_a_max = v_a_max[:, mid, mid]
-                    v_a_max = tf.squeeze(v_a_max)
-                    v_a_max = tf.expand_dims(v_a_max, axis=-1)
-                    dict_data["transient"] /= v_a_max
-                    dict_data["transient_global"] /= v_a_max
-            else:
-                dict_data["v_scale"] = None
+                # Scale the iToF raw data
+                dict_data["raw_itof"] /= v_a
+
             self.b += 1
 
             # Return next batch

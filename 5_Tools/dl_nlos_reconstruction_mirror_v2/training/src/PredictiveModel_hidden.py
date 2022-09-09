@@ -6,13 +6,10 @@ import time
 from tensorflow.keras.utils import plot_model
 
 sys.path.append("../../utils/")
-sys.path.append("../")
-import Autoencoder_sameconv as Autoencoder_Interp
 
 
 class PredictiveModel:
-    def __init__(self, name, dim_b, lr, freqs, P, saves_path, dim_t=2000,
-                 fil_size=8):
+    def __init__(self, name, dim_b, lr, freqs, P, saves_path, dim_t=2000, fil_size=8):
         """
         Initialize the Predictive model class
         Inputs:
@@ -90,13 +87,12 @@ class PredictiveModel:
         self.best_epoch = -1
         self.c = 299792458.  # speed of light
 
-    def load_weights(self, weight_filename_v=None):
+    def load_weights(self, weight_filename_v):
         """
         Load weights from a file
         """
 
-        if weight_filename_v is not None:
-            self.DirectCNN.load_weights(weight_filename_v, by_name=True)
+        self.DirectCNN.load_weights(weight_filename_v, by_name=True)
 
     def save_weights(self, suffix):
         """

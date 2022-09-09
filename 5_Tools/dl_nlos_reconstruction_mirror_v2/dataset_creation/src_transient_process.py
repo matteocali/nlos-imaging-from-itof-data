@@ -23,7 +23,6 @@ Flags and variables:
     -out_dir:                   path to the output directory (by default the "data" folder in the training directory)
     -data_dir:                  location of the transient dataset
     -flag_new_shuffle:          Set to True to get a new random split of the dataset images. Otherwise the csv files in ./data_split/ will be used
-    -f_ran:                     Set to True chooses the patches in random positions from all over the image, otherwise a grid will be employed
     -n_patches:                 Number of patches taken from each images
     -s:                         Patch size
     -max_imgs:                  Maximum number of images of each set. Can be used to make a quick run of the process. Otherwise set it to high value (higher than max dataset size)
@@ -31,7 +30,6 @@ Flags and variables:
     -fl_get_train:              If set to True we will acquire the training set
     -fl_get_val:                If set to True we will acquire the validation set
     -fl_get_test:               If set to True we will acquire the test set
-    -fl_normalize_transient:    Whether to normalize all transient to sum to 1. Can be useful but it is better to do it later right before training
 """
 
 def arg_parser(argv):
@@ -99,8 +97,6 @@ if __name__ == '__main__':
 
     # Flags and variables
     np.random.seed(2019283)                                    # set the random seed
-    fl_normalize_transient = False                             # whether to normalize the transient information
-    f_ran = True                                               # whether to use random or grid sampling
     n_patches = 500                                            # number of pixels taken from each image
     s = args[4]                                                # size of each input patch
     add_str = f"_ps{s}"                                        # part of the dataset name containing the patch size
@@ -108,7 +104,10 @@ if __name__ == '__main__':
     train_slice = 0.6                                          # percentage of images belonging to training dataset
     val_slice = round((1 - train_slice) / 2, 1)                # percentage of images belonging to validation dataset
     freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)  # frequencies used by the iToF sensor
-    #freqs = np.array((list(range(int(20e06), int(400e06), int(20e06)))), dtype=np.float32)  # frequencies used by the iToF sensor
+    multi_freqs = np.array((list(range(int(20e06),
+                                       int(400e06),
+                                       int(20e06)))),
+                           dtype=np.float32)                   # frequencies used by the iToF sensor
     if freqs.shape[0] == 2:
         add_str += "_2freq"
     if freqs.shape[0] > 3:
@@ -121,8 +120,6 @@ if __name__ == '__main__':
     fl_get_test = True          # build the test set
 
     # Grab all the names of the images of the dataset, shuffle them and save them in a csv file
-    if not fl_normalize_transient:
-        add_str += "_nonorm"
 
     if flag_new_shuffle:
         # Load all the images of the dataset
@@ -209,108 +206,73 @@ if __name__ == '__main__':
         train_files = np.asarray(train_files)
         train_files = [data_dir + file for file in train_files]
         print("Training dataset:")
-        Back, Back_nod, gt_depth_real, gt_alpha_real, _, _, _, v_real, v_real_no_d, v_real_d, _, Back_fit, mask = acquire_pixels(images=train_files,
-                                                                                                                                 num_pixels=n_patches,
-                                                                                                                                 max_img=max_imgs,
-                                                                                                                                 f_ran=f_ran,
-                                                                                                                                 s=s,
-                                                                                                                                 fl_normalize_transient=fl_normalize_transient,
-                                                                                                                                 freqs=freqs)
-        num_elem = Back.shape[0]
+        v_real, gt_depth_real, gt_alpha_real = acquire_pixels(images=train_files,
+                                                              num_pixels=n_patches,
+                                                              max_img=max_imgs,
+                                                              s=s,
+                                                              freqs=freqs)
+        num_elem = v_real.shape[0]
 
-        A_in, phi_in, A_g, phi_g, A_d, phi_d = Aphi_compute(v_real, v_real_no_d, v_real_d)
+        a_in, phi_in = Aphi_compute(v_real)
 
         file_train = f"{out_dir}train_{dataset_name}_n{str(num_elem)}{add_str}.h5"
         with h5py.File(file_train, 'w') as f:
             f.create_dataset("name", data=dataset_name)
-            f.create_dataset("transient", data=Back, compression="gzip")
-            f.create_dataset("transient_global", data=Back_nod, compression="gzip")
             f.create_dataset("gt_depth", data=gt_depth_real, compression="gzip")
             f.create_dataset("gt_alpha", data=gt_alpha_real, compression="gzip")
             f.create_dataset("raw_itof", data=v_real)
-            f.create_dataset("global_itof", data=v_real_no_d)
-            f.create_dataset("direct_itof", data=v_real_d)
-            f.create_dataset("amplitude_raw", data=A_in)
+            f.create_dataset("amplitude_raw", data=a_in)
             f.create_dataset("phase_raw", data=phi_in)
-            f.create_dataset("amplitude_direct", data=A_d)
-            f.create_dataset("phase_direct", data=phi_d)
-            f.create_dataset("amplitude_global", data=A_g)
-            f.create_dataset("phase_global", data=phi_g)
             f.create_dataset("freqs", data=freqs)
-            f.create_dataset("mask", data=mask)
 
     # VALIDATION IMAGES
     if fl_get_val:
         val_files = np.asarray(val_files)
         val_files = [data_dir + fil for fil in val_files]
         print("\nValidation dataset:")
-        Back, Back_nod, gt_depth_real, gt_alpha_real, _, _, _, v_real, v_real_no_d, v_real_d, _, Back_fit, mask = acquire_pixels(images=val_files,
-                                                                                                                                 num_pixels=n_patches,
-                                                                                                                                 max_img=max_imgs,
-                                                                                                                                 f_ran=f_ran,
-                                                                                                                                 s=s,
-                                                                                                                                 fl_normalize_transient=fl_normalize_transient,
-                                                                                                                                 freqs=freqs)
+        v_real, gt_depth_real, gt_alpha_real = acquire_pixels(images=val_files,
+                                                              num_pixels=n_patches,
+                                                              max_img=max_imgs,
+                                                              s=s,
+                                                              freqs=freqs)
 
-        num_elem = Back.shape[0]
+        num_elem = v_real.shape[0]
 
-        A_in, phi_in, A_g, phi_g, A_d, phi_d = Aphi_compute(v_real, v_real_no_d, v_real_d)
+        a_in, phi_in = Aphi_compute(v_real)
         file_val = f"{out_dir}val_{dataset_name}_n{str(num_elem)}{add_str}.h5"
         with h5py.File(file_val, 'w') as f:
             f.create_dataset("name", data=dataset_name)
-            f.create_dataset("transient", data=Back, compression="gzip")
-            f.create_dataset("transient_global", data=Back_nod, compression="gzip")
             f.create_dataset("gt_depth", data=gt_depth_real, compression="gzip")
             f.create_dataset("gt_alpha", data=gt_alpha_real, compression="gzip")
             f.create_dataset("raw_itof", data=v_real)
-            f.create_dataset("global_itof", data=v_real_no_d)
-            f.create_dataset("direct_itof", data=v_real_d)
-            f.create_dataset("amplitude_raw", data=A_in)
+            f.create_dataset("amplitude_raw", data=a_in)
             f.create_dataset("phase_raw", data=phi_in)
-            f.create_dataset("amplitude_direct", data=A_d)
-            f.create_dataset("phase_direct", data=phi_d)
-            f.create_dataset("amplitude_global", data=A_g)
-            f.create_dataset("phase_global", data=phi_g)
             f.create_dataset("freqs", data=freqs)
-            f.create_dataset("mask", data=mask)
 
     # TEST IMAGES
     if fl_get_test:
         test_files = np.asarray(test_files)
         test_files = [data_dir + fil for fil in test_files]
         print("\nTest dataset:")
-        Back, Back_nod, gt_depth_real, gt_alpha_real, _, _, _, v_real, v_real_no_d, v_real_d, _, Back_fit, mask = acquire_pixels(images=test_files,
-                                                                                                                                 num_pixels=n_patches,
-                                                                                                                                 max_img=max_imgs,
-                                                                                                                                 f_ran=f_ran,
-                                                                                                                                 s=s,
-                                                                                                                                 fl_normalize_transient=fl_normalize_transient,
-                                                                                                                                 freqs=freqs)
-        num_elem = Back.shape[0]
+        v_real, gt_depth_real, gt_alpha_real = acquire_pixels(images=test_files,
+                                                              num_pixels=n_patches,
+                                                              max_img=max_imgs,
+                                                              s=s,
+                                                              freqs=freqs)
+        num_elem = v_real.shape[0]
 
-        A_in, phi_in, A_g, phi_g, A_d, phi_d = Aphi_compute(v_real, v_real_no_d, v_real_d)
+        a_in, phi_in = Aphi_compute(v_real)
         file_test = f"{out_dir}test_{dataset_name}_n{str(num_elem)}{add_str}.h5"
         with h5py.File(file_test, 'w') as f:
             f.create_dataset("name", data=dataset_name)
-            f.create_dataset("transient", data=Back, compression="gzip")
-            f.create_dataset("transient_global", data=Back_nod, compression="gzip")
             f.create_dataset("gt_depth", data=gt_depth_real, compression="gzip")
             f.create_dataset("gt_alpha", data=gt_alpha_real, compression="gzip")
             f.create_dataset("raw_itof", data=v_real)
-            f.create_dataset("global_itof", data=v_real_no_d)
-            f.create_dataset("direct_itof", data=v_real_d)
-            f.create_dataset("amplitude_raw", data=A_in)
+            f.create_dataset("amplitude_raw", data=a_in)
             f.create_dataset("phase_raw", data=phi_in)
-            f.create_dataset("amplitude_direct", data=A_d)
-            f.create_dataset("phase_direct", data=phi_d)
-            f.create_dataset("amplitude_global",data=A_g)
-            f.create_dataset("phase_global", data=phi_g)
             f.create_dataset("freqs", data=freqs)
-            f.create_dataset("mask", data=mask)
 
     end_time = time.time()
     minutes, seconds = divmod(end_time - start_time, 60)
     hours, minutes = divmod(minutes, 60)
     print("\nTotal time to build the whole dataset is %d:%02d:%02d" % (hours, minutes, seconds))
-
-
