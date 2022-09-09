@@ -4,7 +4,6 @@ import tensorflow as tf
 import h5py
 import pandas as pd
 import matplotlib
-import scipy
 from datetime import date
 from tqdm import tqdm
 import matplotlib.pyplot as plt
