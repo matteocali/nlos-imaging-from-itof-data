@@ -134,9 +134,6 @@ class DataLoader:
 
         # Iterate over all the batches
         if self.b < self.N_batches:
-            if "transient" in self.f.keys():
-                self.fl_load_transient = True
-
             # Compute sample indices corresponding to the current batch
             i_init = self.b * self.dim_batch
             i_end = (self.b+1) * self.dim_batch

@@ -35,12 +35,15 @@ def arg_parser(argv):
     """
 
     arg_name = "test"   # Argument containing the name of the training attempt
-    arg_lr = 1e-04       # Argument containing the learning rate
+    arg_lr = 1e-04      # Argument containing the learning rate
+    arg_filter = 32     # Argument containing the number of the filter to be used
+    arg_loss = "mae"    # Argument containing the loss function to be used
+    arg_n_layer = None  # Argument containing the number of layers to be used
     arg_help = "{0} -n <name> -r <lr>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:r:", ["help", "name=", "lr="])
+        opts, args = getopt.getopt(argv[1:], "hn:r:f:l:s:", ["help", "name=", "lr=", "filter=", "loss=", "n_layers="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -50,12 +53,21 @@ def arg_parser(argv):
             arg_name = arg  # Set the attempt name
         elif opt in ("-r", "--lr"):
             arg_lr = float(arg)  # Set the learning rate
+        elif opt in ("-f", "--filter"):
+            arg_filter = int(arg)
+        elif opt in ("-l", "--loss"):
+            arg_loss = arg
+        elif opt in ("-s", "--n_layers"):
+            arg_n_layer = int(arg)
 
     print("Attempt name: ", arg_name)
     print("Learning rate: ", arg_lr)
+    print("Number of filters: ", arg_filter)
+    print("Loss function: ", arg_loss)
+    print("Number of layers: ", arg_n_layer)
     print()
 
-    return [arg_name, arg_lr]
+    return [arg_name, arg_lr, arg_filter, arg_loss, arg_n_layer]
 
 
 if __name__ == '__main__':
@@ -63,17 +75,20 @@ if __name__ == '__main__':
 
     attempt_name = args[0]                                                                              # name of the stored approach weights
     lr = args[1]                                                                                        # kernel size for the convolutional layers
+    n_filters = args[2]                                                                                 # number of filters for the convolutional layers
+    loss = args[3]                                                                                      # loss function
+    n_layers = args[4]                                                                                  # number of layers
     win_server_path = "Z:/decaligm"                                                                     # path to the server
     win_server_path_2 = "Y:/matteo"                                                                     # path to the server
+    local_path = "C:/Users/DECaligM/Documents"                                                          # path to the local machine
     git_folder_path = "thesis-nlos-for-itof/5_Tools/dl_nlos_reconstruction_mirror_v2"                   # path to the git folder
     dataset_folder = "datasets/mirror"                                                                  # path to the dataset folder
     data_path_real = "../../Datasets/S3S4S5/*"                                                          # path to the real images
     data_path_synth = f"{win_server_path_2}/{dataset_folder}/mirror_dts"                                # Path of the synthetic test set (same patch size as training and validation)
-    processed_dts_folder = f"{win_server_path}/{git_folder_path}/training/data/val_balanced_dts_fixed_cam_n33500_ps11_nonorm.h5"                        # Path of the processed test set (same patch size as training and validation)
-    #test_file_csv = f"{win_server_path}/{git_folder_path}/dataset_creation/data_split/test_images.csv"  # path to the test file
-    test_file_csv = f"{win_server_path}/{git_folder_path}/dataset_creation/data_split/val_images.csv"
+    processed_dts_folder = f"{local_path}/{git_folder_path}/training/data/test_balanced_dataset_v2_n1_ps11.h5"                        # Path of the processed test set (same patch size as training and validation)
+    test_file_csv = f"{win_server_path_2}/{git_folder_path}/dataset_creation/data_split/test_images.csv"  # path to the test file
     #weights_folder = f"../training/saves/{attempt_name}/checkpoints/"                                  # path to the weights
-    weights_folder = f"{win_server_path}/{git_folder_path}/training/saves/{attempt_name}/checkpoints/"  # path to the weights
+    weights_folder = f"{win_server_path_2}/{git_folder_path}/training/saves/{attempt_name}/checkpoints/"  # path to the weights
     dim_t = 2000                                                                                        # number of bins in the transient dimension
     P = 11                                                                                              # patch size
     flag_norm_perpixel = True                                                                           # normalization per pixel
@@ -81,7 +96,6 @@ if __name__ == '__main__':
     flag_plot = False                                                                                   # whether to plot and save the results
     flag_epoch = False                                                                                  # whether to test on a specific epoch
     fl_test_img = True
-    fil_direct = 32
     num_epoch = 40000                                                                                   # epoch to test on
     epoch_name_d = attempt_name + "_d_e" + str(num_epoch) + "_weights.h5"                               # name of the epoch to test on for the spatial net
     epoch_name_v = attempt_name + "_v_e" + str(num_epoch) + "_weights.h5"                               # name of the epoch to test on for the direct net
@@ -139,12 +153,13 @@ if __name__ == '__main__':
                  lr=lr,
                  freqs=freqs,
                  fl_scale=flag_scale,
-                 fl_norm_perpixel=flag_norm_perpixel,
-                 fil_dir=fil_direct,
+                 fil_dir=n_filters,
+                 loss_fn=loss,
+                 n_single_layers=n_layers,
                  dim_t=dim_t,
                  plot_results=True)  # test on transient images
     elif test_type == "patch":
-        test_synth(fl_test_img=False,
+        test_synth(fl_test_img=True,
                    processed_dts_path=processed_dts_folder,
                    test_files=test_file_csv,
                    dts_path=data_path,
@@ -153,5 +168,8 @@ if __name__ == '__main__':
                    freqs=freqs,
                    lr=lr,
                    fl_scale=flag_scale,
-                   fil_dir=fil_direct,
-                   dim_t=dim_t)
+                   fil_dir=n_filters,
+                   loss_fn=loss,
+                   n_single_layers=n_layers,
+                   dim_t=dim_t,
+                   out_path=out_path)

@@ -103,7 +103,6 @@ if __name__ == '__main__':
     # Training and test set generators
     fl_scale = True           # If True the normalization is performed
     fl_2freq = False          # If set, the training is done on only 2 frequencies (in this case 20 and 50 MHz)
-    fl_multi_freq = False     # If set, the training is done on all frequencies
     P = int(patch_str[2:])    # Patch size
     dim_b = 1024              # Batch dimension
     dim_t = 2000              # Number of bins in the transient dimension
@@ -113,9 +112,6 @@ if __name__ == '__main__':
     if fl_2freq:
         str_freqs = "_2freq"
         freqs = np.array((20e06, 50e06), dtype=np.float32)
-    elif fl_multi_freq:
-        str_freqs = "_multi_freq"
-        freqs = np.array((20e06, 30e06, 40e06, 50e06), dtype=np.float32)
     else:
         str_freqs = ""
         freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
@@ -144,5 +140,5 @@ if __name__ == '__main__':
     pretrain_filenamev = None
 
     # Training loop
-    net.training_loop(train_w_loader=train_loader, test_w_loader=val_loader, final_epochs=50000, print_freq=1,
+    net.training_loop(train_w_loader=train_loader, test_w_loader=val_loader, final_epochs=10000, print_freq=1,
                       save_freq=25, pretrain_filenamev=pretrain_filenamev)

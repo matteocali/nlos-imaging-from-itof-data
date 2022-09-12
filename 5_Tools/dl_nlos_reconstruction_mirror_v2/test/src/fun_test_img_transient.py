@@ -1,41 +1,19 @@
 import numpy as np
 import os
 import h5py
-import matplotlib
-import scipy
-import scipy.signal
-import tensorflow as tf
 from matplotlib import pyplot as plt
 import pandas as pd
 import sys
 from tqdm import tqdm
-
 sys.path.append("../training/src/")
 sys.path.append("../utils/")  # Adds higher directory to python modules path
 import utils
-
-font = {'size': 6}
 import PredictiveModel_hidden as PredictiveModel
-matplotlib.rc('font', **font)
 
 
-def phi_remapping(v, d_max=4):
-    # Function used to map the phasor to a desired range
-    fn = v.shape[-1]
-    ampl = np.sqrt(v[..., :fn] ** 2 + v[..., fn:] ** 2)
-    phi = np.arctan2(v[..., fn:], v[..., :fn])
-    phi = (phi + 2 * utils.pi()) % (2 * utils.pi())
-    phi = phi / 7.5 * d_max
-    phi = (phi - utils.pi()) % (2 * utils.pi()) - utils.pi()
-    v_new = np.copy(v)
-    v_new[..., :fn] = ampl * np.cos(phi)
-    v_new[..., fn:] = ampl * np.sin(phi)
-
-    return v_new
-
-
-def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fl_norm_perpixel, fil_dir, lr, test_files=None,
+def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fil_dir, lr, loss_fn="mae", n_single_layers=None, test_files=None,
              dim_t=2000, return_vals=False, plot_results=False):
+
     ff = freqs.shape[0]
     test_names = pd.read_csv(test_files, header=None).to_numpy()
     names = [file for file in os.listdir(data_path) if file.endswith(".h5")]
@@ -48,7 +26,8 @@ def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fl_norm_perp
 
     # Define the network and load the corresponding weights
     net = PredictiveModel.PredictiveModel(name='test_result_01', dim_b=dim_dataset, freqs=freqs, P=P,
-                                          saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, lr=lr)
+                                          saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, lr=lr,
+                                          loss_name=loss_fn, single_layers=n_single_layers)
 
     for name in weight_names:
         if name.find("v_e") != -1:
@@ -63,60 +42,49 @@ def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fl_norm_perp
             gt_alpha = f["alpha_map"][:]
             gt_alpha = np.swapaxes(gt_alpha, 0, 1)
 
-        phi = np.transpose(utils.phi(freqs, dim_t, 0.01))
-        tr = np.swapaxes(tr, 0, 1)
-
-        v_in = np.matmul(tr, phi)
-
-        # Direct part of the transient
-        x_d = np.copy(tr)
-        for j in range(x_d.shape[0]):
-            for k in range(x_d.shape[1]):
-                peaks = np.nanargmax(x_d[j, k, :], axis=0)
-                zeros_pos = np.where(x_d[j, k, :] == 0)[0]
-                valid_zero_indexes = zeros_pos[np.where(zeros_pos > peaks)]
-                if valid_zero_indexes.size == 0:
-                    x_d[j, k, :] = 0
-                else:
-                    x_d[j, k, int(valid_zero_indexes[0]):] = 0
-
-        v_d_gt = np.matmul(x_d, phi)
-        v_g_gt = v_in - v_d_gt
         s_pad = int((P - 1) / 2)
-        (dim_x, dim_y, dim_t) = tr.shape
+        dim_x, dim_y, dim_t = tr.shape
+
+        # Fix first peak before the computation
+        tr = np.reshape(tr, ((dim_x * dim_y), dim_t))
+
+        ind_maxima = np.argmax(tr, axis=-1)
+        val_maxima = np.zeros(ind_maxima.shape, dtype=np.float32)
+        ind_end_direct = np.zeros(ind_maxima.shape, dtype=np.int32)
+
+        for j in range(tr.shape[0]):
+            zeros_pos = np.where(tr[j] == 0)[0]  # find the index of the zeros
+            ind_end_direct[j] = zeros_pos[np.where(zeros_pos > ind_maxima[j])][0]  # find the index of the zeros after the first peak
+        for j in range(ind_maxima.shape[0]):
+            val_maxima[j] = np.sum(tr[j, :ind_end_direct[j]])  # compute the value of the first peak considering the sum of the values before the global
+        for j in range(tr.shape[0]):
+            tr[j, :ind_end_direct[j]] = 0  # set the values before the global to zero
+        for j in range(tr.shape[0]):
+            tr[j, ind_maxima[j]] = val_maxima[j]  # set the value of the first peak to the value computed before
+
+        # Compute the iToF data
+        phi = np.transpose(utils.phi(freqs=freqs, dim_t=dim_t, exp_time=0.01))
+        v_in = np.matmul(tr, phi)
+        tr = np.reshape(tr, (dim_x, dim_y, dim_t))
+        v_in = np.reshape(v_in, (dim_x, dim_y, ff*2))
+
         if fl_scale:
             # Compute the scaling kernel for the image pixels
-            ampl = np.sqrt(v_in[..., :ff] ** 2 + v_in[..., ff:] ** 2)
-            norm_fact = np.ones((P, P)) / P ** 2
-            ampl20 = np.squeeze(ampl[..., 0])
-            norm_fact = scipy.signal.convolve2d(ampl20, norm_fact, mode="same")
-            if fl_norm_perpixel:
-                norm_fact = ampl[..., 0]
-            v_in = v_in[np.newaxis, :, :, :]
-            norm_fact = norm_fact[np.newaxis, ..., np.newaxis]
+            ampl20 = np.sqrt(v_in[..., 0] ** 2 + v_in[..., ff] ** 2)
+            norm_fact = ampl20[..., np.newaxis]
 
             # Give the correct number of dimensions to each matrix and then scale them
             v_in /= norm_fact
             v_in[np.isnan(v_in)] = 0
-            v_d_gt = v_d_gt[np.newaxis, ...]
-            v_d_gt /= norm_fact[0, ...]
-            v_d_gt[np.isnan(v_d_gt)] = 0
-            v_g_gt = v_g_gt[np.newaxis, ...]
-            v_g_gt /= norm_fact[0, ...]
-            v_g_gt[np.isnan(v_g_gt)] = 0
-            norm_fact = np.squeeze(norm_fact)
-            norm_fact = norm_fact[..., np.newaxis]
-            x_d /= norm_fact
-            x_d[np.isnan(x_d)] = 0
-            tr /= norm_fact
-            tr[np.isnan(tr)] = 0
+            v_in = v_in[np.newaxis, ...]
         else:
             v_in = v_in[np.newaxis, :, :, :]
 
         # Make prediction
-        v_in_v = np.pad(v_in, pad_width=[[0, 0], [s_pad, s_pad], [s_pad, s_pad], [0, 0]], mode="reflect")
+        v_in = np.swapaxes(v_in, 1, 2)
+        v_in = np.pad(v_in, pad_width=[[0, 0], [s_pad, s_pad], [s_pad, s_pad], [0, 0]], mode="reflect")
 
-        [pred_depth, pred_alpha] = net.DirectCNN(v_in_v)
+        [pred_depth, pred_alpha] = net.DirectCNN(v_in)
         pred_depth = np.squeeze(pred_depth)
         pred_alpha = np.squeeze(pred_alpha)
 

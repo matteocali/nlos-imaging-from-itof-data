@@ -8,8 +8,7 @@ import time
 import getopt
 sys.path.append("./src")
 sys.path.append("../utils")
-from fun_acquire_pixels import acquire_pixels
-from fct_Aphi_compute import Aphi_compute
+from fun_acquire_pixels import acquire_pixels, acquire_pixels_test
 
 
 """
@@ -104,14 +103,9 @@ if __name__ == '__main__':
     train_slice = 0.6                                          # percentage of images belonging to training dataset
     val_slice = round((1 - train_slice) / 2, 1)                # percentage of images belonging to validation dataset
     freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)  # frequencies used by the iToF sensor
-    multi_freqs = np.array((list(range(int(20e06),
-                                       int(400e06),
-                                       int(20e06)))),
-                           dtype=np.float32)                   # frequencies used by the iToF sensor
+
     if freqs.shape[0] == 2:
         add_str += "_2freq"
-    if freqs.shape[0] > 3:
-        add_str += "_multifreq"
 
     # Choose which datasets you want to build
     flag_new_shuffle = args[3]  # whether to shuffle again the images and create new training validation and test datasets
@@ -211,18 +205,14 @@ if __name__ == '__main__':
                                                               max_img=max_imgs,
                                                               s=s,
                                                               freqs=freqs)
+
         num_elem = v_real.shape[0]
-
-        a_in, phi_in = Aphi_compute(v_real)
-
         file_train = f"{out_dir}train_{dataset_name}_n{str(num_elem)}{add_str}.h5"
         with h5py.File(file_train, 'w') as f:
             f.create_dataset("name", data=dataset_name)
-            f.create_dataset("gt_depth", data=gt_depth_real, compression="gzip")
-            f.create_dataset("gt_alpha", data=gt_alpha_real, compression="gzip")
+            f.create_dataset("gt_depth", data=gt_depth_real)
+            f.create_dataset("gt_alpha", data=gt_alpha_real)
             f.create_dataset("raw_itof", data=v_real)
-            f.create_dataset("amplitude_raw", data=a_in)
-            f.create_dataset("phase_raw", data=phi_in)
             f.create_dataset("freqs", data=freqs)
 
     # VALIDATION IMAGES
@@ -237,16 +227,12 @@ if __name__ == '__main__':
                                                               freqs=freqs)
 
         num_elem = v_real.shape[0]
-
-        a_in, phi_in = Aphi_compute(v_real)
         file_val = f"{out_dir}val_{dataset_name}_n{str(num_elem)}{add_str}.h5"
         with h5py.File(file_val, 'w') as f:
             f.create_dataset("name", data=dataset_name)
-            f.create_dataset("gt_depth", data=gt_depth_real, compression="gzip")
-            f.create_dataset("gt_alpha", data=gt_alpha_real, compression="gzip")
+            f.create_dataset("gt_depth", data=gt_depth_real)
+            f.create_dataset("gt_alpha", data=gt_alpha_real)
             f.create_dataset("raw_itof", data=v_real)
-            f.create_dataset("amplitude_raw", data=a_in)
-            f.create_dataset("phase_raw", data=phi_in)
             f.create_dataset("freqs", data=freqs)
 
     # TEST IMAGES
@@ -254,22 +240,18 @@ if __name__ == '__main__':
         test_files = np.asarray(test_files)
         test_files = [data_dir + fil for fil in test_files]
         print("\nTest dataset:")
-        v_real, gt_depth_real, gt_alpha_real = acquire_pixels(images=test_files,
-                                                              num_pixels=n_patches,
-                                                              max_img=max_imgs,
-                                                              s=s,
-                                                              freqs=freqs)
-        num_elem = v_real.shape[0]
+        v_real, gt_depth_real, gt_alpha_real = acquire_pixels_test(images=test_files,
+                                                                   max_img=max_imgs,
+                                                                   s=s,
+                                                                   freqs=freqs)
 
-        a_in, phi_in = Aphi_compute(v_real)
+        num_elem = v_real.shape[0]
         file_test = f"{out_dir}test_{dataset_name}_n{str(num_elem)}{add_str}.h5"
         with h5py.File(file_test, 'w') as f:
             f.create_dataset("name", data=dataset_name)
-            f.create_dataset("gt_depth", data=gt_depth_real, compression="gzip")
-            f.create_dataset("gt_alpha", data=gt_alpha_real, compression="gzip")
+            f.create_dataset("gt_depth", data=gt_depth_real)
+            f.create_dataset("gt_alpha", data=gt_alpha_real)
             f.create_dataset("raw_itof", data=v_real)
-            f.create_dataset("amplitude_raw", data=a_in)
-            f.create_dataset("phase_raw", data=phi_in)
             f.create_dataset("freqs", data=freqs)
 
     end_time = time.time()
