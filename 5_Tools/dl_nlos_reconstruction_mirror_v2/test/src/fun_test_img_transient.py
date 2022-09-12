@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 import pandas as pd
 import sys
 from tqdm import tqdm
+import tensorflow as tf
 sys.path.append("../training/src/")
 sys.path.append("../utils/")  # Adds higher directory to python modules path
 import utils
@@ -84,7 +85,7 @@ def test_img(weight_names, data_path, out_path, P, freqs, fl_scale, fil_dir, lr,
         v_in = np.swapaxes(v_in, 1, 2)
         v_in = np.pad(v_in, pad_width=[[0, 0], [s_pad, s_pad], [s_pad, s_pad], [0, 0]], mode="reflect")
 
-        [pred_depth, pred_alpha] = net.DirectCNN(v_in)
+        [pred_depth, pred_alpha] = net.DirectCNN(tf.convert_to_tensor(v_in))
         pred_depth = np.squeeze(pred_depth)
         pred_alpha = np.squeeze(pred_alpha)
 

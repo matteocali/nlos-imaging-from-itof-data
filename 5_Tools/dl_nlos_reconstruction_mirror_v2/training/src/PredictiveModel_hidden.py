@@ -110,7 +110,6 @@ class PredictiveModel:
         weight_filename_v = self.name + '_v_' + suffix + '.h5'
         self.DirectCNN.save_weights(os.path.join(self.checkpoint_path, weight_filename_v))
 
-
     def def_DirectCNN(self):
         """
         Define the DirectCNN model

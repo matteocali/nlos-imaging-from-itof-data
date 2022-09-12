@@ -20,9 +20,10 @@ import PredictiveModel_hidden as PredictiveModel
 
 def test_synth(weight_names, P, freqs, out_path, lr, loss_fn="mae", n_single_layers=None, fl_scale=False, fil_dir=8,
                dim_t=2000, fl_test_img=False, test_files=None, dts_path=None, processed_dts_path=None):
+
     ff = freqs.shape[0]
     mid = int((P - 1) / 2)  # index pointing at the middle element of the patch
-    test =True
+    test = False
 
     if processed_dts_path is not None and not fl_test_img and not test:
         with h5py.File(processed_dts_path, "r") as f:

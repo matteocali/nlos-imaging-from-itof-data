@@ -84,8 +84,8 @@ if __name__ == '__main__':
     git_folder_path = "thesis-nlos-for-itof/5_Tools/dl_nlos_reconstruction_mirror_v2"                   # path to the git folder
     dataset_folder = "datasets/mirror"                                                                  # path to the dataset folder
     data_path_real = "../../Datasets/S3S4S5/*"                                                          # path to the real images
-    data_path_synth = f"{win_server_path_2}/{dataset_folder}/mirror_dts"                                # Path of the synthetic test set (same patch size as training and validation)
-    processed_dts_folder = f"{local_path}/{git_folder_path}/training/data/test_balanced_dataset_v2_n1_ps11.h5"                        # Path of the processed test set (same patch size as training and validation)
+    data_path_synth = f"{win_server_path_2}/{dataset_folder}/mirror_dts/fixed_camera_diffuse_wall"      # path of the synthetic test set (same patch size as training and validation)
+    processed_dts_folder = f"{win_server_path_2}/{git_folder_path}/training/data/test_balanced_dts_fixed_cam_v2_n1_ps11.h5"                        # Path of the processed test set (same patch size as training and validation)
     test_file_csv = f"{win_server_path_2}/{git_folder_path}/dataset_creation/data_split/test_images.csv"  # path to the test file
     #weights_folder = f"../training/saves/{attempt_name}/checkpoints/"                                  # path to the weights
     weights_folder = f"{win_server_path_2}/{git_folder_path}/training/saves/{attempt_name}/checkpoints/"  # path to the weights
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     else:
         data_path = data_path_real
 
-    test_type = "patch"
+    test_type = "img"
     if test_type == "img":
         test_img(weight_names=weight_names,
                  data_path=data_path,
