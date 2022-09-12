@@ -65,7 +65,7 @@ def arg_parser(argv):
             if arg_out_path[-1] != "/":
                 arg_out_path += "/"
         elif opt in ("-s", "--shuffle"):
-            if arg_shuffle == "True":
+            if arg == "True":
                 arg_shuffle = True
             else:
                 arg_shuffle = False
