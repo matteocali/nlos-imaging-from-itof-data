@@ -256,7 +256,7 @@ if __name__ == '__main__':
         test_files = np.asarray(test_files)
         test_files = [data_dir + fil for fil in test_files]
         print("\nTest dataset:")
-        gt_depth_real, gt_alpha_real, v_real = acquire_pixels_test_3(images=[test_files[0]],
+        gt_depth_real, gt_alpha_real, v_real = acquire_pixels_test_3(images=test_files,
                                                                      max_img=max_imgs,
                                                                      s=s,
                                                                      freqs=freqs)
