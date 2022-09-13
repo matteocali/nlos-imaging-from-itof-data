@@ -8,7 +8,7 @@ import time
 import getopt
 sys.path.append("./src")
 sys.path.append("../utils")
-from fun_acquire_pixels import acquire_pixels, acquire_pixels_test
+from fun_acquire_pixels import acquire_pixels, acquire_pixels_test_2, acquire_pixels_test_3
 
 
 """
@@ -42,13 +42,15 @@ def arg_parser(argv):
     arg_name = "dts"                    # Argument containing the name of the dataset
     arg_data_path = ""                  # Argument containing the path where the raw data are located
     arg_out_path = "../training/data/"  # Argument containing the path of the output folder
-    arg_shuffle = True                 # Argument containing the flag for shuffling the dataset
+    arg_shuffle = True                  # Argument containing the flag for shuffling the dataset
+    arg_n_patches = 500                 # Argument containing the number of patches to be extracted from each image
     arg_patch_size = 11                 # Argument containing the patch size
-    arg_help = "{0} -n <name> -i <input> -o <output> -s <shuffle> -p <patch>".format(argv[0])      # Help string
+    arg_groups = 111                    # Argument containing the groups to be processed
+    arg_help = "{0} -n <name> -i <input> -o <output> -s <shuffle> -p <patch> -d <n_patches> -g <groups>".format(argv[0])      # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:i:o:s:p:", ["help", "name=", "input=", "output=", "shuffle=", "patch="])
+        opts, args = getopt.getopt(argv[1:], "hn:i:o:s:p:d:g:", ["help", "name=", "input=", "output=", "shuffle=", "patch=", "n_patches=", "groups="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -71,15 +73,22 @@ def arg_parser(argv):
                 arg_shuffle = False
         elif opt in ("-p", "--patch"):
             arg_patch_size = int(arg)
-
+        elif opt in ("-d", "--n_patches"):
+            arg_n_patches = int(arg)
+        elif opt in ("-g", "--groups"):
+            arg_groups = arg
+            if arg_groups != "100" and arg_groups != "010" and arg_groups != "001" and arg_groups != "111":
+                arg_groups = "111"
     print("Attempt name: ", arg_name)
     print("Input folder: ", arg_data_path)
     print("Output folder: ", arg_out_path)
     print("Shuffle: ", arg_shuffle)
     print("Patch size: ", arg_patch_size)
+    print("Number of patches: ", arg_n_patches)
+    print("Groups: ", arg_groups)
     print()
 
-    return [arg_name, arg_data_path, arg_out_path, arg_shuffle, arg_patch_size]
+    return [arg_name, arg_data_path, arg_out_path, arg_shuffle, arg_patch_size, arg_n_patches, arg_groups]
 
 
 if __name__ == '__main__':
@@ -96,7 +105,7 @@ if __name__ == '__main__':
 
     # Flags and variables
     np.random.seed(2019283)                                    # set the random seed
-    n_patches = 500                                            # number of pixels taken from each image
+    n_patches = args[5]                                            # number of pixels taken from each image
     s = args[4]                                                # size of each input patch
     add_str = f"_ps{s}"                                        # part of the dataset name containing the patch size
     max_imgs = 1000                                            # maximum number of images to be used (if grater than the actual number, all the dataset will be used)
@@ -109,9 +118,16 @@ if __name__ == '__main__':
 
     # Choose which datasets you want to build
     flag_new_shuffle = args[3]  # whether to shuffle again the images and create new training validation and test datasets
-    fl_get_train = True         # build the training set
-    fl_get_val = True           # build the validation set
-    fl_get_test = True          # build the test set
+    fl_get_train = False  # build the training set
+    fl_get_val = False    # build the validation set
+    fl_get_test = False   # build the test set
+    groups = args[6]            # which groups to be processed
+    if groups[0] == "1":
+        fl_get_train = True
+    if groups[1] == "1":
+        fl_get_val = True
+    if groups[2] == "1":
+        fl_get_test = True
 
     # Grab all the names of the images of the dataset, shuffle them and save them in a csv file
 
@@ -240,10 +256,10 @@ if __name__ == '__main__':
         test_files = np.asarray(test_files)
         test_files = [data_dir + fil for fil in test_files]
         print("\nTest dataset:")
-        v_real, gt_depth_real, gt_alpha_real = acquire_pixels_test(images=test_files,
-                                                                   max_img=max_imgs,
-                                                                   s=s,
-                                                                   freqs=freqs)
+        gt_depth_real, gt_alpha_real, v_real = acquire_pixels_test_3(images=[test_files[0]],
+                                                                     max_img=max_imgs,
+                                                                     s=s,
+                                                                     freqs=freqs)
 
         num_elem = v_real.shape[0]
         file_test = f"{out_dir}test_{dataset_name}_n{str(num_elem)}{add_str}.h5"

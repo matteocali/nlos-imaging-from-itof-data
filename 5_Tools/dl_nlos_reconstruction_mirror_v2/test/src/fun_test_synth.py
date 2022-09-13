@@ -43,11 +43,11 @@ def test_synth(weight_names, P, freqs, out_path, lr, loss_fn="mae", n_single_lay
 
         # Load the model
         net = PredictiveModel.PredictiveModel(name=f'test_patches_{date.today()}', dim_b=dim_dataset, freqs=freqs, P=P,
-                                              saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, lr=lr)
+                                              saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, lr=lr, loss_name=loss_fn,
+                                              single_layers=n_single_layers)
 
         # Load the weights
         net.DirectCNN.load_weights(weight_names[0])
-
 
         # Make prediction
         #v_input = tf.convert_to_tensor(v_in,dtype="float32")

@@ -92,7 +92,7 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, s=3, freqs=np.array((2
         for i in range(ind[0].shape[0]):
             tran_patch = temp[ind[0][i] - pad_s:ind[0][i] + pad_s + 1, ind[1][i] - pad_s:ind[1][i] + pad_s + 1]
             tran_patch = np.reshape(tran_patch, (s * s, dim_t))
-
+            '''
             # Fix first peak before the computation
             ind_maxima = np.argmax(tran_patch, axis=-1)
             val_maxima = np.zeros(ind_maxima.shape, dtype=np.float32)
@@ -107,7 +107,7 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, s=3, freqs=np.array((2
                 tran_patch[j, :ind_end_direct[j]] = 0  # set the values before the global to zero
             for j in range(tran_patch.shape[0]):
                 tran_patch[j, ind_maxima[j]] = val_maxima[j]  # set the value of the first peak to the value computed before
-
+            '''
             # computation with the direct component
             v = np.matmul(tran_patch, np.transpose(phi))
             v = np.reshape(v, (s, s, phi.shape[0]))
@@ -191,6 +191,7 @@ def acquire_pixels_test(images, max_img=1000, s=3, freqs=np.array((20e06, 50e06,
             tran_patch = np.reshape(tran_patch, (s * s, dim_t))
 
             # Fix first peak before the computation
+
             ind_maxima = np.argmax(tran_patch, axis=-1)
             val_maxima = np.zeros(ind_maxima.shape, dtype=np.float32)
             ind_end_direct = np.zeros(ind_maxima.shape, dtype=np.int32)
@@ -235,3 +236,133 @@ def acquire_pixels_test(images, max_img=1000, s=3, freqs=np.array((20e06, 50e06,
     hours, minutes = divmod(minutes, 60)
     print(" The overall computation time for the dataset is %d:%02d:%02d" % (hours, minutes, seconds))
     return v_real_img, gt_depth_img, gt_alpha_img
+
+
+def acquire_pixels_test_2(images, max_img=1000, s=3, freqs=np.array((20e06, 50e06, 60e06), dtype=np.float32)):
+    pad_s = int((s - 1) / 2)  # padding size
+    phi = phi_func(freqs)  # compute the phi matrix (iToF data)
+    nf = phi.shape[0]  # number of frequencies
+
+    # Load the first image to get the size of the images
+    num_images = len(images)
+    with h5py.File(images[0], "r") as h:
+        temp = h["data"][:]
+
+    [dim_x, dim_y, dim_t] = temp.shape
+    num_pixels = dim_x * dim_y  # number of pixels to sample
+
+    # Given the image size, build a mask_out to choose which pixels to get the ground truth from.
+    # This can be done either with a grid or randomly
+
+    mask = np.ones((dim_x, dim_y), dtype=np.int32)
+
+    v_real = np.zeros((num_images, num_pixels, s, s, nf), dtype=np.float32)
+
+    count = 0
+
+    for image in tqdm(images, desc="Loading images", total=num_images):
+        # Load the transient data
+        with h5py.File(image, "r") as h:
+            temp = h["data"][:]  # load the transient data
+            gt_depth = h["depth_map"][:]  # load the ground truth depth data
+            gt_alpha = h["alpha_map"][:].astype(int)  # load the ground truth alpha map data
+
+        temp = np.pad(temp, pad_width=[[pad_s, pad_s], [pad_s, pad_s], [0, 0]], mode="reflect")
+
+        # Compute the v_values for the patch around each pixels
+        ind = list(np.where(mask > 0))
+
+        # 1) Computation of v_real (iToF data)
+        for i in range(ind[0].shape[0]):
+            tran_patch = temp[ind[0][i]:ind[0][i] + s, ind[1][i]:ind[1][i] + s]
+            # tran_patch = temp[ind[0][i] - pad_s:ind[0][i] + pad_s + 1, ind[1][i] - pad_s:ind[1][i] + pad_s + 1]
+            tran_patch = np.reshape(tran_patch, (s * s, dim_t))
+
+            # Fix first peak before the computation
+            ind_maxima = np.argmax(tran_patch, axis=-1)
+            val_maxima = np.zeros(ind_maxima.shape, dtype=np.float32)
+            ind_end_direct = np.zeros(ind_maxima.shape, dtype=np.int32)
+
+            for j in range(tran_patch.shape[0]):
+                zeros_pos = np.where(tran_patch[j] == 0)[0]  # find the index of the zeros
+                ind_end_direct[j] = zeros_pos[np.where(zeros_pos > ind_maxima[j])][
+                    0]  # find the index of the zeros after the first peak
+            for j in range(ind_maxima.shape[0]):
+                val_maxima[j] = np.sum(tran_patch[j, :ind_end_direct[
+                    j]])  # compute the value of the first peak considering the sum of the values before the global
+            for j in range(tran_patch.shape[0]):
+                tran_patch[j, :ind_end_direct[j]] = 0  # set the values before the global to zero
+            for j in range(tran_patch.shape[0]):
+                tran_patch[j, ind_maxima[j]] = val_maxima[
+                    j]  # set the value of the first peak to the value computed before
+            # computation with the direct component
+            v = np.matmul(tran_patch, np.transpose(phi))
+            v = np.reshape(v, (s, s, phi.shape[0]))
+            v_real[count, i, :, :, :] = v
+
+        # print(" Total time for an image is %d:%02d:%02d" % (hours, minutes, seconds))
+        count += 1
+        if count == max_img:
+            break
+        if count > max_img:
+            print("WRONG COUNT")
+            sys.exit()
+    max_ind = count
+
+    v_real = v_real[:max_ind, ...]
+
+    gt_depth_real = gt_depth
+    gt_alpha_real = gt_alpha
+
+    v_real = np.reshape(v_real, (v_real.shape[0] * v_real.shape[1], v_real.shape[2], v_real.shape[3], v_real.shape[4]))
+    v_real_img = np.zeros((v_real.shape[0], 6))
+    for i in range(v_real.shape[0]):
+        v_real_img[i, ...] = v_real[i, pad_s, pad_s, ...]
+    v_real_img = np.reshape(v_real_img, (dim_x, dim_y, 6))
+
+    return gt_depth_real, gt_alpha_real, v_real_img
+
+
+def acquire_pixels_test_3(images, max_img=1000, s=3, freqs=np.array((20e06, 50e06, 60e06), dtype=np.float32)):
+    phi = phi_func(freqs)  # compute the phi matrix (iToF data)
+    nf = phi.shape[0]  # number of frequencies
+
+    # Load the first image to get the size of the images
+    num_images = len(images)
+    with h5py.File(images[0], "r") as h:
+        temp = h["data"][:]
+    [dim_x, dim_y, dim_t] = temp.shape
+
+    v_real = np.zeros((num_images, dim_x, dim_y, nf), dtype=np.float32)
+
+    count = 0
+
+    for image in tqdm(images, desc="Loading images", total=num_images):
+        # Load the transient data
+        with h5py.File(image, "r") as h:
+            temp = h["data"][:]  # load the transient data
+            gt_depth = h["depth_map"][:]  # load the ground truth depth data
+            gt_alpha = h["alpha_map"][:].astype(int)  # load the ground truth alpha map data
+
+        temp_lin = np.reshape(temp, (dim_x * dim_y, dim_t))
+
+        # computation with the direct component
+        v = np.matmul(temp_lin, np.transpose(phi))
+        v = np.reshape(v, (dim_x, dim_y, phi.shape[0]))
+        v_real[count, ...] = v
+
+        # print(" Total time for an image is %d:%02d:%02d" % (hours, minutes, seconds))
+        count += 1
+        if count == max_img:
+            break
+        if count > max_img:
+            print("WRONG COUNT")
+            sys.exit()
+    max_ind = count
+
+    v_real = v_real[:max_ind, ...]
+
+    gt_depth_real = gt_depth
+    gt_alpha_real = gt_alpha
+
+    return gt_depth_real, gt_alpha_real, v_real

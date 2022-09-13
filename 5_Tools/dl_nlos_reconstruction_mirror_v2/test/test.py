@@ -85,20 +85,20 @@ if __name__ == '__main__':
     dataset_folder = "datasets/mirror"                                                                  # path to the dataset folder
     data_path_real = "../../Datasets/S3S4S5/*"                                                          # path to the real images
     data_path_synth = f"{win_server_path_2}/{dataset_folder}/mirror_dts/fixed_camera_diffuse_wall"      # path of the synthetic test set (same patch size as training and validation)
-    processed_dts_folder = f"{win_server_path_2}/{git_folder_path}/training/data/test_balanced_dts_fixed_cam_v2_n1_ps11.h5"                        # Path of the processed test set (same patch size as training and validation)
+    processed_dts_folder = f"{local_path}/{git_folder_path}/training/data/test_balanced_dataset_v2_test_new_fast_n1_ps11.h5"                        # Path of the processed test set (same patch size as training and validation)
     test_file_csv = f"{win_server_path_2}/{git_folder_path}/dataset_creation/data_split/test_images.csv"  # path to the test file
     #weights_folder = f"../training/saves/{attempt_name}/checkpoints/"                                  # path to the weights
     weights_folder = f"{win_server_path_2}/{git_folder_path}/training/saves/{attempt_name}/checkpoints/"  # path to the weights
-    dim_t = 2000                                                                                        # number of bins in the transient dimension
-    P = 11                                                                                              # patch size
-    flag_norm_perpixel = True                                                                           # normalization per pixel
-    flag_scale = True                                                                                   # whether to apply scaling on the inputs
-    flag_plot = False                                                                                   # whether to plot and save the results
-    flag_epoch = False                                                                                  # whether to test on a specific epoch
+    dim_t = 2000                                                                                          # number of bins in the transient dimension
+    P = 11                                                                                                # patch size
+    flag_norm_perpixel = True                                                                             # normalization per pixel
+    flag_scale = True                                                                                     # whether to apply scaling on the inputs
+    flag_plot = False                                                                                     # whether to plot and save the results
+    flag_epoch = False                                                                                    # whether to test on a specific epoch
     fl_test_img = True
-    num_epoch = 40000                                                                                   # epoch to test on
-    epoch_name_d = attempt_name + "_d_e" + str(num_epoch) + "_weights.h5"                               # name of the epoch to test on for the spatial net
-    epoch_name_v = attempt_name + "_v_e" + str(num_epoch) + "_weights.h5"                               # name of the epoch to test on for the direct net
+    num_epoch = 40000                                                                                     # epoch to test on
+    epoch_name_d = attempt_name + "_d_e" + str(num_epoch) + "_weights.h5"                                 # name of the epoch to test on for the spatial net
+    epoch_name_v = attempt_name + "_v_e" + str(num_epoch) + "_weights.h5"                                 # name of the epoch to test on for the direct net
 
     # Check if the iToF data uses two or three frequencies and set their value accordingly
     str_freqs = ""
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     else:
         data_path = data_path_real
 
-    test_type = "img"
+    test_type = "patch"
     if test_type == "img":
         test_img(weight_names=weight_names,
                  data_path=data_path,
@@ -159,7 +159,7 @@ if __name__ == '__main__':
                  dim_t=dim_t,
                  plot_results=True)  # test on transient images
     elif test_type == "patch":
-        test_synth(fl_test_img=True,
+        test_synth(fl_test_img=False,
                    processed_dts_path=processed_dts_folder,
                    test_files=test_file_csv,
                    dts_path=data_path,

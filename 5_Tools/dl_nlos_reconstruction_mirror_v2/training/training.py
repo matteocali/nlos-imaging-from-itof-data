@@ -37,18 +37,20 @@ def arg_parser(argv):
     :return: list containing the input and output path
     """
 
-    arg_name = "train"   # Argument containing the name of the training attempt
-    arg_lr = 1e-04       # Argument containing the learning rate
-    arg_train_dts = ""   # Argument containing the name of the training dataset
-    arg_val_dts = ""     # Argument containing the name of the validation dataset
-    arg_filter = 32      # Argument containing the number of the filter to be used
-    arg_loss = "mae"     # Argument containing the loss function to be used
-    arg_n_layer = None   # Argument containing the number of layers to be used
-    arg_help = "{0} -n <name> -r <lr> -t <train>, -v <validation>, -f <filter>, -l <loss>, -s <n_layers>".format(argv[0])  # Help string
+    arg_name = "train"     # Argument containing the name of the training attempt
+    arg_lr = 1e-04         # Argument containing the learning rate
+    arg_train_dts = ""     # Argument containing the name of the training dataset
+    arg_val_dts = ""       # Argument containing the name of the validation dataset
+    arg_filter = 32        # Argument containing the number of the filter to be used
+    arg_loss = "mae"       # Argument containing the loss function to be used
+    arg_n_layer = None     # Argument containing the number of layers to be used
+    arg_batch_size = 2048  # Argument containing the batch size
+    arg_n_epochs = 10000   # Argument containing the number of epochs
+    arg_help = "{0} -n <name> -r <lr> -t <train>, -v <validation>, -f <filter>, -l <loss>, -s <n_layers>, -b <batch_size>, -e <n_epochs>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, _ = getopt.getopt(argv[1:], "hn:r:t:v:f:l:s:", ["help", "name=", "lr=", "train=", "validation=", "filter=", "loss=", "n_layers="])
+        opts, _ = getopt.getopt(argv[1:], "hn:r:t:v:f:l:s:b:e:", ["help", "name=", "lr=", "train=", "validation=", "filter=", "loss=", "n_layers=", "batch_size=", "n_epochs="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -67,18 +69,24 @@ def arg_parser(argv):
         elif opt in ("-l", "--loss"):
             arg_loss = arg  # Set the loss function
         elif opt in ("-s", "--n_layers"):
-            arg_n_layer = int(arg)
+            arg_n_layer = int(arg)  # Set the number of layers
+        elif opt in ("-b", "--batch_size"):
+            arg_batch_size = int(arg)  # Set the batch size
+        elif opt in ("-e", "--n_epochs"):
+            arg_n_epochs = int(arg)  # Set the number of epochs
 
     print("Attempt name: ", arg_name)
     print("Learning rate: ", arg_lr)
     print("Filter size: ", arg_filter)
     print("Loss function: ", arg_loss)
     print("Number of layers: ", arg_n_layer)
+    print("Batch size: ", arg_batch_size)
+    print("Number of epochs: ", arg_n_epochs)
     print("Train dataset name: ", arg_train_dts)
     print("Validation dataset name: ", arg_val_dts)
     print()
 
-    return [arg_name, arg_lr, arg_train_dts, arg_val_dts, arg_filter, arg_loss, arg_n_layer]
+    return [arg_name, arg_lr, arg_train_dts, arg_val_dts, arg_filter, arg_loss, arg_n_layer, arg_batch_size, arg_n_epochs]
 
 
 if __name__ == '__main__':
@@ -90,6 +98,7 @@ if __name__ == '__main__':
     lr = args[1]                                                # Learning rate
     loss_fn = args[5]                                           # Loss function
     n_single_layer = args[6]                                    # Number of single layer networks
+    n_epochs = args[8]                                          # Number of epochs
 
     # Training and validation data for dataset
     train_filename = f"./data/{args[2]}.h5"
@@ -104,7 +113,7 @@ if __name__ == '__main__':
     fl_scale = True           # If True the normalization is performed
     fl_2freq = False          # If set, the training is done on only 2 frequencies (in this case 20 and 50 MHz)
     P = int(patch_str[2:])    # Patch size
-    dim_b = 1024              # Batch dimension
+    dim_b = args[7]           # Batch dimension
     dim_t = 2000              # Number of bins in the transient dimension
 
 
@@ -140,5 +149,5 @@ if __name__ == '__main__':
     pretrain_filenamev = None
 
     # Training loop
-    net.training_loop(train_w_loader=train_loader, test_w_loader=val_loader, final_epochs=10000, print_freq=1,
+    net.training_loop(train_w_loader=train_loader, test_w_loader=val_loader, final_epochs=n_epochs, print_freq=1,
                       save_freq=25, pretrain_filenamev=pretrain_filenamev)
