@@ -145,7 +145,8 @@ if __name__ == '__main__':
     # Prepare the main model
     net = PredictiveModel.PredictiveModel(name=name_of_attempt, dim_b=dim_b, lr=lr, freqs=freqs, P=P,
                                           saves_path='./saves', dim_t=dim_t, fil_size=fil_dir_size,
-                                          loss_name=loss_fn, single_layers=n_single_layer, dropout_rate=dropout_rate)
+                                          loss_name=loss_fn, single_layers=n_single_layer, dropout_rate=dropout_rate,
+                                          training=True)
     # Summaries of the various networks
     net.DirectCNN.summary()
 
