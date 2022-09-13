@@ -9,7 +9,7 @@ sys.path.append("../../utils/")
 
 
 class PredictiveModel:
-    def __init__(self, name, dim_b, lr, freqs, P, saves_path, loss_name, dim_t=2000, fil_size=8, single_layers=None):
+    def __init__(self, name, dim_b, lr, freqs, P, saves_path, loss_name, dim_t=2000, fil_size=8, single_layers=None, dropout_rate=None):
         """
         Initialize the Predictive model class
         Inputs:
@@ -36,6 +36,9 @@ class PredictiveModel:
 
             single_layers:      dtype='int'
                                 Number of single layers to add to the Direct CNN
+
+            dropout_rate:       dtype='float32'
+                                Dropout rate to use in the Direct CNN
         """
 
         # Initializing the flags and other input parameters
@@ -51,6 +54,7 @@ class PredictiveModel:
         self.freqs = tf.convert_to_tensor(freqs, dtype="float32")  # modulation frequencies
         self.loss_name = loss_name                                 # name of the loss function
         self.single_layers = single_layers                         # number of single layers to add to the Direct CNN
+        self.dropout_rate = dropout_rate                           # dropout rate
 
         # Create saves directory if it does not exist
         if not os.path.exists(saves_path):
@@ -127,6 +131,8 @@ class PredictiveModel:
                               use_bias=True,
                               trainable=True,
                               name="conv_1")(v_in)
+        if self.dropout_rate is not None:
+            c_out = layers.Dropout(self.dropout_rate)(c_out)
         # Convolutional layers leading to the prediction of the depth data
         for i in range(3):
             l_name = f"conv_{str(i + 2)}"
@@ -139,6 +145,8 @@ class PredictiveModel:
                                   use_bias=True,
                                   trainable=True,
                                   name=l_name)(c_out)
+            if self.dropout_rate is not None:
+                c_out = layers.Dropout(self.dropout_rate)(c_out)
         if self.single_layers is not None:
             for i in range(self.single_layers):
                 l_name = f"conv_{str(i + 5)}"
@@ -151,6 +159,8 @@ class PredictiveModel:
                                       use_bias=True,
                                       trainable=True,
                                       name=l_name)(c_out)
+                if self.dropout_rate is not None:
+                    c_out = layers.Dropout(self.dropout_rate)(c_out)
         final_out = layers.Conv2D(filters=2,
                                   kernel_size=3,
                                   strides=1,

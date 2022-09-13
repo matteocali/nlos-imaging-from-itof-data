@@ -46,11 +46,12 @@ def arg_parser(argv):
     arg_n_layer = None     # Argument containing the number of layers to be used
     arg_batch_size = 2048  # Argument containing the batch size
     arg_n_epochs = 10000   # Argument containing the number of epochs
-    arg_help = "{0} -n <name> -r <lr> -t <train>, -v <validation>, -f <filter>, -l <loss>, -s <n_layers>, -b <batch_size>, -e <n_epochs>".format(argv[0])  # Help string
+    arg_dropout = None     # Argument containing the dropout rate
+    arg_help = "{0} -n <name> -r <lr> -t <train> -v <validation> -f <filter> -l <loss> -s <n_layers> -b <batch_size> -e <n_epochs> -d <dropout>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, _ = getopt.getopt(argv[1:], "hn:r:t:v:f:l:s:b:e:", ["help", "name=", "lr=", "train=", "validation=", "filter=", "loss=", "n_layers=", "batch_size=", "n_epochs="])
+        opts, _ = getopt.getopt(argv[1:], "hn:r:t:v:f:l:s:b:e:d:", ["help", "name=", "lr=", "train=", "validation=", "filter=", "loss=", "n_layers=", "batch_size=", "n_epochs=", "dropout="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -74,6 +75,8 @@ def arg_parser(argv):
             arg_batch_size = int(arg)  # Set the batch size
         elif opt in ("-e", "--n_epochs"):
             arg_n_epochs = int(arg)  # Set the number of epochs
+        elif opt in ("-d", "--dropout"):
+            arg_dropout = float(arg)
 
     print("Attempt name: ", arg_name)
     print("Learning rate: ", arg_lr)
@@ -82,11 +85,12 @@ def arg_parser(argv):
     print("Number of layers: ", arg_n_layer)
     print("Batch size: ", arg_batch_size)
     print("Number of epochs: ", arg_n_epochs)
+    print("Dropout rate: ", arg_dropout)
     print("Train dataset name: ", arg_train_dts)
     print("Validation dataset name: ", arg_val_dts)
     print()
 
-    return [arg_name, arg_lr, arg_train_dts, arg_val_dts, arg_filter, arg_loss, arg_n_layer, arg_batch_size, arg_n_epochs]
+    return [arg_name, arg_lr, arg_train_dts, arg_val_dts, arg_filter, arg_loss, arg_n_layer, arg_batch_size, arg_n_epochs, arg_dropout]
 
 
 if __name__ == '__main__':
@@ -99,6 +103,7 @@ if __name__ == '__main__':
     loss_fn = args[5]                                           # Loss function
     n_single_layer = args[6]                                    # Number of single layer networks
     n_epochs = args[8]                                          # Number of epochs
+    dropout_rate = args[9]                                      # Dropout rate
 
     # Training and validation data for dataset
     train_filename = f"./data/{args[2]}.h5"
@@ -140,7 +145,7 @@ if __name__ == '__main__':
     # Prepare the main model
     net = PredictiveModel.PredictiveModel(name=name_of_attempt, dim_b=dim_b, lr=lr, freqs=freqs, P=P,
                                           saves_path='./saves', dim_t=dim_t, fil_size=fil_dir_size,
-                                          loss_name=loss_fn, single_layers=n_single_layer)
+                                          loss_name=loss_fn, single_layers=n_single_layer, dropout_rate=dropout_rate)
     # Summaries of the various networks
     net.DirectCNN.summary()
 

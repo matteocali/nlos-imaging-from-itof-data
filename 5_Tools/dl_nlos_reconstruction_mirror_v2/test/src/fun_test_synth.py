@@ -19,7 +19,7 @@ import PredictiveModel_hidden as PredictiveModel
 
 
 def test_synth(weight_names, P, freqs, out_path, lr, loss_fn="mae", n_single_layers=None, fl_scale=False, fil_dir=8,
-               dim_t=2000, fl_test_img=False, test_files=None, dts_path=None, processed_dts_path=None):
+               dim_t=2000, fl_test_img=False, test_files=None, dts_path=None, processed_dts_path=None, dropout=None):
 
     ff = freqs.shape[0]
     mid = int((P - 1) / 2)  # index pointing at the middle element of the patch
@@ -44,7 +44,7 @@ def test_synth(weight_names, P, freqs, out_path, lr, loss_fn="mae", n_single_lay
         # Load the model
         net = PredictiveModel.PredictiveModel(name=f'test_patches_{date.today()}', dim_b=dim_dataset, freqs=freqs, P=P,
                                               saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, lr=lr, loss_name=loss_fn,
-                                              single_layers=n_single_layers)
+                                              single_layers=n_single_layers, dropout_rate=dropout)
 
         # Load the weights
         net.DirectCNN.load_weights(weight_names[0])
@@ -89,7 +89,8 @@ def test_synth(weight_names, P, freqs, out_path, lr, loss_fn="mae", n_single_lay
         # Define the network and load the corresponding weights
         net = PredictiveModel.PredictiveModel(name=f'test_img_as_patches_{date.today()}', dim_b=dim_dataset,
                                               freqs=freqs, P=P, saves_path='./saves', dim_t=dim_t,
-                                              fil_size=fil_dir, lr=lr, loss_name=loss_fn, single_layers=n_single_layers)
+                                              fil_size=fil_dir, lr=lr, loss_name=loss_fn, single_layers=n_single_layers,
+                                              dropout_rate=dropout)
 
         # Load the weights
         net.DirectCNN.load_weights(weight_names[0])
@@ -210,113 +211,4 @@ def test_synth(weight_names, P, freqs, out_path, lr, loss_fn="mae", n_single_lay
             ax[1, 2].set_ylabel("Row pixel")
             # fig.tight_layout()
             plt.savefig(f"{out_path}/{name[:-3]}_PLOTS.svg")
-            plt.close()
-
-
-    # Perform a test
-    if test:
-        with h5py.File(processed_dts_path, "r") as f:
-            v_in = f["raw_itof"][:]
-            gt_alpha = f["gt_alpha"][:]
-            gt_depth = f["gt_depth"][:]
-
-        dim_dataset = v_in.shape[0]
-
-        # Load the model
-        net = PredictiveModel.PredictiveModel(name=f'test_img_as_full_img_{date.today()}', dim_b=dim_dataset,
-                                              freqs=freqs, P=P, saves_path='./saves', dim_t=dim_t,
-                                              fil_size=fil_dir, lr=lr, loss_name=loss_fn, single_layers=n_single_layers)
-
-        # SCALING
-        if fl_scale:
-            v_a = np.sqrt(v_in[..., 0] ** 2 + v_in[..., ff] ** 2)
-            v_a = v_a[..., np.newaxis]
-
-            # Scale all factors
-            v_in /= v_a
-
-        v_in = np.pad(v_in, pad_width=[[0, 0], [mid, mid], [mid, mid], [0, 0]], mode="reflect")
-
-        [pred_depth, pred_alpha] = net.DirectCNN(v_in)
-        pred_depth = np.squeeze(pred_depth, axis=-1)
-        pred_alpha = np.squeeze(pred_alpha, axis=-1)
-
-        # Save the results
-        for img_index in range(dim_dataset):
-            pred_depth_img = pred_depth[img_index, ...]
-            pred_alpha_img = pred_alpha[img_index, ...]
-            gt_depth_img = gt_depth[img_index, ...]
-            gt_alpha_img = gt_alpha[img_index, ...]
-
-            pred_depth_masked = pred_depth_img * gt_alpha_img
-            gt_depth_masked = gt_depth_img * gt_alpha_img
-
-            pred_alpha_masked_ones = pred_alpha_img * gt_alpha_img
-            num_ones = np.sum(gt_alpha_img)
-            alpha_mae_obj = np.sum(np.abs(pred_alpha_masked_ones - gt_alpha_img)) / num_ones
-            pred_alpha_masked_zeros = pred_alpha_img * (1 - gt_alpha_img)
-            num_zeros = np.sum(1 - gt_alpha_img)
-            alpha_mae_bkg = np.sum(
-                np.abs(pred_alpha_masked_zeros - np.zeros(gt_alpha_img.shape, dtype=np.float32))) / num_zeros
-            alpha_mae = np.sum(alpha_mae_obj + alpha_mae_bkg) / 2
-
-            pred_depth_masked_ones = pred_depth_img * gt_alpha_img
-            depth_mae_obj = np.sum(np.abs(pred_depth_masked_ones - gt_alpha_img)) / num_ones
-            pred_depth_masked_zeros = pred_depth_img * (1 - gt_alpha_img)
-            depth_mae_bkg = np.sum(
-                np.abs(pred_depth_masked_zeros - np.zeros(gt_alpha_img.shape, dtype=np.float32))) / num_zeros
-            depth_mae = np.sum(depth_mae_obj + depth_mae_bkg) / 2
-
-            fig, ax = plt.subplots(2, 3, figsize=(15, 10), constrained_layout=True)
-            fig.suptitle("TEST")#name[:-3])
-            img0 = ax[0, 0].matshow(gt_depth_masked, cmap='jet')
-            img0.set_clim(np.min(gt_depth_img), np.max(gt_depth_img))
-            cax = fig.add_axes(
-                [ax[0, 0].get_position().x1 + 0.005, ax[0, 0].get_position().y0, 0.015, ax[0, 0].get_position().height])
-            fig.colorbar(img0, cax=cax)
-            ax[0, 0].set_title("Ground truth depth map")
-            ax[0, 0].set_xlabel("Column pixel")
-            ax[0, 0].set_ylabel("Row pixel")
-            img1 = ax[0, 1].matshow(pred_depth_masked, cmap='jet')
-            cax = fig.add_axes(
-                [ax[0, 1].get_position().x1 + 0.005, ax[0, 1].get_position().y0, 0.015, ax[0, 1].get_position().height])
-            fig.colorbar(img1, cax=cax)
-            img1.set_clim(np.min(gt_depth_img), np.max(gt_depth_img))
-            ax[0, 1].set_title("Predicted depth map")
-            ax[0, 1].set_xlabel("Column pixel")
-            ax[0, 1].set_ylabel("Row pixel")
-            img2 = ax[0, 2].matshow(np.abs(gt_depth_masked - pred_depth_masked), cmap='jet')
-            cax = fig.add_axes(
-                [ax[0, 2].get_position().x1 + 0.005, ax[0, 2].get_position().y0, 0.015, ax[0, 2].get_position().height])
-            fig.colorbar(img1, cax=cax)
-            img2.set_clim(np.min(gt_depth_img), np.max(gt_depth_img))
-            ax[0, 2].text(25, 25, "MAE: " + str(round(depth_mae, 3)), ha='left', va='center', fontsize=6, color='white')
-            ax[0, 2].set_title("Absolute difference of depth map")
-            ax[0, 2].set_xlabel("Column pixel")
-            ax[0, 2].set_ylabel("Row pixel")
-            img3 = ax[1, 0].matshow(gt_alpha_img, cmap='jet')
-            cax = fig.add_axes(
-                [ax[1, 0].get_position().x1 + 0.005, ax[1, 0].get_position().y0, 0.015, ax[1, 0].get_position().height])
-            fig.colorbar(img3, cax=cax)
-            ax[1, 0].set_title("Ground truth alpha map")
-            ax[1, 0].set_xlabel("Column pixel")
-            ax[1, 0].set_ylabel("Row pixel")
-            img4 = ax[1, 1].matshow(pred_alpha_img, cmap='jet')
-            cax = fig.add_axes(
-                [ax[1, 1].get_position().x1 + 0.005, ax[1, 1].get_position().y0, 0.015, ax[1, 1].get_position().height])
-            fig.colorbar(img4, cax=cax)
-            img4.set_clim(np.min(gt_alpha_img), np.max(gt_alpha_img))
-            ax[1, 1].set_title("Predicted alpha map")
-            ax[1, 1].set_xlabel("Column pixel")
-            ax[1, 1].set_ylabel("Row pixel")
-            img5 = ax[1, 2].matshow(np.abs(gt_alpha_img - pred_alpha_img), cmap='jet')
-            ax[1, 2].text(25, 25, "MAE: " + str(round(alpha_mae, 3)), ha='left', va='center', fontsize=6, color='white')
-            cax = fig.add_axes(
-                [ax[1, 2].get_position().x1 + 0.005, ax[1, 2].get_position().y0, 0.015, ax[1, 2].get_position().height])
-            fig.colorbar(img5, cax=cax)
-            ax[1, 2].set_title("Absolute difference of alpha map")
-            ax[1, 2].set_xlabel("Column pixel")
-            ax[1, 2].set_ylabel("Row pixel")
-            # fig.tight_layout()
-            plt.savefig(f"{out_path}/TEST.svg")#{name[:-3]}_PLOTS.svg")
             plt.close()

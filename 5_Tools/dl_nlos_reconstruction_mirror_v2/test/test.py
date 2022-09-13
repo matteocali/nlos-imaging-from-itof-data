@@ -39,11 +39,12 @@ def arg_parser(argv):
     arg_filter = 32     # Argument containing the number of the filter to be used
     arg_loss = "mae"    # Argument containing the loss function to be used
     arg_n_layer = None  # Argument containing the number of layers to be used
-    arg_help = "{0} -n <name> -r <lr>".format(argv[0])  # Help string
+    arg_dropout = None  # Argument containing the dropout rate
+    arg_help = "{0} -n <name> -r <lr> -f <filter_size> -l <loss_fn> -s <n_single_layers> -d <dropout_rate>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:r:f:l:s:", ["help", "name=", "lr=", "filter=", "loss=", "n_layers="])
+        opts, args = getopt.getopt(argv[1:], "hn:r:f:l:s:d:", ["help", "name=", "lr=", "filter=", "loss=", "n_layers=", "dropout="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -59,15 +60,18 @@ def arg_parser(argv):
             arg_loss = arg
         elif opt in ("-s", "--n_layers"):
             arg_n_layer = int(arg)
+        elif opt in ("-d", "--dropout"):
+            arg_dropout = float(arg)
 
     print("Attempt name: ", arg_name)
     print("Learning rate: ", arg_lr)
     print("Number of filters: ", arg_filter)
     print("Loss function: ", arg_loss)
     print("Number of layers: ", arg_n_layer)
+    print("Dropout rate: ", arg_dropout)
     print()
 
-    return [arg_name, arg_lr, arg_filter, arg_loss, arg_n_layer]
+    return [arg_name, arg_lr, arg_filter, arg_loss, arg_n_layer, arg_dropout]
 
 
 if __name__ == '__main__':
@@ -78,6 +82,7 @@ if __name__ == '__main__':
     n_filters = args[2]                                                                                 # number of filters for the convolutional layers
     loss = args[3]                                                                                      # loss function
     n_layers = args[4]                                                                                  # number of layers
+    dropout = args[5]                                                                                   # dropout rate
     win_server_path = "Z:/decaligm"                                                                     # path to the server
     win_server_path_2 = "Y:/matteo"                                                                     # path to the server
     local_path = "C:/Users/DECaligM/Documents"                                                          # path to the local machine
@@ -172,4 +177,5 @@ if __name__ == '__main__':
                    loss_fn=loss,
                    n_single_layers=n_layers,
                    dim_t=dim_t,
-                   out_path=out_path)
+                   out_path=out_path,
+                   dropout=dropout)
