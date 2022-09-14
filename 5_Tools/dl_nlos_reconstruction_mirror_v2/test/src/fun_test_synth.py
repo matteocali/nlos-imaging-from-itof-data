@@ -24,9 +24,9 @@ def plot_results(out_path, name, gt_depth_data, gt_alpha_data, pred_depth, pred_
     alpha_mae_bkg = np.sum(np.abs(pred_alpha_masked_zeros - np.zeros(gt_alpha_data.shape, dtype=np.float32))) / num_zeros
     alpha_mae = np.sum(alpha_mae_obj + alpha_mae_bkg) / 2
     # MAE on the depth map
-    pred_depth_masked_ones = pred_depth * gt_alpha_data
+    pred_depth_masked_ones = pred_depth_masked * gt_alpha_data
     depth_mae_obj = np.sum(np.abs(pred_depth_masked_ones - gt_depth_data)) / num_ones
-    pred_depth_masked_zeros = pred_depth * (1 - gt_alpha_data)
+    pred_depth_masked_zeros = pred_depth_masked * (1 - gt_alpha_data)
     depth_mae_bkg = np.sum(np.abs(pred_depth_masked_zeros - np.zeros(gt_alpha_data.shape, dtype=np.float32))) / num_zeros
     depth_mae = np.sum(depth_mae_obj + depth_mae_bkg) / 2
 
