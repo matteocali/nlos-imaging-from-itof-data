@@ -9,7 +9,7 @@ sys.path.append("../../utils/")
 
 
 class PredictiveModel:
-    def __init__(self, name, dim_b, lr, freqs, P, saves_path, loss_name, training, dim_t=2000, fil_size=8, single_layers=None, dropout_rate=None):
+    def __init__(self, name, dim_b, lr, freqs, P, saves_path, loss_name, dim_t=2000, fil_size=8, single_layers=None, dropout_rate=None):
         """
         Initialize the Predictive model class
         Inputs:
@@ -39,9 +39,6 @@ class PredictiveModel:
 
             dropout_rate:       dtype='float32'
                                 Dropout rate to use in the Direct CNN
-
-            training:           dtype='bool'
-                                True if the model is used for training, False otherwise
         """
 
         # Initializing the flags and other input parameters
@@ -58,7 +55,6 @@ class PredictiveModel:
         self.loss_name = loss_name                                 # name of the loss function
         self.single_layers = single_layers                         # number of single layers to add to the Direct CNN
         self.dropout_rate = dropout_rate                           # dropout rate
-        self.training = training                                   # whether we are training or not
 
         # Create saves directory if it does not exist
         if not os.path.exists(saves_path):
@@ -118,7 +114,7 @@ class PredictiveModel:
         weight_filename_v = self.name + '_v_' + suffix + '.h5'
         self.DirectCNN.save_weights(os.path.join(self.checkpoint_path, weight_filename_v))
 
-    def def_DirectCNN(self):
+    def def_DirectCNN(self, training=True):
         """
         Define the DirectCNN model
         """
@@ -136,7 +132,7 @@ class PredictiveModel:
                               trainable=True,
                               name="conv_1")(v_in)
         if self.dropout_rate is not None:
-            c_out = layers.Dropout(self.dropout_rate, name="dropout_1")(c_out, training=self.training)
+            c_out = layers.Dropout(self.dropout_rate, name="dropout_1")(c_out, training=training)
         # Convolutional layers leading to the prediction of the depth data
         for i in range(3):
             l_name = f"conv_{str(i + 2)}"
@@ -151,7 +147,7 @@ class PredictiveModel:
                                   trainable=True,
                                   name=l_name)(c_out)
             if self.dropout_rate is not None:
-                c_out = layers.Dropout(self.dropout_rate, name=d_name)(c_out, training=self.training)
+                c_out = layers.Dropout(self.dropout_rate, name=d_name)(c_out, training=training)
         if self.single_layers is not None:
             for i in range(self.single_layers):
                 l_name = f"conv_{str(i + 5)}"
@@ -166,7 +162,7 @@ class PredictiveModel:
                                       trainable=True,
                                       name=l_name)(c_out)
                 if self.dropout_rate is not None:
-                    c_out = layers.Dropout(rate=self.dropout_rate, name=d_name)(c_out, training=self.training)
+                    c_out = layers.Dropout(rate=self.dropout_rate, name=d_name)(c_out, training=training)
         final_out = layers.Conv2D(filters=2,
                                   kernel_size=3,
                                   strides=1,
@@ -185,7 +181,7 @@ class PredictiveModel:
         plot_model(model_pred, os.path.join(self.net_path, "CNN_model.png"), show_shapes=True)
         return model_pred
 
-    def def_loss(self, data_dict):
+    def def_loss(self, data_dict, training=True):
         """
         Define custom loss function
         NOTE:
@@ -196,15 +192,14 @@ class PredictiveModel:
 
         # Choose what kind of loss and networks to use according to the dataset we are using.
         if self.loss_name == "mae":
-            loss, loss_list = self.loss_data_mae(data_dict)
+            loss, loss_list = self.loss_data_mae(data_dict, training)
         elif self.loss_name == "b_cross_entropy":
-            loss, loss_list = self.loss_data_cross_entropy(data_dict)
+            loss, loss_list = self.loss_data_cross_entropy(data_dict, training)
         else:
-            loss, loss_list = self.loss_data_mae(data_dict)
+            loss, loss_list = self.loss_data_mae(data_dict, training)
         return loss, loss_list
 
-    # Loss computed on the transient dataset
-    def loss_data_mae(self, data_dict):
+    def loss_data_mae(self, data_dict, training):
         # Load the needed data
         v_in = data_dict["raw_itof"]
         gt_depth = data_dict["gt_depth"]
@@ -216,7 +211,7 @@ class PredictiveModel:
         gt_alpha = tf.slice(gt_alpha, begin=[0, i_mid, i_mid], size=[-1, 1, 1])
 
         # Process the output with the Direct CNN
-        pred_depth_map, pred_alpha_map = self.DirectCNN(v_in)
+        pred_depth_map, pred_alpha_map = self.DirectCNN(v_in, training=training)
         pred_depth_map = tf.squeeze(pred_depth_map, axis=-1)
         pred_alpha_map = tf.squeeze(pred_alpha_map, axis=-1)
 
@@ -233,7 +228,7 @@ class PredictiveModel:
         loss_list = [[loss_depth, loss_alpha]]
         return final_loss, loss_list
 
-    def loss_data_cross_entropy(self, data_dict):
+    def loss_data_cross_entropy(self, data_dict, training):
         # Load the needed data
         v_in = data_dict["raw_itof"]
         gt_depth = data_dict["gt_depth"]
@@ -245,7 +240,7 @@ class PredictiveModel:
         gt_alpha = tf.slice(gt_alpha, begin=[0, i_mid, i_mid], size=[-1, 1, 1])
 
         # Process the output with the Direct CNN
-        pred_depth_map, pred_alpha_map = self.DirectCNN(v_in)
+        pred_depth_map, pred_alpha_map = self.DirectCNN(v_in, training=training)
         pred_depth_map = tf.squeeze(pred_depth_map, axis=-1)
         pred_alpha_map = tf.squeeze(pred_alpha_map, axis=-1)
 
@@ -262,7 +257,7 @@ class PredictiveModel:
         return final_loss, loss_list
 
     # Compute loss function and useful metrics over a given max number of batches
-    def loss_perbatches(self, loader, n_batches=5):
+    def loss_perbatches(self, loader, n_batches=5, training=False):
         loader.init_iter()
         b = 0
         while b < n_batches:
@@ -271,7 +266,7 @@ class PredictiveModel:
             if data_dict is None:
                 loader.init_iter()
                 continue
-            loss_batch, loss_list_batch = self.loss_fn(data_dict)
+            loss_batch, loss_list_batch = self.loss_fn(data_dict, training=training)
             # Update loss and metrics value
             if b <= 0:
                 loss = loss_batch
@@ -296,8 +291,8 @@ class PredictiveModel:
             test_w_loader = 0
 
         # Compute the initial loss and metrics
-        loss_trainw, loss_list_trainw = self.loss_perbatches(train_w_loader, n_batches=1)
-        loss_testw, loss_list_testw = self.loss_perbatches(test_w_loader, n_batches=test_w_loader.N_batches)
+        loss_trainw, loss_list_trainw = self.loss_perbatches(train_w_loader, n_batches=1, training=True)
+        loss_testw, loss_list_testw = self.loss_perbatches(test_w_loader, n_batches=test_w_loader.N_batches, training=False)
 
         # Create log file and record initial loss and metrics
         summary_tr = tf.summary.create_file_writer(self.log_path_train)
@@ -336,8 +331,8 @@ class PredictiveModel:
                 if data_dictw is None:
                     break
 
-                with tf.GradientTape() as denoise_tape2, tf.GradientTape() as predv_tape2:
-                        lossw, loss_listw = self.loss_fn(data_dictw)
+                with tf.GradientTape() as predv_tape2:
+                        lossw, loss_listw = self.loss_fn(data_dictw, training=True)
 
                 if tr_count == 0:
                         loss_list_trainw = loss_listw
@@ -358,7 +353,7 @@ class PredictiveModel:
                 loss_list_trainw[i] = [a / tr_count for a in loss_list_trainw[i]]
 
             # Compute loss and metrics for the current epoch
-            loss_testw, loss_list_testw = self.loss_perbatches(test_w_loader, n_batches=test_w_loader.N_batches)
+            loss_testw, loss_list_testw = self.loss_perbatches(test_w_loader, n_batches=test_w_loader.N_batches, training=False)
 
             # Update log
             with summary_tr.as_default():
@@ -376,7 +371,6 @@ class PredictiveModel:
             # Track and save best performing model over the test set
             if loss_test < self.best_loss_test:
                 # Save new best model
-                old_weight_filename_d = self.name + '_d_e' + str(self.best_epoch) + '_best_weights.h5'
                 old_weight_filename_v = self.name + '_v_e' + str(self.best_epoch) + '_best_weights.h5'
 
                 self.best_loss_test = loss_test

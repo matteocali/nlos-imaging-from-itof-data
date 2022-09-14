@@ -25,7 +25,7 @@ def plot_results(out_path, name, gt_depth_data, gt_alpha_data, pred_depth, pred_
     alpha_mae = np.sum(alpha_mae_obj + alpha_mae_bkg) / 2
     # MAE on the depth map
     pred_depth_masked_ones = pred_depth * gt_alpha_data
-    depth_mae_obj = np.sum(np.abs(pred_depth_masked_ones - gt_alpha_data)) / num_ones
+    depth_mae_obj = np.sum(np.abs(pred_depth_masked_ones - gt_depth_data)) / num_ones
     pred_depth_masked_zeros = pred_depth * (1 - gt_alpha_data)
     depth_mae_bkg = np.sum(np.abs(pred_depth_masked_zeros - np.zeros(gt_alpha_data.shape, dtype=np.float32))) / num_zeros
     depth_mae = np.sum(depth_mae_obj + depth_mae_bkg) / 2
@@ -117,8 +117,7 @@ def test_img(attempt_name, weight_names, P, freqs, out_path, lr, plot=False, los
     # Load the model
     net = PredictiveModel.PredictiveModel(name=f'test_net_{attempt_name}', dim_b=dim_dataset, freqs=freqs, P=P,
                                           saves_path='./saves', dim_t=dim_t, fil_size=fil_dir, lr=lr,
-                                          loss_name=loss_fn, single_layers=n_single_layers, dropout_rate=dropout,
-                                          training=False)
+                                          loss_name=loss_fn, single_layers=n_single_layers, dropout_rate=dropout)
 
     # Load the weights
     net.DirectCNN.load_weights(weight_names[0])
@@ -143,7 +142,7 @@ def test_img(attempt_name, weight_names, P, freqs, out_path, lr, plot=False, los
             itof_data = np.pad(itof_data, pad_width=[[0, 0], [s_pad, s_pad], [s_pad, s_pad], [0, 0]], mode="reflect")
 
         # Make prediction
-        pred_depth, pred_alpha = net.DirectCNN(itof_data)
+        pred_depth, pred_alpha = net.DirectCNN(itof_data, training=False)
         pred_depth = np.squeeze(pred_depth.numpy())
         pred_depth = np.swapaxes(pred_depth, 0, 1)
         pred_alpha = np.squeeze(pred_alpha.numpy())
