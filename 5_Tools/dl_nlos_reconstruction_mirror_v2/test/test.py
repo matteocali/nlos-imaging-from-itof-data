@@ -88,8 +88,7 @@ if __name__ == '__main__':
     dataset_folder = "datasets/mirror"                                                                  # path to the dataset folder
     test_dts_name = args[5]                                                                             # name of the test dataset
     data_path_real = "../../Datasets/S3S4S5/*"                                                          # path to the real images
-    data_path_synth = f"{win_server_path}/{git_folder_path}/training/data/{test_dts_name}.h5"      # path of the synthetic test set (same patch size as training and validation)
-    test_file_csv = f"{win_server_path}/{git_folder_path}/dataset_creation/data_split/test_images.csv"  # path to the test file
+    data_path_synth = f"{win_server_path}/{git_folder_path}/training/data/{test_dts_name}.h5"           # path of the synthetic test set (same patch size as training and validation)
     #weights_folder = f"../training/saves/{attempt_name}/checkpoints/"                                  # path to the weights
     weights_folder = f"{win_server_path}/{git_folder_path}/training/saves/{attempt_name}/checkpoints/"  # path to the weights
 
