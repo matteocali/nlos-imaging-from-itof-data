@@ -3,8 +3,7 @@ import sys
 sys.path.append("./src/") 
 sys.path.append("../utils/") 
 sys.path.append("../itraining/src/")
-from src.fun_test_img_transient import test_img
-from src.fun_test_synth import test_synth
+from src.fun_test_synth import test_img
 import fnmatch
 import glob
 import os
@@ -34,17 +33,17 @@ def arg_parser(argv):
     :return: list containing the input and output path
     """
 
-    arg_name = "test"   # Argument containing the name of the training attempt
+    arg_name = ""       # Argument containing the name of the training attempt
+    arg_test_dts = ""   # Argument containing the name of the test dataset
     arg_lr = 1e-04      # Argument containing the learning rate
     arg_filter = 32     # Argument containing the number of the filter to be used
     arg_loss = "mae"    # Argument containing the loss function to be used
     arg_n_layer = None  # Argument containing the number of layers to be used
-    arg_dropout = None  # Argument containing the dropout rate
-    arg_help = "{0} -n <name> -r <lr> -f <filter_size> -l <loss_fn> -s <n_single_layers> -d <dropout_rate>".format(argv[0])  # Help string
+    arg_help = "{0} -n <name> -r <lr> -f <filter_size> -l <loss_fn> -s <n_single_layers> -t <test_dts>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:r:f:l:s:d:", ["help", "name=", "lr=", "filter=", "loss=", "n_layers=", "dropout="])
+        opts, args = getopt.getopt(argv[1:], "hn:r:f:l:s:t:", ["help", "name=", "lr=", "filter=", "loss=", "n_layers=", "test_dts="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -60,18 +59,18 @@ def arg_parser(argv):
             arg_loss = arg
         elif opt in ("-s", "--n_layers"):
             arg_n_layer = int(arg)
-        elif opt in ("-d", "--dropout"):
-            arg_dropout = float(arg)
+        elif opt in ("-t", "--test_dts"):
+            arg_test_dts = arg
 
     print("Attempt name: ", arg_name)
+    print("Test dts: ", arg_test_dts)
     print("Learning rate: ", arg_lr)
     print("Number of filters: ", arg_filter)
     print("Loss function: ", arg_loss)
     print("Number of layers: ", arg_n_layer)
-    print("Dropout rate: ", arg_dropout)
     print()
 
-    return [arg_name, arg_lr, arg_filter, arg_loss, arg_n_layer, arg_dropout]
+    return [arg_name, arg_lr, arg_filter, arg_loss, arg_n_layer, arg_test_dts]
 
 
 if __name__ == '__main__':
@@ -82,27 +81,26 @@ if __name__ == '__main__':
     n_filters = args[2]                                                                                 # number of filters for the convolutional layers
     loss = args[3]                                                                                      # loss function
     n_layers = args[4]                                                                                  # number of layers
-    dropout = args[5]                                                                                   # dropout rate
-    win_server_path = "Z:/decaligm"                                                                     # path to the server
-    win_server_path_2 = "Y:/matteo"                                                                     # path to the server
+
+    win_server_path = "Y:/matteo"                                                                       # path to the server
     local_path = "C:/Users/DECaligM/Documents"                                                          # path to the local machine
     git_folder_path = "thesis-nlos-for-itof/5_Tools/dl_nlos_reconstruction_mirror_v2"                   # path to the git folder
     dataset_folder = "datasets/mirror"                                                                  # path to the dataset folder
+    test_dts_name = args[5]                                                                             # name of the test dataset
     data_path_real = "../../Datasets/S3S4S5/*"                                                          # path to the real images
-    data_path_synth = f"{win_server_path_2}/{dataset_folder}/mirror_dts/fixed_camera_diffuse_wall"      # path of the synthetic test set (same patch size as training and validation)
-    processed_dts_folder = f"{local_path}/{git_folder_path}/training/data/test_balanced_dts_fixed_cam_v3_np_800_n67_ps11.h5"                        # Path of the processed test set (same patch size as training and validation)
-    test_file_csv = f"{win_server_path_2}/{git_folder_path}/dataset_creation/data_split/test_images.csv"  # path to the test file
+    data_path_synth = f"{win_server_path}/{git_folder_path}/training/data/{test_dts_name}.h5"      # path of the synthetic test set (same patch size as training and validation)
+    test_file_csv = f"{win_server_path}/{git_folder_path}/dataset_creation/data_split/test_images.csv"  # path to the test file
     #weights_folder = f"../training/saves/{attempt_name}/checkpoints/"                                  # path to the weights
-    weights_folder = f"{win_server_path_2}/{git_folder_path}/training/saves/{attempt_name}/checkpoints/"  # path to the weights
+    weights_folder = f"{win_server_path}/{git_folder_path}/training/saves/{attempt_name}/checkpoints/"  # path to the weights
+
     dim_t = 2000                                                                                          # number of bins in the transient dimension
     P = 11                                                                                                # patch size
     flag_norm_perpixel = True                                                                             # normalization per pixel
     flag_scale = True                                                                                     # whether to apply scaling on the inputs
     flag_plot = False                                                                                     # whether to plot and save the results
     flag_epoch = False                                                                                    # whether to test on a specific epoch
-    fl_test_img = True
+    fl_test_img = True                                                                                    # whether to test on synthetic images
     num_epoch = 40000                                                                                     # epoch to test on
-    epoch_name_d = attempt_name + "_d_e" + str(num_epoch) + "_weights.h5"                                 # name of the epoch to test on for the spatial net
     epoch_name_v = attempt_name + "_v_e" + str(num_epoch) + "_weights.h5"                                 # name of the epoch to test on for the direct net
 
     # Check if the iToF data uses two or three frequencies and set their value accordingly
@@ -110,9 +108,6 @@ if __name__ == '__main__':
     if attempt_name[-5:] == "2freq":
         freqs = np.array((20e06, 50e06), dtype=np.float32)
         str_freqs = "_2freq"
-    elif attempt_name[-9:] == "multifrew":
-        freqs = np.array((20e06, 50e06, 80e06), dtype=np.float32)
-        str_freqs = "_multifreq"
     else:
         freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
 
@@ -132,8 +127,7 @@ if __name__ == '__main__':
     # Load the weights corresponding to the desired epoch
     if flag_epoch:
         weight_names = weight_names[:5]
-        weight_names[0] = weights_folder + epoch_name_d
-        weight_names[1] = weights_folder + epoch_name_v
+        weight_names[0] = weights_folder + epoch_name_v
 
     # Test on patches of the same dataset
     print(" ")
@@ -148,34 +142,16 @@ if __name__ == '__main__':
     else:
         data_path = data_path_real
 
-    test_type = "patch"
-    if test_type == "img":
-        test_img(weight_names=weight_names,
-                 data_path=data_path,
-                 out_path=out_path,
-                 test_files=test_file_csv,
-                 P=P,
-                 lr=lr,
-                 freqs=freqs,
-                 fl_scale=flag_scale,
-                 fil_dir=n_filters,
-                 loss_fn=loss,
-                 n_single_layers=n_layers,
-                 dim_t=dim_t,
-                 plot_results=True)  # test on transient images
-    elif test_type == "patch":
-        test_synth(fl_test_img=False,
-                   processed_dts_path=processed_dts_folder,
-                   test_files=test_file_csv,
-                   dts_path=data_path,
-                   weight_names=weight_names,
-                   P=P,
-                   freqs=freqs,
-                   lr=lr,
-                   fl_scale=flag_scale,
-                   fil_dir=n_filters,
-                   loss_fn=loss,
-                   n_single_layers=n_layers,
-                   dim_t=dim_t,
-                   out_path=out_path,
-                   dropout=dropout)
+    test_img(plot=True,
+             attempt_name=attempt_name,
+             dts_path=data_path,
+             weight_names=weight_names,
+             P=P,
+             freqs=freqs,
+             lr=lr,
+             fl_scale=flag_scale,
+             fil_dir=n_filters,
+             loss_fn=loss,
+             n_single_layers=n_layers,
+             dim_t=dim_t,
+             out_path=out_path)

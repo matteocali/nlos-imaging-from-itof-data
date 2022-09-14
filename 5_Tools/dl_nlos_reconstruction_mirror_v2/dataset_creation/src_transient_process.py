@@ -8,11 +8,10 @@ import time
 import getopt
 sys.path.append("./src")
 sys.path.append("../utils")
-from fun_acquire_pixels import acquire_pixels, acquire_pixels_test_2, acquire_pixels_test_3
+from fun_acquire_pixels import acquire_pixels, acquire_pixels_test
 
 
 """
-
 Script for preparing training, validation and test set based on transient data.
 For more details of the data used see fun_acquire_pixels where most of the computations are performed
 
@@ -256,15 +255,17 @@ if __name__ == '__main__':
         test_files = np.asarray(test_files)
         test_files = [data_dir + fil for fil in test_files]
         print("\nTest dataset:")
-        gt_depth_real, gt_alpha_real, v_real = acquire_pixels_test_3(images=test_files,
-                                                                     max_img=max_imgs,
-                                                                     s=s,
-                                                                     freqs=freqs)
+        gt_depth_real, gt_alpha_real, v_real, names = acquire_pixels_test(images=test_files,
+                                                                          max_img=max_imgs,
+                                                                          s=s,
+                                                                          freqs=freqs)
 
         num_elem = v_real.shape[0]
         file_test = f"{out_dir}test_{dataset_name}_n{str(num_elem)}{add_str}.h5"
+        names = [n.encode("ascii", "ignore") for n in names]
         with h5py.File(file_test, 'w') as f:
             f.create_dataset("name", data=dataset_name)
+            f.create_dataset("names", data=names)
             f.create_dataset("gt_depth", data=gt_depth_real)
             f.create_dataset("gt_alpha", data=gt_alpha_real)
             f.create_dataset("raw_itof", data=v_real)
