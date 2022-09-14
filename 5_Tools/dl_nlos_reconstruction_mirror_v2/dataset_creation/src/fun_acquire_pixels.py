@@ -149,6 +149,7 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, s=3, freqs=np.array((2
 
 
 def acquire_pixels_test(images, max_img=1000, s=3, freqs=np.array((20e06, 50e06, 60e06), dtype=np.float32)):
+    st = time.time()  # start time
     phi = phi_func(freqs)  # compute the phi matrix (iToF data)
     nf = phi.shape[0]  # number of frequencies
 
@@ -199,5 +200,10 @@ def acquire_pixels_test(images, max_img=1000, s=3, freqs=np.array((20e06, 50e06,
     gt_depth_real = gt_depth_real[:max_ind, ...]
     gt_alpha_real = gt_alpha_real[:max_ind, ...]
     names = names[:max_ind]
+
+    fi = time.time()
+    minutes, seconds = divmod(fi - st, 60)
+    hours, minutes = divmod(minutes, 60)
+    print(" The overall computation time for the dataset is %d:%02d:%02d" % (hours, minutes, seconds))
 
     return gt_depth_real, gt_alpha_real, v_real, names
