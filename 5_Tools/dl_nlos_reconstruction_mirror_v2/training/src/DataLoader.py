@@ -137,6 +137,7 @@ class DataLoader:
             # Compute sample indices corresponding to the current batch
             i_init = self.b * self.dim_batch
             i_end = (self.b+1) * self.dim_batch
+            non_zeros_pos = np.empty((1))
 
             # Load next batch
             dict_data = {}
@@ -146,12 +147,23 @@ class DataLoader:
                 else:
                     dict_data[key] = tf.convert_to_tensor(self.f[key][i_init:i_end, ...], dtype="float32")
 
+            # If necessary remove all the wrong patches (i.e. with no valid pixels = 0)
+            if tf.where(dict_data["raw_itof"] == 0).shape[0] > 0:
+                zero_pos = np.where(dict_data["raw_itof"] == 0)
+                zero_pos = np.squeeze(zero_pos[0])
+                zero_pos = np.unique(zero_pos)
+                index_to_gather = np.ones((dict_data["raw_itof"].shape[0]), dtype=bool)
+                index_to_gather[zero_pos] = False
+                index_to_gather = np.where(index_to_gather)[0]
+                dict_data["raw_itof"] = tf.gather(dict_data["raw_itof"], index_to_gather)
+                dict_data["gt_alpha"] = tf.gather(dict_data["gt_alpha"], index_to_gather)
+                dict_data["gt_depth"] = tf.gather(dict_data["gt_depth"], index_to_gather)
+
             # Compute the scaling factor (based on the amplitude at 20 MHz). Per pixel or per patch
             if self.fl_scale:
                 v_in = dict_data["raw_itof"]
                 v_a = tf.math.sqrt(tf.math.square(v_in[..., 0]) + tf.math.square(v_in[..., self.n_fr]))
                 v_a = tf.expand_dims(v_a, axis=-1)
-            
                 # Scale the iToF raw data
                 dict_data["raw_itof"] /= v_a
 
