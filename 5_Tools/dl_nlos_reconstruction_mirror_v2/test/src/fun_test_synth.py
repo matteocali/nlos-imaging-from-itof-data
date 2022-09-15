@@ -126,6 +126,9 @@ def test_img(attempt_name, weight_names, P, freqs, out_path, lr, plot=False, los
         name = names[i].decode("ascii", "ignore")
 
         itof_data = v_in[i, ...]
+        if np.where(itof_data == 0)[0].shape[0] > 0:
+            itof_data[itof_data == 0] = 1
+
         gt_alpha_data = gt_alpha[i, ...]
         gt_alpha_data = np.swapaxes(gt_alpha_data, 0, 1)
         gt_depth_data = gt_depth[i, ...]
@@ -156,5 +159,5 @@ def test_img(attempt_name, weight_names, P, freqs, out_path, lr, plot=False, los
         with h5py.File(f"{out_path}/{name}_TEST.h5", "w") as f:
             f.create_dataset("depth_map", data=pred_depth)
             f.create_dataset("alpha_map", data=pred_alpha)
-            f.create_dataset("depth_map_gt", data=gt_alpha_data)
-            f.create_dataset("alpha_map_gt", data=gt_depth_data)
+            f.create_dataset("depth_map_gt", data=gt_depth_data)
+            f.create_dataset("alpha_map_gt", data=gt_alpha_data)
