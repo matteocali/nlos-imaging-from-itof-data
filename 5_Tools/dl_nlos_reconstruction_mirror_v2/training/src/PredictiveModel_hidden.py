@@ -9,7 +9,8 @@ sys.path.append("../../utils/")
 
 
 class PredictiveModel:
-    def __init__(self, name, dim_b, lr, freqs, P, saves_path, loss_name, dim_t=2000, fil_size=8, single_layers=None, dropout_rate=None):
+    def __init__(self, name, dim_b, lr, freqs, P, saves_path, loss_name, dim_t=2000, fil_size=8, single_layers=None,
+                 dropout_rate=None, alpha_loss_factor=1.0):
         """
         Initialize the Predictive model class
         Inputs:
@@ -39,6 +40,9 @@ class PredictiveModel:
 
             dropout_rate:       dtype='float32'
                                 Dropout rate to use in the Direct CNN
+
+            alpha_loss_factor:  dtype='float32'
+                                Factor to multiply the alpha loss by
         """
 
         # Initializing the flags and other input parameters
@@ -55,6 +59,7 @@ class PredictiveModel:
         self.loss_name = loss_name                                 # name of the loss function
         self.single_layers = single_layers                         # number of single layers to add to the Direct CNN
         self.dropout_rate = dropout_rate                           # dropout rate
+        self.alpha_scale = alpha_loss_factor                       # scale factor for the alpha loss
 
         # Create saves directory if it does not exist
         if not os.path.exists(saves_path):
@@ -222,7 +227,7 @@ class PredictiveModel:
         loss_depth = tf.math.reduce_sum(tf.math.abs(gt_depth - pred_msk_depth)) / tf.math.reduce_sum(gt_alpha)  # MAE loss on the masked depth
         loss_alpha = tf.math.abs(gt_alpha - pred_alpha_map)
         loss_alpha = tf.math.reduce_mean(loss_alpha)
-        final_loss = loss_depth + loss_alpha
+        final_loss = loss_depth + (self.alpha_scale * loss_alpha)
 
         # Keep track of the losses
         loss_list = [[loss_depth, loss_alpha]]
@@ -250,7 +255,7 @@ class PredictiveModel:
         # Compute the loss
         loss_depth = tf.math.reduce_sum(tf.math.abs(gt_depth - pred_msk_depth)) / tf.math.reduce_sum(gt_alpha)  # MAE loss on the masked depth
         loss_alpha = tf.losses.BinaryCrossentropy(from_logits=True)(gt_alpha, pred_alpha_map)
-        final_loss = loss_depth + loss_alpha
+        final_loss = loss_depth + (self.alpha_scale * loss_alpha)
 
         # Keep track of the losses
         loss_list = [[loss_depth, loss_alpha]]

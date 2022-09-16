@@ -45,11 +45,14 @@ def arg_parser(argv):
     arg_n_patches = 500                 # Argument containing the number of patches to be extracted from each image
     arg_patch_size = 11                 # Argument containing the patch size
     arg_groups = 111                    # Argument containing the groups to be processed
-    arg_help = "{0} -n <name> -i <input> -o <output> -s <shuffle> -p <patch> -d <n_patches> -g <groups>".format(argv[0])      # Help string
+    arg_freq_type = "std"               # Argument containing the frequency type to be processed
+    arg_help = "{0} -n <name> -i <input> -o <output> -s <shuffle> -p <patch> -d <n_patches> -g <groups> " \
+               "-f <frequencies_set>".format(argv[0])      # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:i:o:s:p:d:g:", ["help", "name=", "input=", "output=", "shuffle=", "patch=", "n_patches=", "groups="])
+        opts, args = getopt.getopt(argv[1:], "hn:i:o:s:p:d:g:f:", ["help", "name=", "input=", "output=", "shuffle=",
+                                                                   "patch=", "n_patches=", "groups=", "freq_type="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -78,6 +81,10 @@ def arg_parser(argv):
             arg_groups = arg
             if arg_groups != "100" and arg_groups != "010" and arg_groups != "001" and arg_groups != "111":
                 arg_groups = "111"
+        elif opt in ("-f", "--frequencies"):
+            arg_freq_type = arg
+            if arg_freq_type != "std" and arg_freq_type != "all":
+                arg_freq_type = "std"
     print("Attempt name: ", arg_name)
     print("Input folder: ", arg_data_path)
     print("Output folder: ", arg_out_path)
@@ -85,9 +92,10 @@ def arg_parser(argv):
     print("Patch size: ", arg_patch_size)
     print("Number of patches: ", arg_n_patches)
     print("Groups: ", arg_groups)
+    print("Frequencies: ", arg_freq_type)
     print()
 
-    return [arg_name, arg_data_path, arg_out_path, arg_shuffle, arg_patch_size, arg_n_patches, arg_groups]
+    return [arg_name, arg_data_path, arg_out_path, arg_shuffle, arg_patch_size, arg_n_patches, arg_groups, arg_freq_type]
 
 
 if __name__ == '__main__':
@@ -104,16 +112,24 @@ if __name__ == '__main__':
 
     # Flags and variables
     np.random.seed(2019283)                                    # set the random seed
-    n_patches = args[5]                                            # number of pixels taken from each image
+    n_patches = args[5]                                        # number of pixels taken from each image
     s = args[4]                                                # size of each input patch
     add_str = f"_ps{s}"                                        # part of the dataset name containing the patch size
     max_imgs = 1000                                            # maximum number of images to be used (if grater than the actual number, all the dataset will be used)
     train_slice = 0.6                                          # percentage of images belonging to training dataset
     val_slice = round((1 - train_slice) / 2, 1)                # percentage of images belonging to validation dataset
-    freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)  # frequencies used by the iToF sensor
+    freq_type = args[7]                                        # type of frequencies to be used
 
-    if freqs.shape[0] == 2:
-        add_str += "_2freq"
+    # Frequencies used by the iToF sensor
+    if freq_type == "std":
+        freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
+        add_str += "_stdfreq"
+    elif freq_type == "multi":
+        freqs = np.array(range(int(20e06), int(420e06), int(20e06)), dtype=np.float32)
+        add_str += "_multifreq"
+    else:
+        freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
+        add_str += "_stdfreq"
 
     # Choose which datasets you want to build
     flag_new_shuffle = args[3]  # whether to shuffle again the images and create new training validation and test datasets

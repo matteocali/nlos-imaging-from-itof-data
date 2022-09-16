@@ -33,17 +33,18 @@ def arg_parser(argv):
     :return: list containing the input and output path
     """
 
-    arg_name = ""       # Argument containing the name of the training attempt
-    arg_test_dts = ""   # Argument containing the name of the test dataset
-    arg_lr = 1e-04      # Argument containing the learning rate
-    arg_filter = 32     # Argument containing the number of the filter to be used
-    arg_loss = "mae"    # Argument containing the loss function to be used
-    arg_n_layer = None  # Argument containing the number of layers to be used
-    arg_help = "{0} -n <name> -r <lr> -f <filter_size> -l <loss_fn> -s <n_single_layers> -t <test_dts>".format(argv[0])  # Help string
+    arg_name = ""          # Argument containing the name of the training attempt
+    arg_test_dts = ""      # Argument containing the name of the test dataset
+    arg_lr = 1e-04         # Argument containing the learning rate
+    arg_filter = 32        # Argument containing the number of the filter to be used
+    arg_loss = "mae"       # Argument containing the loss function to be used
+    arg_n_layer = None     # Argument containing the number of layers to be used
+    arg_help = "{0} -n <name> -r <lr> -f <filter_size> -l <loss_fn> -s <n_single_layers> -t <test_dts> ".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:r:f:l:s:t:", ["help", "name=", "lr=", "filter=", "loss=", "n_layers=", "test_dts="])
+        opts, args = getopt.getopt(argv[1:], "hn:r:f:l:s:t:", ["help", "name=", "lr=", "filter=", "loss=",
+                                                               "n_layers=", "test_dts="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -104,9 +105,11 @@ if __name__ == '__main__':
 
     # Check if the iToF data uses two or three frequencies and set their value accordingly
     str_freqs = ""
-    if attempt_name[-5:] == "2freq":
-        freqs = np.array((20e06, 50e06), dtype=np.float32)
-        str_freqs = "_2freq"
+    # Frequencies used by the iToF sensor
+    if attempt_name[-7:] == "stdfreq":
+        freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
+    elif attempt_name[-9:] == "multifreq":
+        freqs = np.array(range(int(20e06), int(420e06), int(20e06)), dtype=np.float32)
     else:
         freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
 
