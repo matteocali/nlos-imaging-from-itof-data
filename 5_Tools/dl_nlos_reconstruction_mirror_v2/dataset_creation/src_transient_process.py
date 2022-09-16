@@ -83,7 +83,7 @@ def arg_parser(argv):
                 arg_groups = "111"
         elif opt in ("-f", "--frequencies"):
             arg_freq_type = arg
-            if arg_freq_type != "std" and arg_freq_type != "all":
+            if arg_freq_type != "std" and arg_freq_type != "multi":
                 arg_freq_type = "std"
     print("Attempt name: ", arg_name)
     print("Input folder: ", arg_data_path)
