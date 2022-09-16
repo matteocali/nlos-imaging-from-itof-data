@@ -82,6 +82,7 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, s=3, freqs=np.array((2
         if diff > 0:  # if the number of pixels sampled is less than the number of pixels to sample add the same number of zero valued pixels
             indexes = np.where(mask == 0)
             p = np.random.permutation(len(indexes[0]))  # permute the positions of the ones
+            indexes = list(indexes)
             indexes[0] = indexes[0][p]      # permute the array
             indexes[0] = indexes[0][:diff]  # select the first diff ones
             indexes[1] = indexes[1][p]      # permute the array
