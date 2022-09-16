@@ -48,14 +48,16 @@ def arg_parser(argv):
     arg_n_epochs = 10000   # Argument containing the number of epochs
     arg_dropout = None     # Argument containing the dropout rate
     arg_alpha_scale = 1.0  # Argument containing the alpha scale
+    arg_pretrained = None  # Argument containing the path to the pretrained weights
     arg_help = "{0} -n <name> -r <lr> -t <train> -v <validation> -f <filter> -l <loss> -s <n_layers> -b <batch_size> " \
-               "-e <n_epochs> -d <dropout> -a <alpha_loss_scale>".format(argv[0])  # Help string
+               "-e <n_epochs> -d <dropout> -a <alpha_loss_scale> -p <pretrained>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, _ = getopt.getopt(argv[1:], "hn:r:t:v:f:l:s:b:e:d:a:", ["help", "name=", "lr=", "train=", "validation=",
-                                                                      "filter=", "loss=", "n_layers=", "batch_size=",
-                                                                      "n_epochs=", "dropout=", "alpha_scale="])
+        opts, _ = getopt.getopt(argv[1:], "hn:r:t:v:f:l:s:b:e:d:a:p:", ["help", "name=", "lr=", "train=", "validation=",
+                                                                        "filter=", "loss=", "n_layers=", "batch_size=",
+                                                                        "n_epochs=", "dropout=", "alpha_scale=",
+                                                                        "pretrained="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -83,6 +85,8 @@ def arg_parser(argv):
             arg_dropout = float(arg)  # Set the dropout rate
         elif opt in ("-a", "--alpha_scale"):
             arg_alpha_scale = float(arg)
+        elif opt in ("-p", "--pretrained"):
+            arg_pretrained = arg
 
     print("Attempt name: ", arg_name)
     print("Learning rate: ", arg_lr)
@@ -95,10 +99,11 @@ def arg_parser(argv):
     print("Train dataset name: ", arg_train_dts)
     print("Validation dataset name: ", arg_val_dts)
     print("Alpha loss scale: ", arg_alpha_scale)
+    print("Pretrained weights: ", arg_pretrained)
     print()
 
     return [arg_name, arg_lr, arg_train_dts, arg_val_dts, arg_filter, arg_loss, arg_n_layer, arg_batch_size,
-            arg_n_epochs, arg_dropout, arg_alpha_scale, ]
+            arg_n_epochs, arg_dropout, arg_alpha_scale, arg_pretrained]
 
 
 if __name__ == '__main__':
@@ -113,6 +118,7 @@ if __name__ == '__main__':
     n_epochs = args[8]                                          # Number of epochs
     dropout_rate = args[9]                                      # Dropout rate
     alpha_scale = args[10]                                      # Alpha loss scale
+    pretrained_weights = args[11]                               # Pretrained weights
 
     # Training and validation data for dataset
     train_filename = f"./data/{args[2]}.h5"
@@ -157,10 +163,6 @@ if __name__ == '__main__':
     # Summaries of the various networks
     net.DirectCNN.summary()
 
-    # Path of the weight in case we want to start from a pretrained network
-    pretrain_filenamed = None
-    pretrain_filenamev = None
-
     # Training loop
     net.training_loop(train_w_loader=train_loader, test_w_loader=val_loader, final_epochs=n_epochs, print_freq=1,
-                      save_freq=25, pretrain_filenamev=pretrain_filenamev)
+                      save_freq=25, pretrain_filenamev=pretrained_weights)
