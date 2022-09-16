@@ -92,22 +92,7 @@ def acquire_pixels(images, num_pixels=2000, max_img=1000, s=3, freqs=np.array((2
         for i in range(ind[0].shape[0]):
             tran_patch = temp[ind[0][i] - pad_s:ind[0][i] + pad_s + 1, ind[1][i] - pad_s:ind[1][i] + pad_s + 1]
             tran_patch = np.reshape(tran_patch, (s * s, dim_t))
-            '''
-            # Fix first peak before the computation
-            ind_maxima = np.argmax(tran_patch, axis=-1)
-            val_maxima = np.zeros(ind_maxima.shape, dtype=np.float32)
-            ind_end_direct = np.zeros(ind_maxima.shape, dtype=np.int32)
 
-            for j in range(tran_patch.shape[0]):
-                zeros_pos = np.where(tran_patch[j] == 0)[0]  # find the index of the zeros
-                ind_end_direct[j] = zeros_pos[np.where(zeros_pos > ind_maxima[j])][0]  # find the index of the zeros after the first peak
-            for j in range(ind_maxima.shape[0]):
-                val_maxima[j] = np.sum(tran_patch[j, :ind_end_direct[j]])  # compute the value of the first peak considering the sum of the values before the global
-            for j in range(tran_patch.shape[0]):
-                tran_patch[j, :ind_end_direct[j]] = 0  # set the values before the global to zero
-            for j in range(tran_patch.shape[0]):
-                tran_patch[j, ind_maxima[j]] = val_maxima[j]  # set the value of the first peak to the value computed before
-            '''
             # computation with the direct component
             v = np.matmul(tran_patch, np.transpose(phi))
             v = np.reshape(v, (s, s, phi.shape[0]))
