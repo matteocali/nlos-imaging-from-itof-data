@@ -111,14 +111,15 @@ if __name__ == '__main__':
         os.mkdir(out_dir)
 
     # Flags and variables
-    np.random.seed(2019283)                                    # set the random seed
-    n_patches = args[5]                                        # number of pixels taken from each image
-    s = args[4]                                                # size of each input patch
-    add_str = f"_ps{s}"                                        # part of the dataset name containing the patch size
-    max_imgs = 1000                                            # maximum number of images to be used (if grater than the actual number, all the dataset will be used)
-    train_slice = 0.6                                          # percentage of images belonging to training dataset
-    val_slice = round((1 - train_slice) / 2, 1)                # percentage of images belonging to validation dataset
-    freq_type = args[7]                                        # type of frequencies to be used
+    np.random.seed(2019283)                      # set the random seed
+    n_patches = args[5]                          # number of pixels taken from each image
+    s = args[4]                                  # size of each input patch
+    add_str = f"np_{n_patches}"                  # string to add to the output file name
+    add_str += f"_ps{s}"                         # part of the dataset name containing the patch size
+    max_imgs = 1000                              # maximum number of images to be used (if grater than the actual number, all the dataset will be used)
+    train_slice = 0.6                            # percentage of images belonging to training dataset
+    val_slice = round((1 - train_slice) / 2, 1)  # percentage of images belonging to validation dataset
+    freq_type = args[7]                          # type of frequencies to be used
 
     # Frequencies used by the iToF sensor
     if freq_type == "std":
