@@ -113,7 +113,7 @@ if __name__ == '__main__':
         images = tr.transient_loader(img_path=arg_in,
                                      np_path=arg_out / "np_transient.npy",
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        tr.histo_plt(radiance=images[:, 91, 182, :],  # righe:colonne
+        tr.histo_plt(radiance=images[:, 120, 160, :],  # righe:colonne
                      exp_time=arg_exp_time,
                      interval=None,
                      stem=False,
