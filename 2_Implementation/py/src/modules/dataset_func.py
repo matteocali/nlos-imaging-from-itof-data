@@ -670,6 +670,7 @@ def fuse_dt_gt_mirror(d_path: Path, gt_path: Path, out_path: Path, def_obj_pos: 
             gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"  # Compose the name of the gt file starting from the one of the dataset
 
         if gt_name not in gt_files_name:  # If the gt file doesn't exist
+            indexes = []
             if 0.0 in obj_pos2:
                 indexes = [index for index, elm in enumerate(obj_pos2) if elm == 0.0]
                 for index in indexes:
@@ -681,9 +682,18 @@ def fuse_dt_gt_mirror(d_path: Path, gt_path: Path, out_path: Path, def_obj_pos: 
                 if obj_pos2[0] == 0.0:
                     obj_pos2[0] = -0.0
                     gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
-                if gt_name not in gt_files_name:
-                    raise ValueError(
-                        f"The ground truth file is missing ({gt_name})")  # If the gt file doesn't exist, raise an error
+            if gt_name not in gt_files_name:
+                if len(indexes) > 1:
+                    obj_pos2[indexes[1]] = 0.0
+                    gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
+            if gt_name not in gt_files_name:
+                if len(indexes) > 1:
+                    obj_pos2[indexes[1]] = -0.0
+                    obj_pos2[indexes[2]] = 0.0
+                    gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
+            if gt_name not in gt_files_name:
+                raise ValueError(
+                    f"The ground truth file is missing ({gt_name})")  # If the gt file doesn't exist, raise an error
 
         d_file = d_path / d_name  # Compose the path of the dataset file
         gt_file = gt_path / gt_name  # Compose the path of the gt file
