@@ -13,7 +13,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def plot_results(out_path, name, gt_depth_data, gt_alpha_data, pred_depth, pred_alpha):
     # Compute the MAE on the final images
-    pred_depth_masked = pred_depth * gt_alpha_data
+    pred_depth_masked_gt = pred_depth * gt_alpha_data
+    pred_depth_masked = pred_depth * pred_alpha
     gt_depth_masked = gt_depth_data * gt_alpha_data
     # MAE on the alpha mask
     pred_alpha_masked_ones = pred_alpha * gt_alpha_data
@@ -23,6 +24,12 @@ def plot_results(out_path, name, gt_depth_data, gt_alpha_data, pred_depth, pred_
     num_zeros = np.sum(1 - gt_alpha_data)
     alpha_mae_bkg = np.sum(np.abs(pred_alpha_masked_zeros - np.zeros(gt_alpha_data.shape, dtype=np.float32))) / num_zeros
     alpha_mae = np.sum(alpha_mae_obj + alpha_mae_bkg) / 2
+    # MAE on the depth map gt masked
+    pred_depth_masked_ones_gt = pred_depth_masked_gt * gt_alpha_data
+    depth_mae_obj_gt_mask = np.sum(np.abs(pred_depth_masked_ones_gt - gt_depth_data)) / num_ones
+    pred_depth_masked_zeros_gt = pred_depth_masked_gt * (1 - gt_alpha_data)
+    depth_mae_bkg_gt_mask = np.sum(np.abs(pred_depth_masked_zeros_gt - np.zeros(gt_alpha_data.shape, dtype=np.float32))) / num_zeros
+    depth_mae_gt_mask = np.sum(depth_mae_obj_gt_mask + depth_mae_bkg_gt_mask) / 2
     # MAE on the depth map
     pred_depth_masked_ones = pred_depth_masked * gt_alpha_data
     depth_mae_obj = np.sum(np.abs(pred_depth_masked_ones - gt_depth_data)) / num_ones
@@ -31,7 +38,7 @@ def plot_results(out_path, name, gt_depth_data, gt_alpha_data, pred_depth, pred_
     depth_mae = np.sum(depth_mae_obj + depth_mae_bkg) / 2
 
     # Plot the results
-    fig, ax = plt.subplots(2, 3, figsize=(16, 8))
+    fig, ax = plt.subplots(3, 3, figsize=(16, 11))
     fig.suptitle(name)
 
     img0 = ax[0, 0].matshow(gt_depth_masked, cmap='jet')
@@ -43,57 +50,88 @@ def plot_results(out_path, name, gt_depth_data, gt_alpha_data, pred_depth, pred_
     ax[0, 0].set_xlabel("Column pixel")
     ax[0, 0].set_ylabel("Row pixel")
 
-    img1 = ax[0, 1].matshow(pred_depth_masked, cmap='jet')
+    img1 = ax[0, 1].matshow(pred_depth_masked_gt, cmap='jet')
     divider = make_axes_locatable(ax[0, 1])
     cax = divider.append_axes("right", size="5%", pad=0.05)
     fig.colorbar(img1, cax=cax)
     img1.set_clim(np.min(gt_depth_data), np.max(gt_depth_data))
-    ax[0, 1].set_title("Predicted depth map")
+    ax[0, 1].set_title("Predicted depth map (masked with ground truth mask)")
     ax[0, 1].set_xlabel("Column pixel")
     ax[0, 1].set_ylabel("Row pixel")
 
-    img2 = ax[0, 2].matshow(pred_depth_masked - gt_depth_masked, cmap='jet')
+    img2 = ax[0, 2].matshow(pred_depth_masked_gt - gt_depth_masked, cmap='jet')
     divider = make_axes_locatable(ax[0, 2])
     cax = divider.append_axes("right", size="5%", pad=0.05)
     fig.colorbar(img2, cax=cax)
-    max_cbar_val = np.max(np.abs(pred_depth_masked - gt_depth_masked))
+    max_cbar_val = np.max(np.abs(pred_depth_masked_gt - gt_depth_masked))
     max_cbar_val = np.ceil(max_cbar_val * 100) / 100
     img2.set_clim(-max_cbar_val, max_cbar_val)
     box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)
-    ax[0, 2].text(20, 20, f"MAE: {str(round(depth_mae, 3))}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)
+    ax[0, 2].text(20, 20, f"MAE: {str(round(depth_mae_gt_mask, 3))}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)
     ax[0, 2].set_title("Difference of the depth maps")
     ax[0, 2].set_xlabel("Column pixel")
     ax[0, 2].set_ylabel("Row pixel")
 
-    img3 = ax[1, 0].matshow(gt_alpha_data, cmap='jet')
+    img3 = ax[1, 0].matshow(gt_depth_masked, cmap='jet')
+    img3.set_clim(np.min(gt_depth_data), np.max(gt_depth_data))
     divider = make_axes_locatable(ax[1, 0])
     cax = divider.append_axes("right", size="5%", pad=0.05)
     fig.colorbar(img3, cax=cax)
-    ax[1, 0].set_title("Ground truth alpha map")
+    ax[1, 0].set_title("Ground truth depth map")
     ax[1, 0].set_xlabel("Column pixel")
     ax[1, 0].set_ylabel("Row pixel")
 
-    img4 = ax[1, 1].matshow(pred_alpha, cmap='jet')
+    img4 = ax[1, 1].matshow(pred_depth_masked, cmap='jet')
     divider = make_axes_locatable(ax[1, 1])
     cax = divider.append_axes("right", size="5%", pad=0.05)
     fig.colorbar(img4, cax=cax)
-    img4.set_clim(np.min(gt_alpha_data), np.max(gt_alpha_data))
-    ax[1, 1].set_title("Predicted alpha map")
+    img4.set_clim(np.min(gt_depth_data), np.max(gt_depth_data))
+    ax[1, 1].set_title("Predicted depth map (masked with predicted mask)")
     ax[1, 1].set_xlabel("Column pixel")
     ax[1, 1].set_ylabel("Row pixel")
 
-    img5 = ax[1, 2].matshow(pred_alpha - gt_alpha_data, cmap='jet')
+    img5 = ax[1, 2].matshow(pred_depth_masked - gt_depth_masked, cmap='jet')
     divider = make_axes_locatable(ax[1, 2])
     cax = divider.append_axes("right", size="5%", pad=0.05)
     fig.colorbar(img5, cax=cax)
-    max_cbar_val = np.max(np.abs(pred_alpha - gt_alpha_data))
+    max_cbar_val = np.max(np.abs(pred_depth_masked - gt_depth_masked))
     max_cbar_val = np.ceil(max_cbar_val * 100) / 100
     img5.set_clim(-max_cbar_val, max_cbar_val)
     box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)
-    ax[1, 2].text(20, 20, f"MAE: {str(round(alpha_mae, 3))}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)
-    ax[1, 2].set_title("Difference of the alpha maps")
+    ax[1, 2].text(20, 20, f"MAE: {str(round(depth_mae, 3))}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)
+    ax[1, 2].set_title("Difference of the depth maps")
     ax[1, 2].set_xlabel("Column pixel")
     ax[1, 2].set_ylabel("Row pixel")
+
+    img6 = ax[2, 0].matshow(gt_alpha_data, cmap='jet')
+    divider = make_axes_locatable(ax[2, 0])
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    fig.colorbar(img6, cax=cax)
+    ax[2, 0].set_title("Ground truth mask")
+    ax[2, 0].set_xlabel("Column pixel")
+    ax[2, 0].set_ylabel("Row pixel")
+
+    img7 = ax[2, 1].matshow(pred_alpha, cmap='jet')
+    divider = make_axes_locatable(ax[2, 1])
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    fig.colorbar(img7, cax=cax)
+    img7.set_clim(np.min(gt_alpha_data), np.max(gt_alpha_data))
+    ax[2, 1].set_title("Predicted mask")
+    ax[2, 1].set_xlabel("Column pixel")
+    ax[2, 1].set_ylabel("Row pixel")
+
+    img8 = ax[2, 2].matshow(pred_alpha - gt_alpha_data, cmap='jet')
+    divider = make_axes_locatable(ax[2, 2])
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    fig.colorbar(img8, cax=cax)
+    max_cbar_val = np.max(np.abs(pred_alpha - gt_alpha_data))
+    max_cbar_val = np.ceil(max_cbar_val * 100) / 100
+    img8.set_clim(-max_cbar_val, max_cbar_val)
+    box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)
+    ax[2, 2].text(20, 20, f"MAE: {str(round(alpha_mae, 3))}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)
+    ax[2, 2].set_title("Difference of the masks")
+    ax[2, 2].set_xlabel("Column pixel")
+    ax[2, 2].set_ylabel("Row pixel")
 
     plt.tight_layout()
     plt.savefig(f"{out_path}/{name}_PLOTS.svg")
