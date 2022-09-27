@@ -183,7 +183,7 @@ class PredictiveModel:
         alpha_map = tf.slice(final_out, begin=[0, 0, 0, 1], size=[-1, -1, -1, 1], name='alpha_map')
 
         model_pred = tf.keras.Model(inputs=v_in, outputs=[depth_map, alpha_map], name=self.name)
-        plot_model(model_pred, os.path.join(self.net_path, "CNN_model.png"), show_shapes=True)
+        plot_model(model_pred, os.path.join(self.net_path, "CNN_model.svg"), show_shapes=True)
         return model_pred
 
     def def_loss(self, data_dict, training=True):
