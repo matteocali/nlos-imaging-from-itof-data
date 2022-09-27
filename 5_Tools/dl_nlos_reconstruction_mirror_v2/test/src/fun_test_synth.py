@@ -39,7 +39,7 @@ def plot_results(out_path, name, gt_depth_data, gt_alpha_data, pred_depth, pred_
 
     # Plot the results
     fig, ax = plt.subplots(3, 3, figsize=(16, 11))
-    fig.suptitle(name)
+    #fig.suptitle(name)
 
     img0 = ax[0, 0].matshow(gt_depth_masked, cmap='jet')
     img0.set_clim(np.min(gt_depth_data), np.max(gt_depth_data))
