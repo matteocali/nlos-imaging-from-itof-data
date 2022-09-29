@@ -77,31 +77,26 @@ def arg_parser(argv):
 if __name__ == '__main__':
     args = arg_parser(sys.argv) # Get the arguments
 
-    attempt_name = args[0]                                                                              # name of the stored approach weights
-    lr = args[1]                                                                                        # kernel size for the convolutional layers
-    n_filters = args[2]                                                                                 # number of filters for the convolutional layers
-    loss = args[3]                                                                                      # loss function
-    n_layers = args[4]                                                                                  # number of layers
+    attempt_name = args[0]                                                 # name of the stored approach weights
+    lr = args[1]                                                           # kernel size for the convolutional layers
+    n_filters = args[2]                                                    # number of filters for the convolutional layers
+    loss = args[3]                                                         # loss function
+    n_layers = args[4]                                                     # number of layers
 
-    win_server_path = "Y:/matteo"                                                                       # path to the server
-    local_path = "C:/Users/DECaligM/Documents"                                                          # path to the local machine
-    git_folder_path = "thesis-nlos-for-itof/5_Tools/dl_nlos_reconstruction_mirror_v2"                   # path to the git folder
-    dataset_folder = "datasets/mirror"                                                                  # path to the dataset folder
-    test_dts_name = args[5]                                                                             # name of the test dataset
-    data_path_real = "../../Datasets/S3S4S5/*"                                                          # path to the real images
-    data_path_synth = f"{win_server_path}/{git_folder_path}/training/data/{test_dts_name}.h5"           # path of the synthetic test set (same patch size as training and validation)
-    #weights_folder = f"../training/saves/{attempt_name}/checkpoints/"                                  # path to the weights
-    weights_folder = f"{win_server_path}/{git_folder_path}/training/saves/{attempt_name}/checkpoints/"  # path to the weights
+    test_dts_name = args[5]                                                # name of the test dataset
+    data_path_real = "../../Datasets/S3S4S5/*"                             # path to the real images
+    data_path_synth = f"../training/data/{test_dts_name}.h5"               # path of the synthetic test set (same patch size as training and validation)
+    weights_folder = f"../training/saves/{attempt_name}/checkpoints/"      # path to the weights
 
-    dim_t = 2000                                                                                          # number of bins in the transient dimension
-    P = 11                                                                                                # patch size
-    flag_norm_perpixel = True                                                                             # normalization per pixel
-    flag_scale = True                                                                                     # whether to apply scaling on the inputs
-    flag_plot = False                                                                                     # whether to plot and save the results
-    flag_epoch = False                                                                                    # whether to test on a specific epoch
-    fl_test_img = True                                                                                    # whether to test on synthetic images
-    num_epoch = 40000                                                                                     # epoch to test on
-    epoch_name_v = attempt_name + "_v_e" + str(num_epoch) + "_weights.h5"                                 # name of the epoch to test on for the direct net
+    dim_t = 2000                                                           # number of bins in the transient dimension
+    P = 11                                                                 # patch size
+    flag_norm_perpixel = True                                              # normalization per pixel
+    flag_scale = True                                                      # whether to apply scaling on the inputs
+    flag_plot = False                                                      # whether to plot and save the results
+    flag_epoch = False                                                     # whether to test on a specific epoch
+    fl_test_img = True                                                     # whether to test on synthetic images
+    num_epoch = 40000                                                      # epoch to test on
+    epoch_name_v = attempt_name + "_v_e" + str(num_epoch) + "_weights.h5"  # name of the epoch to test on for the direct net
 
     # Check if the iToF data uses two or three frequencies and set their value accordingly
     str_freqs = ""
