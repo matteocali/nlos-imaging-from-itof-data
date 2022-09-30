@@ -1,0 +1,7 @@
+Computed distance on the pixel (120, 160) are:
+	- On channel Red: 10.0
+	  peak value: 450.40155029296875
+	- On channel Green: 10.0
+	  peak value: 450.40301513671875
+	- On channel Blu: 10.0
+	  peak value: 450.405029296875

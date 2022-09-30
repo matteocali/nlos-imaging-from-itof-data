@@ -25,7 +25,7 @@ def arg_parser(argv):
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, _ = getopt.getopt(argv[1:], "hp:d:b:t:s:i:g:",
-                                ["help", "perm=", "dataset=", "batch=", "template=", "seed=", "img+", "grid="])
+                                ["help", "perm=", "dataset=", "batch=", "template=", "seed=", "img=", "grid="])
     except:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)

@@ -20,10 +20,11 @@ def arg_parser(argv):
     arg_task = ""  # Argument that defines the function that will be used
     arg_exp_time = None  # Argument that defines the used exposure time
     arg_samples = None  # Argument that defines the number of samples used
-    arg_help = "{0} -i <input> -o <output> -t <task> -e <exp_time> -f <fov> -r <rgb>, -s <samples>".format(argv[0])  # Help string
+    arg_pixel = [120, 160]  # Argument that defines the pixel used
+    arg_help = "{0} -i <input> -o <output> -t <task> -e <exp_time> -f <fov> -r <rgb>, -s <samples>, -p <pixel>".format(argv[0])  # Help string
 
     try:
-        opts, args = getopt.getopt(argv[1:], "hi:o:t:e:s:", ["help", "input=", "output=", "task=", "exp_time=", "fov=", "rgb=", "samples="])  # Recover the passed options and arguments from the command line (if any)
+        opts, args = getopt.getopt(argv[1:], "hi:o:t:e:s:p:", ["help", "input=", "output=", "task=", "exp_time=", "fov=", "rgb=", "samples=", "pixel="])  # Recover the passed options and arguments from the command line (if any)
     except:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -42,6 +43,8 @@ def arg_parser(argv):
             arg_exp_time = float(arg)  # Set the exposure time
         elif opt in ("-s", "--samples"):
             arg_samples = int(arg)  # Set the normalization factor
+        elif opt in ("-p", "--pixel"):
+            arg_pixel = [int(arg.split(",")[0]), int(arg.split(",")[1])]  # Set the pixel
 
     print('Input path: ', arg_in)
     if arg_out != "":
@@ -50,13 +53,15 @@ def arg_parser(argv):
         print('Exposure time: ', arg_exp_time)
     if arg_samples is not None:
         print('Number of samples: ', arg_samples)
+    if arg_pixel is not None:
+        print('Pixel to consider:', arg_pixel)
     print()
 
-    return [arg_in, arg_out, arg_task, arg_exp_time, arg_samples]
+    return [arg_in, arg_out, arg_task, arg_exp_time, arg_samples, arg_pixel]
 
 
 if __name__ == '__main__':
-    arg_in, arg_out, arg_task, arg_exp_time, arg_samples = arg_parser(sys.argv)  # Recover the input and output folder from the console args
+    arg_in, arg_out, arg_task, arg_exp_time, arg_samples, arg_pixel = arg_parser(sys.argv)  # Recover the input and output folder from the console args
 
     if arg_task == "tr_video":
         print(f"TASK: {arg_task}")
@@ -113,7 +118,7 @@ if __name__ == '__main__':
         images = tr.transient_loader(img_path=arg_in,
                                      np_path=arg_out / "np_transient.npy",
                                      store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        tr.histo_plt(radiance=images[:, 120, 160, :],  # righe:colonne
+        tr.histo_plt(radiance=images[:, arg_pixel[1], arg_pixel[0], :],  # righe:colonne
                      exp_time=arg_exp_time,
                      interval=None,
                      stem=False,
@@ -134,62 +139,11 @@ if __name__ == '__main__':
         glb_images = tr.rmv_first_reflection_img(images=images,
                                                  file_path=arg_out / "glb_np_transient.npy",
                                                  store=(not exists(arg_out / "glb_np_transient.npy")))
-        tr.histo_plt(radiance=glb_images[:, 119, 161, :],  # righe:colonne
+        tr.histo_plt(radiance=glb_images[:, arg_pixel[1], arg_pixel[0], :],  # righe:colonne
                      exp_time=arg_exp_time,
                      interval=None,
-                     stem=False,#True,
+                     stem=False,
                      file_path=arg_out / "transient_histograms.svg")
-
-        end = time.time()
-        minutes, seconds = divmod(end - start, 60)
-        hours, minutes = divmod(minutes, 60)
-        print(f"Task <{arg_task}> concluded in in %d:%02d:%02d\n" % (hours, minutes, seconds))
-    elif arg_task == "test":
-        print(f"TASK: {arg_task}")
-        start = time.time()
-
-        dirs = ut.read_folders(arg_in, reorder=True)
-
-        for i, dir_path in enumerate(dirs):
-            folder_name = dir_path.split("\\")[-1]
-            out_folder = arg_out / f"TEST_{folder_name}"
-
-            print(f"Working on folder {(i + 1)}/{len(dirs)}:")
-            print("Build the global transient video and the global total image:")
-            images = tr.transient_loader(img_path=Path(dir_path),
-                                         np_path=out_folder / "np_transient.npy",
-                                         store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-            glb_images = tr.rmv_first_reflection_img(images=np.copy(images),
-                                                     file_path=out_folder / "glb_np_transient.npy",
-                                                     store=(not exists(out_folder / "glb_np_transient.npy")))
-            tr.transient_video(images=np.copy(glb_images),
-                               out_path=out_folder,
-                               normalize=True,
-                               name="transient_glb")
-            tr.total_img(images=glb_images,
-                         out_path=out_folder / "total_image_glb",
-                         n_samples=arg_samples)
-            print("Build the transient video and the total image:")
-            tr.transient_video(images=images,
-                               out_path=out_folder,
-                               normalize=True,
-                               name="transient")
-            tr.total_img(images=images,
-                         out_path=out_folder / "total_image",
-                         n_samples=arg_samples)
-            print("Build the global histogram of the central pixel:")
-            tr.histo_plt(radiance=glb_images[:, 119, 161, :],  # righe:colonne
-                         exp_time=arg_exp_time,
-                         interval=None,
-                         stem=False,
-                         file_path=out_folder / "transient_histograms_glb.svg")
-            print("Build the histogram of the central pixel:")
-            tr.histo_plt(radiance=images[:, 119, 161, :],  # righe:colonne
-                         exp_time=arg_exp_time,
-                         interval=None,
-                         stem=False,
-                         file_path=out_folder / "transient_histograms.svg")
-            print()
 
         end = time.time()
         minutes, seconds = divmod(end - start, 60)

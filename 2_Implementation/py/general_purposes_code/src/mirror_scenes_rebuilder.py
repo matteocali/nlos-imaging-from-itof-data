@@ -16,13 +16,14 @@ def arg_parser(argv):
     :return: list containing the input and output path
     """
 
-    arg_in = os.getcwd()  # Argument containing the input directory
+    arg_in = os.getcwd()   # Argument containing the input directory
     arg_out = os.getcwd()  # Argument containing the output directory
-    arg_help = "{0} -i <input> -o <output>".format(argv[0])  # Help string
+    arg_gt = 1             # Argument defining if the depth map will be masked with the gt or not
+    arg_help = "{0} -i <input> -o <output> -g <gt>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hi:o:", ["help", "input=", "output="])
+        opts, args = getopt.getopt(argv[1:], "hi:o:g", ["help", "input=", "output=", "gt="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -32,16 +33,19 @@ def arg_parser(argv):
             arg_in = Path(arg)  # Set the input directory
         elif opt in ("-o", "--output"):
             arg_out = Path(arg)  # Set the output directory
+        elif opt in ("-g", "--gt"):
+            arg_gt = int(arg)
 
     print("Input folder: ", arg_in)
     print("Output folder: ", arg_out)
+    print("GT: ", arg_gt)
     print()
 
-    return [arg_in, arg_out]
+    return [arg_in, arg_out, arg_gt]
 
 
 if __name__ == '__main__':
-    in_path, out_folder = arg_parser(sys.argv)
+    in_path, out_folder, gt= arg_parser(sys.argv)
 
     task = "mirror data reconstruction"
 
@@ -51,8 +55,13 @@ if __name__ == '__main__':
     # Load the data
     data = load_h5(add_extension(in_path, ".h5"))
 
+    if gt == 1:
+        alpha = data['alpha_map_gt']
+    else:
+        alpha = data['alpha_map']
+
     obj = build_point_cloud(data=data['depth_map'],
-                            alpha=data['alpha_map_gt'],
+                            alpha=alpha,
                             fov=60,
                             img_size=(320, 240),
                             out_path=out_folder,

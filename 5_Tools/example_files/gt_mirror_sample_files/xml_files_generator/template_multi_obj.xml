@@ -1,0 +1,101 @@
+<scene version="2.2.1">
+
+<!-- Defaults, these can be set via the command line: -Darg=value -->
+
+	<default name="spp" value="1000"/>
+	<default name="resx" value="320"/>
+	<default name="resy" value="240"/>
+	<default name="fov_val" value="60"/>
+	<default name="time" value="2000"/>
+	<default name="exptime" value="0.01"/>
+	<default name="scl" value="10"/>
+	
+	<default name="tr_cam_x" value="1.0"/>
+	<default name="tr_cam_y" value="1.65"/>
+	<default name="tr_cam_z" value="1.0"/>
+	<default name="rot_cam_x" value="180.0"/>
+	<default name="rot_cam_y" value="-50.0"/>
+	<default name="rot_cam_z" value="180.0"/>
+	
+	<default name="object1" value="&"/>
+	<default name="object2" value="@"/>
+
+<!-- Camera and Rendering Parameters -->
+
+	<integrator type="transientpath">
+		<integer name="max_depth" value="2"/>
+	</integrator>
+	<sensor type="perspective">
+		<string name="fov_axis" value="x"/>
+		<float name="fov" value="$fov_val"/>
+		<float name="near_clip" value="0.000001"/>
+		<float name="far_clip" value="100.0"/>
+		<transform name="to_world">
+			<rotate x="1" angle="$rot_cam_x"/>
+			<rotate y="1" angle="$rot_cam_y"/>
+			<rotate z="1" angle="$rot_cam_z"/>
+			<translate value="$tr_cam_z $tr_cam_y $tr_cam_x"/>
+		</transform>
+		<sampler type="independent">
+			<integer name="sample_count" value="$spp"/>
+		</sampler>
+		<film type="streakhdrfilm" name="streakfilm">
+            <integer name="width" value="$resx"/>
+            <integer name="height" value="$resy"/>
+            <integer name="time" value="$time"/>
+			<string name="component_format" value="float32"/>
+            <float name="exposure_time" value="$exptime"/>
+            <float name="time_offset" value="0"/>
+            <rfilter name="rfilter" type="gaussian"/>
+            <rfilter name="tfilter" type="gaussian"/>
+            <boolean name="high_quality_edges" value="true"/>
+        </film>
+	</sensor>
+
+<!-- Materials -->
+
+	<bsdf type="twosided" id="mat-Black difuse">
+		<bsdf type="diffuse">
+			<rgb value="0.000000 0.000000 0.000000" name="reflectance"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="mat-Green difuse">
+		<bsdf type="diffuse">
+			<rgb value="0.000000 1.000000 0.000000" name="reflectance"/>
+		</bsdf>
+	</bsdf>
+
+<!-- Emitters -->
+
+	<emitter type="projector">
+        <float name="fov" value="$fov_val"/>
+
+        <transform name="to_world">
+			<rotate x="1" angle="$rot_cam_x"/>
+			<rotate y="1" angle="$rot_cam_y"/>
+			<rotate z="1" angle="$rot_cam_z"/>
+			<translate value="$tr_cam_z $tr_cam_y $tr_cam_x"/>
+		</transform>
+
+        <texture type="bitmap" name="irradiance">
+            <string name="filename" value="../../textures/bitmap.png"/>
+        </texture>
+		
+		<float name="scale" value="$scl"/>
+    </emitter>
+
+<!-- Shapes -->
+
+	<shape type="ply">
+		<string name="filename" value="../../meshes/Middle wall.ply"/>
+		<ref id="mat-Black difuse" name="bsdf"/>
+	</shape>
+	<shape type="ply">
+		<string name="filename" value="../../meshes/$object1.ply"/>
+		<ref id="mat-Green difuse" name="bsdf"/>
+	</shape>
+	<shape type="ply">
+		<string name="filename" value="../../meshes/$object2.ply"/>
+		<ref id="mat-Green difuse" name="bsdf"/>
+	</shape>
+</scene>

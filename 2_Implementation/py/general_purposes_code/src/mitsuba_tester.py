@@ -178,4 +178,4 @@ if __name__ == '__main__':
         hours, minutes = divmod(minutes, 60)
         print(f"Task <{arg_task}> concluded in in %d:%02d:%02d\n" % (hours, minutes, seconds))
     else:
-        print("Wrong task provided\nPossibilities are: cross, distance_plot, mm_distance_plot, tot_img_test, norm_factor")
+        print("Wrong task provided\nPossibilities are: cross, distance_plot, mm_distance_plot, tot_img_test, norm_factor, plot_norm_factor")

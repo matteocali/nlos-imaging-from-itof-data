@@ -82,38 +82,6 @@ if __name__ == '__main__':
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
-    elif arg_task == "h5":
-        print(f"TASK: {arg_task}")
-        start = time.time()
-
-        ut.create_folder(arg_out, "all")
-        #images = tr.transient_loader(img_path=arg_in,
-        #                             np_path=arg_out / "np_transient.npy",
-        #                             store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        #ut.save_h5(data=images[:, :, :, 1], file_path=arg_out / "cube", fermat=True)  # Save the transient in a h5 file
-        h5_file = ut.load_h5(arg_out / "cube.h5").values()[0]
-        #tr.histo_plt(tr.rmv_first_reflection_transient(images[:, 121, 160, 1]), exp_time=0.01, stem=False, file_path=Path("C:\\Users\\DECaligM\\Documents\\test_pre.svg"))
-        tr.histo_plt(tr.rmv_first_reflection_transient(h5_file[160, 121, :]), exp_time=0.01, stem=False, file_path=Path("C:\\Users\\DECaligM\\Documents\\test_post.svg"))
-
-        end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
-    elif arg_task == "itof2dtof":
-        print(f"TASK: {arg_task}")
-        start = time.time()
-
-        ut.create_folder(arg_out, "all")
-        images = tr.transient_loader(img_path=arg_in,
-                                     np_path=arg_out / "np_transient.npy",
-                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-        freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
-        phi = tr.phi(freqs=freqs,
-                     exp_time=0.01,
-                     dim_t=images.shape[0])
-
-        tr.plot_phi(phi_matrix=phi, freq_values=freqs, file_path=arg_out / "phi", exp_time=0.01)
-
-        end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
     elif arg_task == "np2mat":
         print(f"TASK: {arg_task}")
         start = time.time()
@@ -124,7 +92,7 @@ if __name__ == '__main__':
                                              store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
 
         modules.fermat_tools.np2mat(data=transient,
-                                    file_path=arg_out / "cube",
+                                    file_path=arg_out / "hidden_obj",
                                     data_grid_size=arg_spot_size,
                                     img_shape=arg_img_size,
                                     store_glb=False,
@@ -136,36 +104,7 @@ if __name__ == '__main__':
 
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
-    elif arg_task == "np2mat_full":
-        print(f"TASK: {arg_task}")
-        start = time.time()
-
-        ut.create_folder(arg_out, "all")
-        images = tr.transient_loader(img_path=arg_in,
-                                     np_path=arg_out / "np_transient.npy",
-                                     store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
-
-        transient = np.zeros([images.shape[1] * images.shape[2], images.shape[0], images.shape[3] - 1], dtype=np.float32)
-        index = 0
-        for row in range(images.shape[1]):
-            for col in range(images.shape[2]):
-                transient[index, :, :] = images[:, row, col, :-1]
-                index += 1
-
-        modules.fermat_tools.np2mat(data=transient,
-                                    file_path=arg_out / "cube",
-                                    data_grid_size=arg_spot_size,
-                                    img_shape=arg_img_size,
-                                    store_glb=False,
-                                    show_plt=False,
-                                    data_clean=True,
-                                    cl_threshold=arg_threshold,
-                                    fov=60,
-                                    exp_time=0.01)
-
-        end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
-    elif arg_task == "point_cloud":
+    elif arg_task == "point_cloud_cleaner":
         print(f"TASK: {arg_task}")
         start = time.time()
 
@@ -180,4 +119,4 @@ if __name__ == '__main__':
         end = time.time()
         print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
     else:
-        print("Wrong task provided\nPossibilities are: spot_bitmap, h5, itof2dtof, np2mat")
+        print("Wrong task provided\nPossibilities are: spot_bitmap, np2mat, point_cloud_cleaner")
