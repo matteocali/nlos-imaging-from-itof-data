@@ -1,6 +1,7 @@
 # NEURAL NETWORK CODE README #
 
-The code contained in this folder is used to train and test the neural network. Other than that it also include the necessary code used to perform the splitting of the dataset into train, validation and test set, and to extract the patches from the train and validation set. It also perform the sampling of the patches and all the pre-processing of the data.
+The code contained in this folder is used to train and test the neural network. Other than that it also include the necessary code used to perform the splitting of the dataset into train, validation and test set, and to extract the patches from the train and validation set. It also performs the sampling of the patches and all the pre-processing of the data.
+All the scripts in here requires the conda environment `itof2dtof.yml` provided in `../../../5_Tools/conda_environments`.\
 
 The folder structure is the following:
 * `dataset_creation`: contains the code needed for creating the training, validation and test datasets, to use it run it with the following arguments:

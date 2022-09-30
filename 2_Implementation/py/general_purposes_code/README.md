@@ -1,6 +1,7 @@
 # GENERAL PURPOSE CODE README #
 
 This folder contains all the code developed during this project except from the Neural Network implementation.\
+All the scripts in here requires the conda environment `mitsuba2.yml` provided in `../../../5_Tools/conda_environments`.\
 The folder contains all the required code inside the `src` folder while into the `tests` folder there are just a test script.\
 
 

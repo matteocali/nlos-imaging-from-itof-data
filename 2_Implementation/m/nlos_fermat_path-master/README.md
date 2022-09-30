@@ -4,6 +4,9 @@ This repository is an implementation of the method described in the following pa
 
 Shumian Xin, Sotiris Nousias, Kiriakos N. Kutulakos, Aswin C. Sankaranarayanan, Srinivasa G. Narasimhan, and Ioannis Gkioulekas. ["A Theory of Fermat Paths for Non-Line-of-Sight Shape Reconstruction"](http://imaging.cs.cmu.edu/fermat_paths/), CVPR 2019.
 
+GitHub link: https://github.com/cmu-ci-lab/nlos_fermat_path,\
+commit: `6522058e8ec26147c6641daa7b7926bf03584635`
+
 ## Run code
 
 Run ```main***``` scripts for various simulated non-line-of-sight (NLOS) shape reconstructions. Reconstructed point clouds are stored in ```reconstructions``` folder. **Note: line-of-sight (LOS) wall is hard-coded to be z = 0.**
