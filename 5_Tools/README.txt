@@ -1,1 +1,0 @@
-This folder should contain external tools used during the internship.
