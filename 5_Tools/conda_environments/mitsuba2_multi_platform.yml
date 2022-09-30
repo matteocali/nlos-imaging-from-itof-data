@@ -1,0 +1,21 @@
+name: mitsuba2
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - numpy
+  - matplotlib
+  - pathlib2
+  - opencv
+  - openexr
+  - openexr-python
+  - tqdm
+  - natsort
+  - imageio
+  - av
+  - h5py
+  - scipy
+  - lxml
+  - scikit-learn
+prefix: C:\Users\DECaligM\Miniconda3\envs\mitsuba2

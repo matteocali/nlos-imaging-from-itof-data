@@ -1,0 +1,13 @@
+name: itof2dtof
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.7.4
+  - numpy=1.18.5
+  - tensorflow=2.3.0
+  - matplotlib=3.3.3
+  - opencv=4.4.0
+  - numba=0.54.1
+  - pandas=1.3.5
+prefix: C:\Users\DECaligM\Miniconda3\envs\itof2dtof
