@@ -4,9 +4,12 @@ import time
 import torch
 import glob
 from torch.utils.data import DataLoader
-from dataset.NlosTransientDataset import NlosTransientDataset
+from torch.optim import Adam
+from torch.nn import L1Loss
+from utils.NlosTransientDataset import NlosTransientDataset
 from utils.ItofNormalize import ItofNormalize
 from utils.NlosNet import NlosNet
+from utils.train_functions import train
 from pathlib import Path
 
 
@@ -56,7 +59,7 @@ if __name__ == '__main__':
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print("Device: ", device)  # Print the device used
+    print("Device: ", device, "\n")  # Print the device used
 
     # Load the different csv files
     csv_files = glob.glob1(str(csv_path),"*.csv")                         # Load the csv files
@@ -66,7 +69,7 @@ if __name__ == '__main__':
     test_csv = Path(csv_path / csv_files[csv_types.index("test")])        # Get the test csv file  # type: ignore
 
     # Create or load the processed datset
-    processed_dts_path = Path(csv_path.parent / "processed_datasets")                # Set the path to the processed datasets  # type: ignore
+    processed_dts_path = Path(csv_path.parent / (str(csv_path.name).split("_")[0] + "_processed_datasets"))                # Set the path to the processed datasets  # type: ignore
     if processed_dts_path.exists() and len(list(processed_dts_path.iterdir())) > 0:  # Check if the folder already exists and is not empty
         train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")     # Load the train dataset
         val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")  # Load the validation dataset
@@ -89,9 +92,33 @@ if __name__ == '__main__':
         f_dts_time = time.time()  # Stop the timer for the dataset creation
         minutes, seconds = divmod(f_dts_time - s_dts_time, 60)
         hours, minutes = divmod(minutes, 60)
-        print("The total computation time for generating the dataset is %d:%02d:%02d" % (hours, minutes, seconds))
+        print("The total computation time for generating the dataset is %d:%02d:%02d \n" % (hours, minutes, seconds))
 
     # Create the dataloaders
     train_loader = DataLoader(train_dts, batch_size=32, shuffle=True, num_workers=4)  # Create the train dataloader
     val_loader = DataLoader(val_dts, batch_size=32, shuffle=True, num_workers=4)      # Create the validation dataloader
     test_loader = DataLoader(test_dts, batch_size=32, shuffle=True, num_workers=4)    # Create the test dataloader
+
+    # Create the network state folder 
+    net_state_path = Path("neural_network_v2_code/net_state")  # Set the path to the network state folder  # type: ignore
+    net_state_path.mkdir(parents=True, exist_ok=True)              # Create the network state folder
+
+    # Create the model
+    model = NlosNet().to(device)  # Create the model and move it to the device
+
+    # Create the optimizer
+    optimizer = Adam(model.parameters(), lr=0.0001)
+
+    # Create the loss function
+    loss_fn = L1Loss()
+
+    # Train the model
+    train_loss, val_loss =train(
+                            net=model, 
+                            train_loader=train_loader, 
+                            val_loader=val_loader, 
+                            optimizer=optimizer, 
+                            loss_fn=loss_fn, 
+                            device=device, 
+                            n_epochs=100,
+                            save_path=net_state_path)

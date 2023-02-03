@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader
 from torch.optim import Optimizer
+from pathlib import Path
 
 
 def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, device: torch.device) -> float:
@@ -62,9 +63,13 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
     return float(np.mean(epoch_loss))
 
 
-def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, device: torch.device, n_epochs: int, save_path: str) -> None:
+def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, device: torch.device, n_epochs: int, save_path: Path) -> tuple:
     # Initialize the best loss
     best_loss = float("inf")
+
+    # Initialize the lists for the losses
+    train_loss_tot = []
+    val_loss_tot = []
 
     for epoch in range(n_epochs):
         # Train the network
@@ -79,13 +84,19 @@ def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader
         # Check if the validation loss is the best
         if val_loss < best_loss:
             # Save the model
-            torch.save(net.state_dict(), save_path)
+            torch.save(net.state_dict(), str(save_path))
 
             # Update the best loss
             best_loss = val_loss
 
         # Update the learning rate
         update_lr(optimizer, epoch)
+
+        # Append the losses
+        train_loss_tot.append(train_loss)
+        val_loss_tot.append(val_loss)
+
+    return train_loss_tot, val_loss_tot
 
 
 def update_lr(optimizer: Optimizer, epoch: int) -> None:

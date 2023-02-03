@@ -12,7 +12,7 @@
             "args": [
                 "--name", "test_dts",
                 "--input", "/media/matteocali/shared_data/Matteo/NLoS imaging using iToF/mirror_dts/fixed_camera_diffuse_wall",
-                "--output", "/media/matteocali/shared_data/Matteo/NLoS imaging using iToF/thesis-nlos-for-itof/2_Implementation/py/neural_network_v2_code"],
+                "--output", "neural_network_v2_code"],
             "console": "integratedTerminal",
             "justMyCode": true
         },
