@@ -77,13 +77,13 @@ if __name__ == '__main__':
 
         # Create and save the datasets
         print("Creating the training dataset...")
-        train_dts = NlosTransientDataset(data_path, train_csv, transform=ItofNormalize(n_freq=3))  # Create the train dataset
+        train_dts = NlosTransientDataset(Path(data_path), train_csv, transform=ItofNormalize(n_freq=3))  # Create the train dataset
         torch.save(train_dts, processed_dts_path / "processed_train_dts.pt")                       # Save the train dataset
         print("Creating the validation dataset...")
-        val_dts = NlosTransientDataset(data_path, val_csv, transform=ItofNormalize(n_freq=3))      # Create the validation dataset
+        val_dts = NlosTransientDataset(Path(data_path), val_csv, transform=ItofNormalize(n_freq=3))      # Create the validation dataset
         torch.save(val_dts, processed_dts_path / "processed_validation_dts.pt")                    # Save the validation dataset
         print("Creating the test dataset...")
-        test_dts = NlosTransientDataset(data_path, test_csv, transform=ItofNormalize(n_freq=3))    # Create the test dataset
+        test_dts = NlosTransientDataset(Path(data_path), test_csv, transform=ItofNormalize(n_freq=3))    # Create the test dataset
         torch.save(test_dts, processed_dts_path / "processed_test_dts.pt")                         # Save the test dataset
 
         f_dts_time = time.time()  # Stop the timer for the dataset creation

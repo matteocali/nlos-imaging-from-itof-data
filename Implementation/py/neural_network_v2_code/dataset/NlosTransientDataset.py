@@ -3,6 +3,7 @@ import numpy as np
 import h5py as h5
 from tqdm import tqdm
 from torch.utils.data import Dataset
+from pathlib import Path
 from utils.utils import phi_func
 
 
@@ -15,7 +16,7 @@ class NlosTransientDataset(Dataset):
         - transform: transformation to apply to the data
     """
 
-    def __init__(self, dts_folder, csv_file, transform=None):
+    def __init__(self, dts_folder: Path, csv_file: Path, transform=None):
         frequencies = np.array((20e06, 50e06, 60e06), dtype=np.float32)  # Define the frequencies used by the considered iToF sensor
         phi = phi_func(frequencies)                                      # Compute the phi matrix (iToF data)
         nf = phi.shape[0]                                                # Extract the number of frequencies
@@ -67,8 +68,8 @@ class NlosTransientDataset(Dataset):
         # Add the transform
         self.transform = transform
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int):
         return self.itof_data[index, ...], self.gt_depth[index, ...], self.gt_alpha[index, ...]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.itof_data[:, 0, 0, 0])
