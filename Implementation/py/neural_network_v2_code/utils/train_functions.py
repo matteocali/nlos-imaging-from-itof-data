@@ -13,8 +13,8 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
 
     for sample in data_loader:
         # Get the input and the target
-        itof_data = sample["itof_data"].to(device)
-        gt_depth = sample["gt_depth"].to(device)
+        itof_data = sample[0].to(device)
+        gt_depth = sample[1].to(device)
 
         # Reset the gradients
         optimizer.zero_grad()

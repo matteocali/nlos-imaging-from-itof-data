@@ -94,7 +94,7 @@ class Decoder(nn.Module):
 
 class NlosNet(nn.Module):
 
-    def __init__(self, enc_channels: tuple = (3, 64, 128, 256, 512, 1024), dec_channels: tuple = (1024, 512, 256, 128, 64), num_class: int = 1, retain_dim: bool = False, out_size: tuple = (572, 572)) -> None:
+    def __init__(self, enc_channels: tuple = (6, 64, 128, 256, 512, 1024), dec_channels: tuple = (1024, 512, 256, 128, 64), num_class: int = 1, retain_dim: bool = False, out_size: tuple = (572, 572)) -> None:
         """
         NLOS Net
         param:
