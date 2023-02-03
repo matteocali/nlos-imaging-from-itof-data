@@ -3,41 +3,6 @@ import torchvision
 from torch import nn
 
 
-class NlosNet(nn.Module):
-
-    def __init__(self, enc_channels: tuple = (3, 64, 128, 256, 512, 1024), dec_channels: tuple = (1024, 512, 256, 128, 64), num_class: int = 1, retain_dim: bool = False, out_size: tuple = (572, 572)) -> None:
-        """
-        NLOS Net
-        param:
-            - enc_channels: number of channels for each block of the encoder
-            - dec_channels: number of channels for each block of the decoder
-            - num_class: number of classes
-            - retain_dim: if True the output tensor will have the same dimension of the input tensor
-            - out_size: output size of the network
-        """
-        super().__init__()
-        self.encoder = Encoder(enc_channels)
-        self.decoder = Decoder(dec_channels)
-        self.head = nn.Conv2d(dec_channels[-1], num_class, kernel_size=1)
-        self.retain_dim = retain_dim
-        self.out_size = out_size
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass
-        param:
-            - x: input tensor
-        return:
-            - output tensor
-        """
-        enc_features = self.encoder(x)
-        out = self.decoder(enc_features[::-1][0], enc_features[::-1][1:])
-        out = self.head(out)
-        if self.retain_dim:
-            out = nn.functional.interpolate(out, size=self.out_size)
-        return out
-
-
 class Block(nn.Module):
     """Block of the proposed network architecture"""
 
@@ -125,3 +90,38 @@ class Decoder(nn.Module):
         _, _, H, W = x.shape
         enc_ftrs = torchvision.transforms.CenterCrop([H, W])(enc_ftrs)
         return enc_ftrs  # type: ignore
+
+
+class NlosNet(nn.Module):
+
+    def __init__(self, enc_channels: tuple = (3, 64, 128, 256, 512, 1024), dec_channels: tuple = (1024, 512, 256, 128, 64), num_class: int = 1, retain_dim: bool = False, out_size: tuple = (572, 572)) -> None:
+        """
+        NLOS Net
+        param:
+            - enc_channels: number of channels for each block of the encoder
+            - dec_channels: number of channels for each block of the decoder
+            - num_class: number of classes
+            - retain_dim: if True the output tensor will have the same dimension of the input tensor
+            - out_size: output size of the network
+        """
+        super().__init__()
+        self.encoder = Encoder(enc_channels)
+        self.decoder = Decoder(dec_channels)
+        self.head = nn.Conv2d(dec_channels[-1], num_class, kernel_size=1)
+        self.retain_dim = retain_dim
+        self.out_size = out_size
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass
+        param:
+            - x: input tensor
+        return:
+            - output tensor
+        """
+        enc_features = self.encoder(x)
+        out = self.decoder(enc_features[::-1][0], enc_features[::-1][1:])
+        out = self.head(out)
+        if self.retain_dim:
+            out = nn.functional.interpolate(out, size=self.out_size)
+        return out
