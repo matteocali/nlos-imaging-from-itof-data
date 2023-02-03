@@ -1,0 +1,32 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: dataset_split",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "--name", "test_dts",
+                "--input", "/media/matteocali/shared_data/Matteo/NLoS imaging using iToF/mirror_dts/fixed_camera_diffuse_wall",
+                "--output", "/media/matteocali/shared_data/Matteo/NLoS imaging using iToF/thesis-nlos-for-itof/2_Implementation/py/neural_network_v2_code"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+
+        {
+            "name": "Python: train",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "--input", "/media/matteocali/shared_data/Matteo/NLoS imaging using iToF/mirror_dts/fixed_camera_diffuse_wall",
+                "--csv", "neural_network_v2_code/test_dts_csv_split"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}
