@@ -79,7 +79,6 @@ if __name__ == '__main__':
     if processed_dts_path.exists() and len(list(processed_dts_path.iterdir())) > 0:  # Check if the folder already exists and is not empty
         train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")     # Load the train dataset
         val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")  # Load the validation dataset
-        test_dts = torch.load(processed_dts_path / "processed_test_dts.pt")       # Load the test dataset
     else:
         processed_dts_path.mkdir(parents=True, exist_ok=True)  # Crreate the datasets folder  # type: ignore
         s_dts_time = time.time()                               # Start the timer for the dataset creation
@@ -101,7 +100,6 @@ if __name__ == '__main__':
     # Create the dataloaders
     train_loader = DataLoader(train_dts, batch_size=32, shuffle=True, num_workers=4)  # Create the train dataloader  # type: ignore
     val_loader = DataLoader(val_dts, batch_size=32, shuffle=True, num_workers=4)      # Create the validation dataloader  # type: ignore
-    test_loader = DataLoader(test_dts, batch_size=32, shuffle=True, num_workers=4)    # Create the test dataloader  # type: ignore
 
     # Create the network state folder 
     net_state_path = Path("neural_network_v2_code/net_state")  # Set the path to the network state folder  # type: ignore
@@ -118,14 +116,14 @@ if __name__ == '__main__':
 
     # Train the model
     s_train_time = time.time()  # Start the timer for the training
-    train_loss, val_loss =train(
-                            net=model, 
-                            train_loader=train_loader, 
-                            val_loader=val_loader, 
-                            optimizer=optimizer, 
-                            loss_fn=loss_fn, 
-                            device=device, 
-                            n_epochs=5,
-                            save_path=(net_state_path / f"{args[2]}model.pt"))
+    train_loss, val_loss = train(
+        net=model, 
+        train_loader=train_loader, 
+        val_loader=val_loader, 
+        optimizer=optimizer, 
+        loss_fn=loss_fn, 
+        device=device, 
+        n_epochs=5, 
+        save_path=(net_state_path / f"{args[2]}model.pt"))
     f_train_time = time.time()  # Stop the timer for the training
     print(f"The total computation time for training the model was {format_time(s_train_time, f_train_time)}\n")

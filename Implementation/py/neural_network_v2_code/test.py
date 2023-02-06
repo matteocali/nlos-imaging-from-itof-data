@@ -3,7 +3,9 @@ import getopt
 import time
 import torch
 from pathlib import Path
-from torch import nn
+from torch.utils.data import DataLoader
+from utils.NlosNet import NlosNet
+from utils.test_function import test
 
 
 def arg_parser(argv):
@@ -49,5 +51,28 @@ def arg_parser(argv):
 
 
 if __name__ == '__main__':
-    torch.manual_seed(2097710)         # Set the random seed
-    args = arg_parser(sys.argv)        # Parse the input arguments
+    torch.manual_seed(2097710)   # Set the random seed
+    args = arg_parser(sys.argv)  # Parse the input arguments
+    
+    # Chekc if the gpu is available
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print("Device: ", device, "\n")  # Print the device used
+
+    # Load the dataset
+    test_dts = torch.load(args[0])  # Load the test dataset
+    test_loader = DataLoader(test_dts, batch_size=32, shuffle=True, num_workers=4)  # Create the test dataloader  # type: ignore
+
+    # Load the model
+    model = NlosNet(retain_dim=True, out_size=(320, 240)).to(device)  # Create the model and move it to the device
+    model.load_state_dict(torch.load(args[1]))                        # Load the model
+
+    # Define the loss function
+    loss_fn = torch.nn.L1Loss()
+
+    # Test the model
+    test_loss, out = test(
+        net=model, 
+        data_loader=test_loader, 
+        loss_fn=loss_fn, 
+        device=device,
+        out_path=(args[2] / f"{args[0][11:]}_results.npy"))  # type: ignore
