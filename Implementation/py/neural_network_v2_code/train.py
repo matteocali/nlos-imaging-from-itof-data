@@ -12,6 +12,7 @@ from utils.NlosNet import NlosNet
 from utils.train_functions import train
 from utils.utils import format_time
 from pathlib import Path
+from torchinfo import summary
 
 
 def arg_parser(argv):
@@ -107,6 +108,9 @@ if __name__ == '__main__':
 
     # Create the model
     model = NlosNet(retain_dim=True, out_size=(320, 240)).to(device)  # Create the model and move it to the device
+
+    # Print the model summary
+    summary(model, input_size=(32, 6, 320, 240), device=str(device), mode="train")
 
     # Create the optimizer
     optimizer = Adam(model.parameters(), lr=0.0001)
