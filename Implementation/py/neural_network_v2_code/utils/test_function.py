@@ -3,6 +3,7 @@ import numpy as np
 from torch import nn
 from torch.utils.data import DataLoader
 from pathlib import Path
+from utils.utils import save_np_as_img
 
 
 def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, device: torch.device, out_path: Path = None) -> tuple:  # type: ignore
@@ -17,8 +18,8 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
         - average loss over all the batches
         - list of output depth maps
     """
-    epoch_loss = []                      # Initialize the loss
-    out_depth = np.empty((1, 320, 240))  # Initialize the output depth maps
+    epoch_loss = []                                        # Initialize the loss
+    out_depth = np.empty((1, 320, 240), dtype=np.float32)  # Initialize the output depth maps
 
     # Set the network in evaluation mode
     net.eval()
@@ -39,13 +40,14 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
             epoch_loss.append(loss.item())
 
             # Append the output
-            out_depth = np.concatenate(out_depth, axis=0)
+            out_depth = np.concatenate((out_depth, output.to('cpu').numpy()), axis=0)
     
     out_depth = np.delete(out_depth, 0, axis=0)  # Delete the first empty array
 
     # Save the output depth maps
     if out_path is not None:
         np.save(out_path, out_depth)
+        save_np_as_img(out_depth, Path(str(out_path)[:-12] + "_images"))  # type: ignore
 
     # Return the average loss over al the batches
     return float(np.mean(epoch_loss)), out_depth

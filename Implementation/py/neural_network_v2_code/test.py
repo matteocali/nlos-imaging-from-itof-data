@@ -6,6 +6,7 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 from utils.NlosNet import NlosNet
 from utils.test_function import test
+from utils.utils import format_time
 
 
 def arg_parser(argv):
@@ -58,6 +59,9 @@ if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print("Device: ", device, "\n")  # Print the device used
 
+    # If not alreaty present create the output folder
+    args[2].mkdir(parents=True, exist_ok=True)  # type: ignore
+
     # Load the dataset
     test_dts = torch.load(args[0])  # Load the test dataset
     test_loader = DataLoader(test_dts, batch_size=32, shuffle=True, num_workers=4)  # Create the test dataloader  # type: ignore
@@ -70,9 +74,15 @@ if __name__ == '__main__':
     loss_fn = torch.nn.L1Loss()
 
     # Test the model
+    s_test_time = time.time()  # Start the test time
     test_loss, out = test(
         net=model, 
         data_loader=test_loader, 
         loss_fn=loss_fn, 
         device=device,
-        out_path=(args[2] / f"{args[0][11:]}_results.npy"))  # type: ignore
+        out_path=(args[2] / f"{str(args[0].stem)[10:]}_results.npy"))  # type: ignore
+    e_test_time = time.time()  # End the test time
+
+    # Print the results
+    print("Test loss: ", test_loss)
+    print("Test time: ", format_time(s_test_time, e_test_time))
