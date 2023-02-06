@@ -124,4 +124,4 @@ class NlosNet(nn.Module):
         out = self.head(out)
         if self.retain_dim:
             out = nn.functional.interpolate(out, size=self.out_size)
-        return out
+        return out.squeeze(1)

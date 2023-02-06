@@ -42,11 +42,11 @@ def arg_parser(argv):
 
     for opt, arg in opts:
         if opt in ("-i", "--input"):
-            arg_data_path = Path(arg)  # Set the path to the raw data
+            arg_data_path = Path(arg)   # Set the path to the raw data
         elif opt in ("-c", "--csv"):
-            arg_csv_path = Path(arg)   # Set the path to the csv foler
+            arg_csv_path = Path(arg)    # Set the path to the csv foler
         elif opt in ("-n", "--name"):
-            arg_model_name = arg       # Set the name of the model
+            arg_model_name = arg + "_"  # Set the name of the model
 
     print("Input folder: ", arg_data_path)
     print("CSV folder: ", arg_csv_path)
@@ -126,6 +126,6 @@ if __name__ == '__main__':
                             loss_fn=loss_fn, 
                             device=device, 
                             n_epochs=5,
-                            save_path=(net_state_path / f"{args[2]}_model.pt"))
+                            save_path=(net_state_path / f"{args[2]}model.pt"))
     f_train_time = time.time()  # Stop the timer for the training
     print(f"The total computation time for training the model was {format_time(s_train_time, f_train_time)}\n")
