@@ -104,7 +104,7 @@ if __name__ == '__main__':
     net_state_path.mkdir(parents=True, exist_ok=True)              # Create the network state folder
 
     # Create the model
-    model = NlosNet(retain_dim=True, out_size=(240, 320)).to(device)  # Create the model and move it to the device
+    model = NlosNet(retain_dim=True, out_size=(320, 240)).to(device)  # Create the model and move it to the device
 
     # Create the optimizer
     optimizer = Adam(model.parameters(), lr=0.0001)
