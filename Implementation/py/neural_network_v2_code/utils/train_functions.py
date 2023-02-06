@@ -47,8 +47,8 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
     with torch.no_grad():
         for sample in data_loader:
             # Get the input and the target
-            itof_data = sample["itof_data"].to(device)
-            gt_depth = sample["gt_depth"].to(device)
+            itof_data = sample[0].to(device)
+            gt_depth = sample[1].to(device)
 
             # Forward pass
             output = net(itof_data)
@@ -84,7 +84,7 @@ def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader
         # Check if the validation loss is the best
         if val_loss < best_loss:
             # Save the model
-            torch.save(net.state_dict(), str(save_path))
+            torch.save(net.state_dict(), save_path)
 
             # Update the best loss
             best_loss = val_loss

@@ -1,9 +1,10 @@
 import sys
 import time
 import getopt
-from pathlib import Path
 import glob
 import random
+from pathlib import Path
+from utils.utils import format_time
 
 
 def arg_parser(argv):
@@ -87,4 +88,4 @@ if __name__ == '__main__':
     end_time = time.time()
     minutes, seconds = divmod(end_time - start_time, 60)
     hours, minutes = divmod(minutes, 60)
-    print("Total time to split the dataset is %d:%02d:%02d" % (hours, minutes, seconds))
+    print(f"Total time to split the dataset is {format_time(start_time, end_time)}")

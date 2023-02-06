@@ -10,6 +10,7 @@ from utils.NlosTransientDataset import NlosTransientDataset
 from utils.ItofNormalize import ItofNormalize
 from utils.NlosNet import NlosNet
 from utils.train_functions import train
+from utils.utils import format_time
 from pathlib import Path
 
 
@@ -26,13 +27,15 @@ def arg_parser(argv):
     arg_data_path = ""
     # Argument containing the path where the csv data are located
     arg_csv_path = ""
+    # Argument containing the name of the model
+    arg_model_name = ""
     # Help string
-    arg_help = "{0} -i <input> -c <output>".format(argv[0])
+    arg_help = "{0} -i <input> -c <output>, -n <name>".format(argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(
-            argv[1:], "hi:c:", ["help", "input=", "csv="])
+            argv[1:], "hi:c:n:", ["help", "input=", "csv=", "name="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -42,12 +45,15 @@ def arg_parser(argv):
             arg_data_path = Path(arg)  # Set the path to the raw data
         elif opt in ("-c", "--csv"):
             arg_csv_path = Path(arg)   # Set the path to the csv foler
+        elif opt in ("-n", "--name"):
+            arg_model_name = arg       # Set the name of the model
 
     print("Input folder: ", arg_data_path)
     print("CSV folder: ", arg_csv_path)
+    print("Model name: ", arg_model_name)
     print()
 
-    return [arg_data_path, arg_csv_path]
+    return [arg_data_path, arg_csv_path, arg_model_name]
 
 
 if __name__ == '__main__':
@@ -90,18 +96,16 @@ if __name__ == '__main__':
         torch.save(test_dts, processed_dts_path / "processed_test_dts.pt")                         # Save the test dataset
 
         f_dts_time = time.time()  # Stop the timer for the dataset creation
-        minutes, seconds = divmod(f_dts_time - s_dts_time, 60)
-        hours, minutes = divmod(minutes, 60)
-        print("The total computation time for generating the dataset is %d:%02d:%02d \n" % (hours, minutes, seconds))
+        print(f"The total computation time for generating the dataset was {format_time(s_dts_time, f_dts_time)}\n")
 
     # Create the dataloaders
-    train_loader = DataLoader(train_dts, batch_size=32, shuffle=True, num_workers=4)  # Create the train dataloader
-    val_loader = DataLoader(val_dts, batch_size=32, shuffle=True, num_workers=4)      # Create the validation dataloader
-    test_loader = DataLoader(test_dts, batch_size=32, shuffle=True, num_workers=4)    # Create the test dataloader
+    train_loader = DataLoader(train_dts, batch_size=32, shuffle=True, num_workers=4)  # Create the train dataloader  # type: ignore
+    val_loader = DataLoader(val_dts, batch_size=32, shuffle=True, num_workers=4)      # Create the validation dataloader  # type: ignore
+    test_loader = DataLoader(test_dts, batch_size=32, shuffle=True, num_workers=4)    # Create the test dataloader  # type: ignore
 
     # Create the network state folder 
     net_state_path = Path("neural_network_v2_code/net_state")  # Set the path to the network state folder  # type: ignore
-    net_state_path.mkdir(parents=True, exist_ok=True)              # Create the network state folder
+    net_state_path.mkdir(parents=True, exist_ok=True)          # Create the network state folder
 
     # Create the model
     model = NlosNet(retain_dim=True, out_size=(320, 240)).to(device)  # Create the model and move it to the device
@@ -113,6 +117,7 @@ if __name__ == '__main__':
     loss_fn = L1Loss()
 
     # Train the model
+    s_train_time = time.time()  # Start the timer for the training
     train_loss, val_loss =train(
                             net=model, 
                             train_loader=train_loader, 
@@ -120,5 +125,7 @@ if __name__ == '__main__':
                             optimizer=optimizer, 
                             loss_fn=loss_fn, 
                             device=device, 
-                            n_epochs=100,
-                            save_path=net_state_path)
+                            n_epochs=5,
+                            save_path=(net_state_path / f"{args[2]}_model.pt"))
+    f_train_time = time.time()  # Stop the timer for the training
+    print(f"The total computation time for training the model was {format_time(s_train_time, f_train_time)}\n")

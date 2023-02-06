@@ -24,7 +24,8 @@
             "program": "${file}",
             "args": [
                 "--input", "/media/matteocali/shared_data/Matteo/NLoS imaging using iToF/mirror_dts/fixed_camera_diffuse_wall",
-                "--csv", "neural_network_v2_code/test_dts_csv_split"],
+                "--csv", "neural_network_v2_code/test_dts_csv_split",
+                "--name", "test"],
             "console": "integratedTerminal",
             "justMyCode": true
         }
