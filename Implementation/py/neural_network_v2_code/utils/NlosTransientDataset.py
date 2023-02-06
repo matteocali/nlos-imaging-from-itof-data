@@ -60,8 +60,8 @@ class NlosTransientDataset(Dataset):
             self.gt_depth[count, ...] = temp_gt_depth
             self.gt_alpha[count, ...] = temp_gt_alpha
 
-        # Swap the axes to have the channels as the second dimension
-        self.itof_data = np.swapaxes(self.itof_data, 1, 3)
+        # Move the axis to have the channels as the second dimension instead of being the last one
+        self.itof_data = np.moveaxis(self.itof_data, 3, 1)
 
         # Transform the data to torch tensors
         self.itof_data = torch.from_numpy(self.itof_data)
