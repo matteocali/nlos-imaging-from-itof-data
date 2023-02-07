@@ -137,6 +137,38 @@ class Regressor(nn.Module):
         return x
 
 
+class FinalConv(nn.Module):
+    """Final convolutional layers of the proposed network architecture"""
+
+    def __init__(self, ch: int = 2, n_layers: int = 5, pad: int = 1) -> None:
+        """
+        Final convolutional layers
+        param:
+            - n_layer: number of layers
+            - pad: padding
+        """
+
+        super().__init__()
+        self.n_layers = n_layers
+        self.conv = nn.ModuleList([nn.Conv2d(ch, ch, kernel_size=3, padding=pad) for _ in range(n_layers)])
+        self.relu = nn.ReLU()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass
+        param:
+            - x: input tensor
+        return:
+            - output tensor
+        """
+
+        for i in range(self.n_layers):
+            x = self.conv[i](x)
+            if i != self.n_layers - 1:
+                x = self.relu(x)
+        return x
+
+
 class NlosNet(nn.Module):
 
     def __init__(self, enc_channels: tuple = (6, 64, 128, 256, 512, 1024), dec_channels: tuple = (1024, 512, 256, 128, 64), pad: int = 1, num_class: int = 1, retain_dim: bool = False, out_size: tuple = (512, 512)) -> None:
@@ -156,6 +188,9 @@ class NlosNet(nn.Module):
         self.head = nn.Conv2d(dec_channels[-1], num_class, kernel_size=1)
         self.retain_dim = retain_dim
         self.out_size = out_size
+        #self.depth_estiamtor = FinalConv(ch=1, n_layers=2)
+        #self.alpha_estiamtor = FinalConv(ch=1, n_layers=2)
+        self.final_cnn = FinalConv(n_layers=5)
         #self.regressor = Regressor()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -167,11 +202,22 @@ class NlosNet(nn.Module):
             - output tensor
         """
 
+        # Run the encoder
         enc_features = self.encoder(x)
+        # Run the decoder
         out = self.decoder(enc_features[::-1][0], enc_features[::-1][1:])
+        # Run the head to move back to the number of classes
         out = self.head(out)
-        if self.retain_dim:
-            out = nn.functional.interpolate(out, size=self.out_size)
+        # Run the final two branches
+        #depth = self.depth_estiamtor(out[:, 0, :, :].unsqueeze(1))
+        #alpha = self.alpha_estiamtor(out[:, 1, :, :].unsqueeze(1))
+        out = self.final_cnn(out)
+
+        #out = torch.cat([depth, alpha], dim=1)
+        # Run the regressor
         #out = self.regressor(out.flatten(1))
         #out = out.view(320, 240)
-        return out.squeeze(1)
+        if self.retain_dim:
+            out = nn.functional.interpolate(out, size=self.out_size)
+        #return out.squeeze(1)
+        return out

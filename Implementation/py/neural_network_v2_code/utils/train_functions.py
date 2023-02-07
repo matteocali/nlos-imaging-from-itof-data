@@ -1,9 +1,15 @@
+import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 import torch
 import numpy as np
+import time
 from torch.utils.data import DataLoader
 from torch.optim import Optimizer
 from pathlib import Path
 from torch.utils.tensorboard.writer import SummaryWriter
+from utils.utils import format_time
+from torch.nn import BCEWithLogitsLoss
+from torch.nn import MSELoss
 from utils.utils import generate_fig
 
 
@@ -17,18 +23,28 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         # Get the input and the target
         itof_data = sample[0].to(device)
         gt_depth = sample[1].to(device)
+        gt_mask = sample[2].to(device)
 
         # Reset the gradients
         optimizer.zero_grad()
 
         # Forward pass
         output = net(itof_data)
+        depth = output[:, 0, ...]
+        mask = output[:, 1, ...]
 
         # Compute the loss
-        loss = loss_fn(output, gt_depth)
+        #loss = loss_fn(output, gt_depth)
+        depth_loss = MSELoss()(depth, gt_depth)
+        mask_loss = BCEWithLogitsLoss()(mask, gt_mask)
+        loss = depth_loss + mask_loss
+        
 
         # Backward pass
-        loss.backward()
+        #loss.backward()
+        depth_loss.backward(retain_graph=True)
+        mask_loss.backward(retain_graph=True)
+        #loss.backward()
 
         # Update the weights
         optimizer.step()
@@ -55,12 +71,18 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
             # Get the input and the target
             itof_data = sample[0].to(device)
             gt_depth = sample[1].to(device)
+            gt_mask = sample[2].to(device)
 
             # Forward pass
             output = net(itof_data)
+            depth = output[:, 0, ...]
+            mask = output[:, 1, ...]
 
             # Compute the loss
-            loss = loss_fn(output, gt_depth)
+            #loss = loss_fn(output, gt_depth)
+            depth_loss = MSELoss()(depth, gt_depth)
+            mask_loss = BCEWithLogitsLoss()(mask, gt_mask)
+            loss = depth_loss + mask_loss
 
             # Append the loss
             epoch_loss.append(loss.item())
@@ -80,19 +102,38 @@ def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader
     # Initialize the best loss
     best_loss = float("inf")
 
+    # Initialize the variable that contains the overall time
+    overall_time = 0
+
     # Initialize the lists for the losses
     train_loss_tot = []
     val_loss_tot = []
 
     for epoch in range(n_epochs):
+        # Start the timer
+        start_time = time.time()
+
         # Train the network
         train_loss = train_fn(net, train_loader, optimizer, loss_fn, device)
 
         # Validate the network
         val_loss, gt_depth, depth = val_fn(net, val_loader, loss_fn, device)
 
+        # End the timer
+        end_time = time.time()
+
+        # Compute the ETA using the mean time per epoch
+        overall_time += end_time - start_time
+        mean_time = overall_time / (epoch + 1)
+        eta = format_time(0, (n_epochs - epoch - 1) * mean_time)
+
         # Print the results
-        print(f"Epoch: {epoch + 1}/{n_epochs} | Train loss: {train_loss:.4f} | Val loss: {val_loss:.4f}")
+        print(f"Epoch: {epoch + 1}/{n_epochs} | Train loss: {train_loss:.4f} | Val loss: {val_loss:.4f} | Time for epoch: {format_time(start_time, end_time)} | ETA: {eta}")
+
+        # Print to file
+        with open(save_path.parent / "log.txt", "a") as f:
+            f.write(f"Epoch: {epoch + 1}/{n_epochs} | Train loss: {train_loss:.4f} | Val loss: {val_loss:.4f} | Time for epoch: {format_time(start_time, time.time())} | ETA: {eta}\n")
+        
 
         # Write the results to tensorboard
         writer.add_scalar("Loss/train", train_loss, epoch)

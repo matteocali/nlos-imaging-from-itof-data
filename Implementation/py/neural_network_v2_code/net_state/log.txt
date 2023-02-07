@@ -1,0 +1,110 @@
+Epoch: 1/50000 | Train loss: 85687069287616.9375 | Val loss: 686714051542796.0000 | Time for epoch: 0:00:19
+Epoch: 2/50000 | Train loss: 23395011318328.0781 | Val loss: 1339678924927603048448.0000 | Time for epoch: 0:00:19
+Epoch: 3/50000 | Train loss: 34154671284729536.0000 | Val loss: 75928971979271.6406 | Time for epoch: 0:00:19
+Epoch: 4/50000 | Train loss: 17743846761502.8086 | Val loss: 625105822673171.6250 | Time for epoch: 0:00:19
+Epoch: 5/50000 | Train loss: 218982160705353.9375 | Val loss: 105026910655748.0469 | Time for epoch: 0:00:19
+Epoch: 6/50000 | Train loss: 45050486047531.6172 | Val loss: 76189466553573.6094 | Time for epoch: 0:00:19
+Epoch: 1/50000 | Train loss: 29619958.6196 | Val loss: 388700160.7440 | Time for epoch: 0:00:19
+Epoch: 1/50000 | Train loss: 28765536.7396 | Val loss: 29607682.4607 | Time for epoch: 0:00:12
+Epoch: 2/50000 | Train loss: 18883533.0459 | Val loss: 3184071.7930 | Time for epoch: 0:00:12
+Epoch: 3/50000 | Train loss: 2273545.1987 | Val loss: 1.0334 | Time for epoch: 0:00:12
+Epoch: 4/50000 | Train loss: 0.7668 | Val loss: 0.7673 | Time for epoch: 0:00:12
+Epoch: 5/50000 | Train loss: 0.7654 | Val loss: 0.7664 | Time for epoch: 0:00:12
+Epoch: 6/50000 | Train loss: 0.7645 | Val loss: 0.7656 | Time for epoch: 0:00:12
+Epoch: 7/50000 | Train loss: 0.7638 | Val loss: 0.7649 | Time for epoch: 0:00:12
+Epoch: 1/50000 | Train loss: 8239.6075 | Val loss: 66846.3714 | Time for epoch: 0:00:13
+Epoch: 2/50000 | Train loss: 31186.2505 | Val loss: 17560.8505 | Time for epoch: 0:00:13
+Epoch: 3/50000 | Train loss: 5175.1839 | Val loss: 5279.2931 | Time for epoch: 0:00:13
+Epoch: 4/50000 | Train loss: 2438.5686 | Val loss: 3351.3504 | Time for epoch: 0:00:13
+Epoch: 5/50000 | Train loss: 554.8944 | Val loss: 872.9968 | Time for epoch: 0:00:13
+Epoch: 6/50000 | Train loss: 256.9598 | Val loss: 698.7523 | Time for epoch: 0:00:13
+Epoch: 7/50000 | Train loss: 272.1714 | Val loss: 442.4381 | Time for epoch: 0:00:13
+Epoch: 8/50000 | Train loss: 169.8110 | Val loss: 393.4413 | Time for epoch: 0:00:13
+Epoch: 9/50000 | Train loss: 132.7418 | Val loss: 313.7195 | Time for epoch: 0:00:13
+Epoch: 10/50000 | Train loss: 108.8229 | Val loss: 258.4240 | Time for epoch: 0:00:13
+Epoch: 11/50000 | Train loss: 90.4398 | Val loss: 235.0932 | Time for epoch: 0:00:13
+Epoch: 12/50000 | Train loss: 316.9079 | Val loss: 215.1125 | Time for epoch: 0:00:13
+Epoch: 13/50000 | Train loss: 74.4128 | Val loss: 347.4832 | Time for epoch: 0:00:13
+Epoch: 14/50000 | Train loss: 137.0500 | Val loss: 233.6621 | Time for epoch: 0:00:13
+Epoch: 15/50000 | Train loss: 79.6505 | Val loss: 208.3246 | Time for epoch: 0:00:13
+Epoch: 16/50000 | Train loss: 72.5338 | Val loss: 163.8876 | Time for epoch: 0:00:13
+Epoch: 17/50000 | Train loss: 55.8364 | Val loss: 158.0060 | Time for epoch: 0:00:13
+Epoch: 18/50000 | Train loss: 54.4833 | Val loss: 148.5550 | Time for epoch: 0:00:13
+Epoch: 19/50000 | Train loss: 51.7155 | Val loss: 143.1810 | Time for epoch: 0:00:13
+Epoch: 20/50000 | Train loss: 49.8071 | Val loss: 140.2171 | Time for epoch: 0:00:13
+Epoch: 21/50000 | Train loss: 48.4348 | Val loss: 135.0963 | Time for epoch: 0:00:13
+Epoch: 22/50000 | Train loss: 46.9380 | Val loss: 131.9449 | Time for epoch: 0:00:13
+Epoch: 23/50000 | Train loss: 45.9847 | Val loss: 130.7558 | Time for epoch: 0:00:13
+Epoch: 24/50000 | Train loss: 45.4415 | Val loss: 128.0224 | Time for epoch: 0:00:13
+Epoch: 25/50000 | Train loss: 44.5757 | Val loss: 337.7488 | Time for epoch: 0:00:13
+Epoch: 26/50000 | Train loss: 43.9623 | Val loss: 124.2367 | Time for epoch: 0:00:13
+Epoch: 27/50000 | Train loss: 43.3964 | Val loss: 122.9040 | Time for epoch: 0:00:13
+Epoch: 28/50000 | Train loss: 42.8820 | Val loss: 121.6091 | Time for epoch: 0:00:13
+Epoch: 29/50000 | Train loss: 42.4390 | Val loss: 120.8406 | Time for epoch: 0:00:13
+Epoch: 30/50000 | Train loss: 42.1670 | Val loss: 317.2017 | Time for epoch: 0:00:13
+Epoch: 31/50000 | Train loss: 41.6710 | Val loss: 314.4175 | Time for epoch: 0:00:13
+Epoch: 32/50000 | Train loss: 41.3011 | Val loss: 117.4992 | Time for epoch: 0:00:13
+Epoch: 33/50000 | Train loss: 41.0045 | Val loss: 117.1126 | Time for epoch: 0:00:13
+Epoch: 34/50000 | Train loss: 40.7732 | Val loss: 116.4197 | Time for epoch: 0:00:13
+Epoch: 35/50000 | Train loss: 40.6099 | Val loss: 115.5451 | Time for epoch: 0:00:13
+Epoch: 36/50000 | Train loss: 40.3361 | Val loss: 115.2290 | Time for epoch: 0:00:13
+Epoch: 37/50000 | Train loss: 40.1707 | Val loss: 114.8032 | Time for epoch: 0:00:13
+Epoch: 38/50000 | Train loss: 40.0450 | Val loss: 114.1979 | Time for epoch: 0:00:13
+Epoch: 39/50000 | Train loss: 39.8704 | Val loss: 113.8392 | Time for epoch: 0:00:13
+Epoch: 40/50000 | Train loss: 39.7383 | Val loss: 113.6711 | Time for epoch: 0:00:13
+Epoch: 41/50000 | Train loss: 39.7046 | Val loss: 113.1663 | Time for epoch: 0:00:13
+Epoch: 42/50000 | Train loss: 39.5231 | Val loss: 113.0178 | Time for epoch: 0:00:13
+Epoch: 43/50000 | Train loss: 39.4395 | Val loss: 112.6651 | Time for epoch: 0:00:13
+Epoch: 44/50000 | Train loss: 39.3411 | Val loss: 112.4344 | Time for epoch: 0:00:13
+Epoch: 1/50000 | Train loss: 4685448.0952 | Val loss: 282641806.8775 | Time for epoch: 0:00:12
+Epoch: 2/50000 | Train loss: 146305595.7852 | Val loss: 526058439.7652 | Time for epoch: 0:00:12
+Epoch: 3/50000 | Train loss: 18888064.7071 | Val loss: 26687557.9866 | Time for epoch: 0:00:12
+Epoch: 4/50000 | Train loss: 14572673.9369 | Val loss: 29532221.0968 | Time for epoch: 0:00:12
+Epoch: 5/50000 | Train loss: 52591779.1668 | Val loss: 12647389.0960 | Time for epoch: 0:00:12
+Epoch: 6/50000 | Train loss: 23422678.8583 | Val loss: 20754477.0954 | Time for epoch: 0:00:12
+Epoch: 7/50000 | Train loss: 5714797.0115 | Val loss: 2918834.2059 | Time for epoch: 0:00:12
+Epoch: 8/50000 | Train loss: 907654.6263 | Val loss: 1425968.8720 | Time for epoch: 0:00:13
+Epoch: 9/50000 | Train loss: 494064.7795 | Val loss: 2934824.4270 | Time for epoch: 0:00:12
+Epoch: 10/50000 | Train loss: 396261.2790 | Val loss: 627388.9266 | Time for epoch: 0:00:12
+Epoch: 1/50000 | Train loss: 28765536.7396 | Val loss: 29604381.1274 | Time for epoch: 0:00:12
+Epoch: 2/50000 | Train loss: 18882399.5074 | Val loss: 3179018.0152 | Time for epoch: 0:00:12
+Epoch: 3/50000 | Train loss: 2274391.1987 | Val loss: 0.8684 | Time for epoch: 0:00:12
+Epoch: 4/50000 | Train loss: 0.7663 | Val loss: 0.7673 | Time for epoch: 0:00:12
+Epoch: 5/50000 | Train loss: 0.7654 | Val loss: 0.7664 | Time for epoch: 0:00:12
+Epoch: 6/50000 | Train loss: 0.7645 | Val loss: 0.7656 | Time for epoch: 0:00:12
+Epoch: 7/50000 | Train loss: 0.7638 | Val loss: 0.7649 | Time for epoch: 0:00:12
+Epoch: 8/50000 | Train loss: 0.7631 | Val loss: 0.7642 | Time for epoch: 0:00:12
+Epoch: 9/50000 | Train loss: 0.7625 | Val loss: 0.7636 | Time for epoch: 0:00:12
+Epoch: 10/50000 | Train loss: 0.7619 | Val loss: 0.7631 | Time for epoch: 0:00:12
+Epoch: 1/50000 | Train loss: 28765534.2489 | Val loss: 26690811.8154 | Time for epoch: 0:00:11 | ETA: 6:18:24:42
+Epoch: 2/50000 | Train loss: 18559424.7098 | Val loss: 1681417.0149 | Time for epoch: 0:00:11 | ETA: 6:17:11:30
+Epoch: 3/50000 | Train loss: 1153395.0940 | Val loss: 151712.2146 | Time for epoch: 0:00:11 | ETA: 6:17:26:28
+Epoch: 4/50000 | Train loss: 24340.4806 | Val loss: 33.5030 | Time for epoch: 0:00:11 | ETA: 6:17:00:57
+Epoch: 5/50000 | Train loss: 11.7645 | Val loss: 15.2792 | Time for epoch: 0:00:11 | ETA: 6:16:55:32
+Epoch: 6/50000 | Train loss: 6.0091 | Val loss: 27.2914 | Time for epoch: 0:00:11 | ETA: 6:17:04:34
+Epoch: 7/50000 | Train loss: 2.1824 | Val loss: 3.4093 | Time for epoch: 0:00:11 | ETA: 6:17:14:57
+Epoch: 8/50000 | Train loss: 1.4762 | Val loss: 2.0463 | Time for epoch: 0:00:11 | ETA: 6:17:05:21
+Epoch: 9/50000 | Train loss: 1.1155 | Val loss: 1.3661 | Time for epoch: 0:00:11 | ETA: 6:16:57:59
+Epoch: 10/50000 | Train loss: 0.9860 | Val loss: 0.9788 | Time for epoch: 0:00:11 | ETA: 6:17:07:00
+Epoch: 11/50000 | Train loss: 0.8574 | Val loss: 0.8514 | Time for epoch: 0:00:11 | ETA: 6:16:58:41
+Epoch: 12/50000 | Train loss: 0.8144 | Val loss: 0.7990 | Time for epoch: 0:00:11 | ETA: 6:17:05:40
+Epoch: 13/50000 | Train loss: 0.7852 | Val loss: 0.7867 | Time for epoch: 0:00:11 | ETA: 6:17:07:34
+Epoch: 14/50000 | Train loss: 0.7862 | Val loss: 0.7771 | Time for epoch: 0:00:11 | ETA: 6:17:10:24
+Epoch: 15/50000 | Train loss: 0.7751 | Val loss: 0.7681 | Time for epoch: 0:00:11 | ETA: 6:17:13:29
+Epoch: 16/50000 | Train loss: 0.7712 | Val loss: 0.7668 | Time for epoch: 0:00:11 | ETA: 6:17:16:26
+Epoch: 17/50000 | Train loss: 0.7672 | Val loss: 0.7663 | Time for epoch: 0:00:11 | ETA: 6:17:16:36
+Epoch: 18/50000 | Train loss: 0.7666 | Val loss: 0.7662 | Time for epoch: 0:00:11 | ETA: 6:17:20:10
+Epoch: 19/50000 | Train loss: 0.7658 | Val loss: 0.7661 | Time for epoch: 0:00:11 | ETA: 6:17:19:45
+Epoch: 20/50000 | Train loss: 0.7655 | Val loss: 0.7660 | Time for epoch: 0:00:11 | ETA: 6:17:22:47
+Epoch: 21/50000 | Train loss: 0.7652 | Val loss: 0.7659 | Time for epoch: 0:00:11 | ETA: 6:17:25:20
+Epoch: 22/50000 | Train loss: 0.7651 | Val loss: 0.7659 | Time for epoch: 0:00:11 | ETA: 6:17:20:05
+Epoch: 23/50000 | Train loss: 0.7649 | Val loss: 0.7658 | Time for epoch: 0:00:11 | ETA: 6:17:21:45
+Epoch: 24/50000 | Train loss: 0.7647 | Val loss: 0.7657 | Time for epoch: 0:00:11 | ETA: 6:17:24:19
+Epoch: 25/50000 | Train loss: 0.7646 | Val loss: 0.7657 | Time for epoch: 0:00:11 | ETA: 6:17:25:30
+Epoch: 26/50000 | Train loss: 0.7650 | Val loss: 0.7656 | Time for epoch: 0:00:11 | ETA: 6:17:27:40
+Epoch: 27/50000 | Train loss: 0.7645 | Val loss: 0.7656 | Time for epoch: 0:00:11 | ETA: 6:17:28:18
+Epoch: 1/50000 | Train loss: 111704.8157 | Val loss: 53038.6722 | Time for epoch: 0:00:11 | ETA: 6:19:23:48
+Epoch: 2/50000 | Train loss: 4427.0984 | Val loss: 1193.9398 | Time for epoch: 0:00:11 | ETA: 6:20:07:46
+Epoch: 1/50000 | Train loss: 111704.8157 | Val loss: 53038.6472 | Time for epoch: 0:00:11 | ETA: 6:19:51:47
+Epoch: 2/50000 | Train loss: 4426.8977 | Val loss: 1194.0984 | Time for epoch: 0:00:11 | ETA: 6:19:18:42
+Epoch: 3/50000 | Train loss: 459.4559 | Val loss: 1489.5640 | Time for epoch: 0:00:11 | ETA: 6:20:11:11

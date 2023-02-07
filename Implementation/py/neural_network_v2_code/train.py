@@ -63,6 +63,7 @@ if __name__ == '__main__':
     args = arg_parser(sys.argv)        # Parse the input arguments
     data_path = args[0]                # Set the path to the raw data
     csv_path = args[1]                 # Set the path to the csv folder
+    batch_size = 16                    # Set the batch size
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -99,18 +100,18 @@ if __name__ == '__main__':
         print(f"The total computation time for generating the dataset was {format_time(s_dts_time, f_dts_time)}\n")
 
     # Create the dataloaders
-    train_loader = DataLoader(train_dts, batch_size=16, shuffle=True, num_workers=4)  # Create the train dataloader  # type: ignore
-    val_loader = DataLoader(val_dts, batch_size=16, shuffle=True, num_workers=4)      # Create the validation dataloader  # type: ignore
+    train_loader = DataLoader(train_dts, batch_size=batch_size, shuffle=True, num_workers=4)  # Create the train dataloader  # type: ignore
+    val_loader = DataLoader(val_dts, batch_size=batch_size, shuffle=True, num_workers=4)      # Create the validation dataloader  # type: ignore
 
     # Create the network state folder 
     net_state_path = Path("neural_network_v2_code/net_state")  # Set the path to the network state folder  # type: ignore
     net_state_path.mkdir(parents=True, exist_ok=True)          # Create the network state folder
 
     # Create the model
-    model = NlosNet(retain_dim=False, out_size=(320, 240)).to(device)  # Create the model and move it to the device
+    model = NlosNet(num_class=2, retain_dim=False, out_size=(320, 240)).to(device)  # Create the model and move it to the device
 
     # Print the model summary
-    summary(model, input_size=(16, 6, 320, 240), device=str(device), mode="train")
+    summary(model, input_size=(batch_size, 6, 320, 240), device=str(device), mode="train")
     print("")
 
     # Create the optimizer

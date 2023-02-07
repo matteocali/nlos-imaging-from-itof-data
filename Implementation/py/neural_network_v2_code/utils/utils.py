@@ -18,6 +18,9 @@ def format_time(s_time: float, f_time: float):
 
     minutes, seconds = divmod(f_time - s_time, 60)
     hours, minutes = divmod(minutes, 60)
+    if hours > 24:
+        days, hours = divmod(hours, 24)
+        return "%d:%02d:%02d:%02d" % (days, hours, minutes, seconds)
     return "%d:%02d:%02d" % (hours, minutes, seconds)
 
 def phi_func(freqs, dim_t=2000, exp_time=0.01):
