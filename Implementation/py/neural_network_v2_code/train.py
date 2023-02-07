@@ -65,6 +65,7 @@ if __name__ == '__main__':
     csv_path = args[1]                 # Set the path to the csv folder
     batch_size = 16                    # Set the batch size
     n_epochs = 1000                    # Set the number of epochs
+    lr = 1e-3                          # Set the learning rate
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -116,7 +117,7 @@ if __name__ == '__main__':
     print("")
 
     # Create the optimizer
-    optimizer = Adam(model.parameters(), lr=0.0001)
+    optimizer = Adam(model.parameters(), lr=lr)
 
     # Create the loss function
     loss_fn = MSELoss()

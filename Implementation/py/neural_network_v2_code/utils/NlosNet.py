@@ -190,7 +190,7 @@ class NlosNet(nn.Module):
         self.out_size = out_size
         #self.depth_estiamtor = FinalConv(ch=1, n_layers=2)
         #self.alpha_estiamtor = FinalConv(ch=1, n_layers=2)
-        self.final_cnn = FinalConv(n_layers=5)
+        self.final_cnn = FinalConv(n_layers=3)
         #self.regressor = Regressor()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
