@@ -64,6 +64,7 @@ if __name__ == '__main__':
     data_path = args[0]                # Set the path to the raw data
     csv_path = args[1]                 # Set the path to the csv folder
     batch_size = 16                    # Set the batch size
+    n_epochs = 1000                    # Set the number of epochs
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -129,7 +130,7 @@ if __name__ == '__main__':
         optimizer=optimizer, 
         loss_fn=loss_fn, 
         device=device, 
-        n_epochs=50000, 
+        n_epochs=n_epochs, 
         save_path=(net_state_path / f"{args[2]}model.pt"))
     f_train_time = time.time()  # Stop the timer for the training
     print(f"The total computation time for training the model was {format_time(s_train_time, f_train_time)}\n")
