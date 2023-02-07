@@ -1,0 +1,2 @@
+#!/bin/sh
+python3 neural_network_v2_code/train.py -i "/media/matteocali/shared_data/Matteo/NLoS imaging using iToF/mirror_dts/fixed_camera_diffuse_wall" -c "neural_network_v2_code/test_dts_csv_split" -n "test"
