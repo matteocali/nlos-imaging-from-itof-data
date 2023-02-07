@@ -5,7 +5,7 @@ import torch
 import glob
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from torch.nn import L1Loss
+from torch.nn import MSELoss
 from utils.NlosTransientDataset import NlosTransientDataset
 from utils.ItofNormalize import ItofNormalize
 from utils.NlosNet import NlosNet
@@ -99,24 +99,25 @@ if __name__ == '__main__':
         print(f"The total computation time for generating the dataset was {format_time(s_dts_time, f_dts_time)}\n")
 
     # Create the dataloaders
-    train_loader = DataLoader(train_dts, batch_size=32, shuffle=True, num_workers=4)  # Create the train dataloader  # type: ignore
-    val_loader = DataLoader(val_dts, batch_size=32, shuffle=True, num_workers=4)      # Create the validation dataloader  # type: ignore
+    train_loader = DataLoader(train_dts, batch_size=16, shuffle=True, num_workers=4)  # Create the train dataloader  # type: ignore
+    val_loader = DataLoader(val_dts, batch_size=16, shuffle=True, num_workers=4)      # Create the validation dataloader  # type: ignore
 
     # Create the network state folder 
     net_state_path = Path("neural_network_v2_code/net_state")  # Set the path to the network state folder  # type: ignore
     net_state_path.mkdir(parents=True, exist_ok=True)          # Create the network state folder
 
     # Create the model
-    model = NlosNet(retain_dim=True, out_size=(320, 240)).to(device)  # Create the model and move it to the device
+    model = NlosNet(retain_dim=False, out_size=(320, 240)).to(device)  # Create the model and move it to the device
 
     # Print the model summary
-    summary(model, input_size=(32, 6, 320, 240), device=str(device), mode="train")
+    summary(model, input_size=(16, 6, 320, 240), device=str(device), mode="train")
+    print("")
 
     # Create the optimizer
     optimizer = Adam(model.parameters(), lr=0.0001)
 
     # Create the loss function
-    loss_fn = L1Loss()
+    loss_fn = MSELoss()
 
     # Train the model
     s_train_time = time.time()  # Start the timer for the training
@@ -127,7 +128,7 @@ if __name__ == '__main__':
         optimizer=optimizer, 
         loss_fn=loss_fn, 
         device=device, 
-        n_epochs=5, 
+        n_epochs=50000, 
         save_path=(net_state_path / f"{args[2]}model.pt"))
     f_train_time = time.time()  # Stop the timer for the training
     print(f"The total computation time for training the model was {format_time(s_train_time, f_train_time)}\n")

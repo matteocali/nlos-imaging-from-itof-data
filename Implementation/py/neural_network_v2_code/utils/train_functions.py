@@ -3,6 +3,8 @@ import numpy as np
 from torch.utils.data import DataLoader
 from torch.optim import Optimizer
 from pathlib import Path
+from torch.utils.tensorboard.writer import SummaryWriter
+from utils.utils import generate_fig
 
 
 def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, device: torch.device) -> float:
@@ -38,8 +40,12 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
     return float(np.mean(epoch_loss))
 
 
-def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, device: torch.device) -> float:
+def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, device: torch.device) -> tuple:
     epoch_loss = []
+
+    # Initialize variable that will ocntains the last gt_depth and the last predicted depth
+    last_gt_depth = None
+    last_depth = None
 
     # Set the network in evaluation mode
     net.eval()
@@ -59,11 +65,18 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
             # Append the loss
             epoch_loss.append(loss.item())
 
+            # Update the last gt_depth and the last predicted depth
+            last_gt_depth = gt_depth.to("cpu").numpy()[-1, ...]
+            last_depth = output.to("cpu").numpy()[-1, ...]
+
     # Return the average loss over al the batches
-    return float(np.mean(epoch_loss))
+    return float(np.mean(epoch_loss)), last_gt_depth, last_depth
 
 
 def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, device: torch.device, n_epochs: int, save_path: Path) -> tuple:
+    # Initialize the tensorboard writer
+    writer = SummaryWriter(comment=f"_{net.__class__.__name__}_LR_{optimizer.param_groups[0]['lr']}_BS_{train_loader.batch_size}")
+    
     # Initialize the best loss
     best_loss = float("inf")
 
@@ -76,10 +89,14 @@ def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader
         train_loss = train_fn(net, train_loader, optimizer, loss_fn, device)
 
         # Validate the network
-        val_loss = val_fn(net, val_loader, loss_fn, device)
+        val_loss, gt_depth, depth = val_fn(net, val_loader, loss_fn, device)
 
         # Print the results
         print(f"Epoch: {epoch + 1}/{n_epochs} | Train loss: {train_loss:.4f} | Val loss: {val_loss:.4f}")
+
+        # Write the results to tensorboard
+        writer.add_scalar("Loss/train", train_loss, epoch)
+        writer.add_scalar("Loss/val", val_loss, epoch)
 
         # Check if the validation loss is the best
         if val_loss < best_loss:
@@ -95,6 +112,14 @@ def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader
         # Append the losses
         train_loss_tot.append(train_loss)
         val_loss_tot.append(val_loss)
+
+        # Add the images to tensorboard
+        #writer.add_figure("Target", generate_fig(depth), epoch)
+        #writer.add_figure("Prediction", gt_depth, epoch)
+
+    # Close the tensorboard writer
+    writer.flush()
+    writer.close()
 
     return train_loss_tot, val_loss_tot
 

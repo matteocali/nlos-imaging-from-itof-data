@@ -71,7 +71,7 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(args[1]))                        # Load the model
 
     # Define the loss function
-    loss_fn = torch.nn.L1Loss()
+    loss_fn = torch.nn.MSELoss()
 
     # Test the model
     s_test_time = time.time()  # Start the test time

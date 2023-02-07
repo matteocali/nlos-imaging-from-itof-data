@@ -1,5 +1,7 @@
 import numpy as np
 import scipy.constants as const
+import torchvision
+import io
 from pathlib import Path
 from matplotlib import pyplot as plt
 
@@ -53,3 +55,10 @@ def save_np_as_img(data: np.ndarray, path: Path):
     for i in range(data.shape[0]):
         # Save the image
         plt.imsave(str(path / f"{i}.png"), data[i, :, :], cmap="jet")
+
+def generate_fig(data: np.ndarray):
+    fig = plt.figure(figsize=(32, 24))
+    plt.matshow(data, cmap="jet")
+    plt.colorbar()
+
+    return fig
