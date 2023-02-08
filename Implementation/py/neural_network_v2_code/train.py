@@ -6,6 +6,7 @@ import glob
 from torch.utils.data import DataLoader
 from torch.optim import Adam
 from torch.nn import MSELoss
+from torch.nn import BCEWithLogitsLoss
 from utils.NlosTransientDataset import NlosTransientDataset
 from utils.ItofNormalize import ItofNormalize
 from utils.NlosNet import NlosNet
@@ -64,7 +65,7 @@ if __name__ == '__main__':
     data_path = args[0]                # Set the path to the raw data
     csv_path = args[1]                 # Set the path to the csv folder
     batch_size = 16                    # Set the batch size
-    n_epochs = 1000                    # Set the number of epochs
+    n_epochs = 5000                    # Set the number of epochs
     lr = 1e-3                          # Set the learning rate
 
     # Chekc if the gpu is available
@@ -110,7 +111,7 @@ if __name__ == '__main__':
     net_state_path.mkdir(parents=True, exist_ok=True)          # Create the network state folder
 
     # Create the model
-    model = NlosNet(num_class=2, retain_dim=False, out_size=(320, 240)).to(device)  # Create the model and move it to the device
+    model = NlosNet(num_class=8, enc_channels=(6, 16, 32, 64, 128, 256), dec_channels=(256, 128, 64, 32, 16)).to(device)  # Create the model and move it to the device
 
     # Print the model summary
     summary(model, input_size=(batch_size, 6, 320, 240), device=str(device), mode="train")
@@ -121,15 +122,19 @@ if __name__ == '__main__':
 
     # Create the loss function
     loss_fn = MSELoss()
+    depth_loss_fn = MSELoss()
+    mask_loss_fn = BCEWithLogitsLoss()
 
     # Train the model
     s_train_time = time.time()  # Start the timer for the training
-    train_loss, val_loss = train(
+    best_loss = train(
         net=model, 
         train_loader=train_loader, 
         val_loader=val_loader, 
         optimizer=optimizer, 
-        loss_fn=loss_fn, 
+        depth_loss_fn=depth_loss_fn,
+        mask_loss_fn=mask_loss_fn, 
+        l = 0.5,
         device=device, 
         n_epochs=n_epochs, 
         save_path=(net_state_path / f"{args[2]}model.pt"))

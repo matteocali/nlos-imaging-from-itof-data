@@ -60,8 +60,7 @@ def save_np_as_img(data: np.ndarray, path: Path):
         plt.imsave(str(path / f"{i}.png"), data[i, :, :], cmap="jet")
 
 def generate_fig(data: np.ndarray):
-    fig = plt.figure(figsize=(32, 24))
-    plt.matshow(data, cmap="jet")
-    plt.colorbar()
-
+    fig, ax = plt.subplots(1, 1)
+    img = ax.matshow(data, cmap="jet")
+    fig.colorbar(mappable=img, ax=ax)
     return fig

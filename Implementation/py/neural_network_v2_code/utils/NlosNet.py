@@ -107,40 +107,10 @@ class Decoder(nn.Module):
         return enc_ftrs
 
 
-class Regressor(nn.Module):
-    """Upsampler of the proposed network architecture"""
-
-    def __init__(self) -> None:
-        """
-        Upsampler
-        """
-
-        super().__init__()
-        features = 320 * 240
-        self.dense = nn.Linear(features, features)
-        self.relu = nn.ReLU()
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass
-        param:
-            - x: input tensor
-        return:
-            - output tensor
-        """
-        
-        x = self.dense(x)
-        x = self.relu(x)
-        x = self.dense(x)
-        x = self.relu(x)
-        x = self.dense(x)
-        return x
-
-
 class FinalConv(nn.Module):
     """Final convolutional layers of the proposed network architecture"""
 
-    def __init__(self, ch: int = 2, n_layers: int = 5, pad: int = 1) -> None:
+    def __init__(self, chs: tuple = (8, 4, 2), pad: int = 1) -> None:
         """
         Final convolutional layers
         param:
@@ -149,8 +119,8 @@ class FinalConv(nn.Module):
         """
 
         super().__init__()
-        self.n_layers = n_layers
-        self.conv = nn.ModuleList([nn.Conv2d(ch, ch, kernel_size=3, padding=pad) for _ in range(n_layers)])
+        self.n_layers = len(chs) - 1
+        self.conv = nn.ModuleList([nn.Conv2d(chs[i], chs[i + 1], kernel_size=3, padding=pad) for i in range(self.n_layers)])
         self.relu = nn.ReLU()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -171,29 +141,30 @@ class FinalConv(nn.Module):
 
 class NlosNet(nn.Module):
 
-    def __init__(self, enc_channels: tuple = (6, 64, 128, 256, 512, 1024), dec_channels: tuple = (1024, 512, 256, 128, 64), pad: int = 1, num_class: int = 1, retain_dim: bool = False, out_size: tuple = (512, 512)) -> None:
+    def __init__(self, enc_channels: tuple = (6, 64, 128, 256, 512, 1024), dec_channels: tuple = (1024, 512, 256, 128, 64), pad: int = 1, num_class: int = 1, n_final_layers: int = 3) -> None:
         """
         NLOS Net
         param:
             - enc_channels: number of channels for each block of the encoder
             - dec_channels: number of channels for each block of the decoder
-            - num_class: number of classes
-            - retain_dim: if True the output tensor will have the same dimension of the input tensor
-            - out_size: output size of the network
+            - pad: padding for the blocks
+            - num_class: number of classes for the last UNet layer
+            - n_final_layers: number of layers for the final convolutional layers (depth and mask estimator)
         """
 
         super().__init__()
-        self.encoder = Encoder(enc_channels, pad)
-        self.decoder = Decoder(dec_channels, pad)
-        self.head = nn.Conv2d(dec_channels[-1], num_class, kernel_size=1)
-        self.retain_dim = retain_dim
-        self.out_size = out_size
-        #self.depth_estiamtor = FinalConv(ch=1, n_layers=2)
-        #self.alpha_estiamtor = FinalConv(ch=1, n_layers=2)
-        self.final_cnn = FinalConv(n_layers=3)
-        #self.regressor = Regressor()
+        self.encoder = Encoder(enc_channels, pad)  # Initialize the encoder
+        self.decoder = Decoder(dec_channels, pad)  # Initialize the decoder
+        self.head = nn.Conv2d(dec_channels[-1], num_class, kernel_size=1)  # Initialize the head (last layer of the UNet reduce the features layer to the one set by num_class)
+        # Final layers
+        chs = [num_class]
+        for i in range(n_final_layers):  # Initialize the number of channels for the final layers
+            chs.append(int(round(num_class / (2 * (i + 1)))))
+        chs = tuple(chs)
+        self.depth_estiamtor = FinalConv(chs=chs)  # Initialize the depth estimator
+        self.mask_estiamtor = FinalConv(chs=chs)  # Initialize the mask estimator
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass
         param:
@@ -209,15 +180,7 @@ class NlosNet(nn.Module):
         # Run the head to move back to the number of classes
         out = self.head(out)
         # Run the final two branches
-        #depth = self.depth_estiamtor(out[:, 0, :, :].unsqueeze(1))
-        #alpha = self.alpha_estiamtor(out[:, 1, :, :].unsqueeze(1))
-        out = self.final_cnn(out)
-
+        depth = self.depth_estiamtor(out).squeeze(1)
+        mask = self.mask_estiamtor(out).squeeze(1)
         #out = torch.cat([depth, alpha], dim=1)
-        # Run the regressor
-        #out = self.regressor(out.flatten(1))
-        #out = out.view(320, 240)
-        if self.retain_dim:
-            out = nn.functional.interpolate(out, size=self.out_size)
-        #return out.squeeze(1)
-        return out
+        return depth, mask
