@@ -60,6 +60,9 @@ class NlosTransientDataset(Dataset):
             self.gt_depth[count, ...] = temp_gt_depth
             self.gt_alpha[count, ...] = temp_gt_alpha
 
+            # Increment the counter
+            count += 1
+
         # Move the axis to have the channels as the second dimension instead of being the last one
         self.itof_data = np.moveaxis(self.itof_data, 3, 1)
 
@@ -70,9 +73,10 @@ class NlosTransientDataset(Dataset):
 
         # Add the transform
         self.transform = transform
+        print("mamma")
 
     def __getitem__(self, index: int):
         return self.itof_data[index, ...], self.gt_depth[index, ...], self.gt_alpha[index, ...]
 
     def __len__(self) -> int:
-        return len(self.itof_data[:, 0, 0, 0])
+        return self.itof_data.shape[0]

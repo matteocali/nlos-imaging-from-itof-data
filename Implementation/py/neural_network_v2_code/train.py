@@ -27,17 +27,17 @@ def arg_parser(argv):
 
     # Argument containing the path where the raw data are located
     arg_data_path = ""
-    # Argument containing the path where the csv data are located
-    arg_csv_path = ""
+    # Argument containing the name of the dataset
+    dts_name = ""
     # Argument containing the name of the model
     arg_model_name = ""
     # Help string
-    arg_help = "{0} -i <input> -c <output>, -n <name>".format(argv[0])
+    arg_help = "{0} -i <input> -d <dataset>, -n <name>".format(argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(
-            argv[1:], "hi:c:n:", ["help", "input=", "csv=", "name="])
+            argv[1:], "hi:d:n:", ["help", "input=", "dataset=", "name="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -45,17 +45,17 @@ def arg_parser(argv):
     for opt, arg in opts:
         if opt in ("-i", "--input"):
             arg_data_path = Path(arg)   # Set the path to the raw data
-        elif opt in ("-c", "--csv"):
-            arg_csv_path = Path(arg)    # Set the path to the csv foler
+        elif opt in ("-d", "--dataset"):
+            dts_name = arg              # Set the name of the dataset
         elif opt in ("-n", "--name"):
             arg_model_name = arg + "_"  # Set the name of the model
 
     print("Input folder: ", arg_data_path)
-    print("CSV folder: ", arg_csv_path)
+    print("Dataset name: ", dts_name)
     print("Model name: ", arg_model_name)
     print()
 
-    return [arg_data_path, arg_csv_path, arg_model_name]
+    return [arg_data_path, dts_name, arg_model_name]
 
 
 if __name__ == '__main__':
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     start_time = time.time()           # Start the timer
     args = arg_parser(sys.argv)        # Parse the input arguments
     data_path = args[0]                # Set the path to the raw data
-    csv_path = args[1]                 # Set the path to the csv folder
+    dts_name = args[1]                 # Set the path to the csv folder
     batch_size = 16                    # Set the batch size
     n_epochs = 5000                    # Set the number of epochs
     lr = 1e-3                          # Set the learning rate
@@ -73,17 +73,18 @@ if __name__ == '__main__':
     print("Device: ", device, "\n")  # Print the device used
 
     # Load the different csv files
-    csv_files = glob.glob1(str(csv_path),"*.csv")                         # Load the csv files
-    csv_types = [csv_name.split("_")[-1][:-4] for csv_name in csv_files]  # Get the type of the csv file (train, val, test)
-    train_csv = Path(csv_path / csv_files[csv_types.index("train")])      # Get the train csv file  # type: ignore
-    val_csv = Path(csv_path / csv_files[csv_types.index("validation")])   # Get the validation csv file  # type: ignore
-    test_csv = Path(csv_path / csv_files[csv_types.index("test")])        # Get the test csv file  # type: ignore
+    csv_path = Path(__file__).parent.absolute() / "datasets" / dts_name / "csv_split"  # Set the path to the csv files
+    csv_files = glob.glob1(str(csv_path),"*.csv")                                      # Load the csv files
+    csv_types = [csv_name.split("_")[-1][:-4] for csv_name in csv_files]               # Get the type of the csv file (train, val, test)
+    train_csv = Path(csv_path / csv_files[csv_types.index("train")])                   # Get the train csv file  # type: ignore
+    val_csv = Path(csv_path / csv_files[csv_types.index("validation")])                # Get the validation csv file  # type: ignore
+    test_csv = Path(csv_path / csv_files[csv_types.index("test")])                     # Get the test csv file  # type: ignore
 
     # Create or load the processed datset
-    processed_dts_path = Path(csv_path.parent / (str(csv_path.name).split("_")[0] + "_processed_datasets"))                # Set the path to the processed datasets  # type: ignore
+    processed_dts_path = Path(csv_path.parent / "processed_dataset")                 # Set the path to the processed datasets  # type: ignore
     if processed_dts_path.exists() and len(list(processed_dts_path.iterdir())) > 0:  # Check if the folder already exists and is not empty
-        train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")     # Load the train dataset
-        val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")  # Load the validation dataset
+        train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")        # Load the train dataset
+        val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")     # Load the validation dataset
     else:
         processed_dts_path.mkdir(parents=True, exist_ok=True)  # Crreate the datasets folder  # type: ignore
         s_dts_time = time.time()                               # Start the timer for the dataset creation
@@ -91,13 +92,13 @@ if __name__ == '__main__':
         # Create and save the datasets
         print("Creating the training dataset...")
         train_dts = NlosTransientDataset(Path(data_path), train_csv, transform=ItofNormalize(n_freq=3))  # Create the train dataset
-        torch.save(train_dts, processed_dts_path / "processed_train_dts.pt")                       # Save the train dataset
+        torch.save(train_dts, processed_dts_path / "processed_train_dts.pt")                             # Save the train dataset
         print("Creating the validation dataset...")
         val_dts = NlosTransientDataset(Path(data_path), val_csv, transform=ItofNormalize(n_freq=3))      # Create the validation dataset
-        torch.save(val_dts, processed_dts_path / "processed_validation_dts.pt")                    # Save the validation dataset
+        torch.save(val_dts, processed_dts_path / "processed_validation_dts.pt")                          # Save the validation dataset
         print("Creating the test dataset...")
         test_dts = NlosTransientDataset(Path(data_path), test_csv, transform=ItofNormalize(n_freq=3))    # Create the test dataset
-        torch.save(test_dts, processed_dts_path / "processed_test_dts.pt")                         # Save the test dataset
+        torch.save(test_dts, processed_dts_path / "processed_test_dts.pt")                               # Save the test dataset
 
         f_dts_time = time.time()  # Stop the timer for the dataset creation
         print(f"The total computation time for generating the dataset was {format_time(s_dts_time, f_dts_time)}\n")

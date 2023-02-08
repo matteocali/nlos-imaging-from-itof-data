@@ -18,13 +18,12 @@ def arg_parser(argv):
 
     arg_name = "dts"                      # Argument containing the name of the dataset
     arg_data_path = ""                    # Argument containing the path where the raw data are located
-    arg_out_path = Path("dts_csv_split")  # Argument containing the path of the output folder
     arg_shuffle = True                    # Argument containing the flag for shuffling the dataset
-    arg_help = "{0} -n <name> -i <input> -o <output> -s <shuffle>".format(argv[0])  # Help string
+    arg_help = "{0} -n <name> -i <input> -s <shuffle>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:i:o:s:", ["help", "name=", "input=", "output=", "shuffle="])
+        opts, args = getopt.getopt(argv[1:], "hn:i:s:", ["help", "name=", "input=", "shuffle="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -34,8 +33,6 @@ def arg_parser(argv):
             arg_name = arg  # Set the attempt name
         elif opt in ("-i", "--input"):
             arg_data_path = Path(arg)  # Set the path to the raw data
-        elif opt in ("-o", "--output"):
-            arg_out_path = Path(arg)  # Set the output path
         elif opt in ("-s", "--shuffle"):
             if arg == "True":  # Set the shuffle flag
                 arg_shuffle = True
@@ -44,11 +41,10 @@ def arg_parser(argv):
         
     print("Attempt name: ", arg_name)
     print("Input folder: ", arg_data_path)
-    print("Output folder: ", arg_out_path)
     print("Shuffle: ", arg_shuffle)
     print()
 
-    return [arg_name, arg_data_path, arg_out_path, arg_shuffle]
+    return [arg_name, arg_data_path, arg_shuffle]
 
 
 if __name__ == '__main__':
@@ -56,9 +52,8 @@ if __name__ == '__main__':
     start_time = time.time()     # Start the timer
     args = arg_parser(sys.argv)  # Parse the input arguments
 
-    out_path = args[2] / f"{args[0]}_csv_split"
-
     # Create the output folder if it does not exist
+    out_path = Path(__file__).parent.absolute() / "datasets" / args[0] / "csv_split"
     out_path.mkdir(parents=True, exist_ok=True)
 
     # Load the dataset folderù
@@ -66,7 +61,7 @@ if __name__ == '__main__':
     n_of_elements = len(elements)
     
     # Shuffle the dataset if the flag is set
-    if args[3]:
+    if args[2]:
         random.shuffle(elements)
 
     # Split the dataset in train, validation and test (60, 20, 20)
