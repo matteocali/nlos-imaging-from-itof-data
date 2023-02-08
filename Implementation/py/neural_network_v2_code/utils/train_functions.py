@@ -134,7 +134,7 @@ def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader
     current_dir = os.path.dirname(__file__)
     current_date = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     hostname = socket.gethostname()
-    writer = SummaryWriter(log_dir=f"{current_dir}/../tensorboard_logs/{current_date}_{hostname}_{net.__class__.__name__}_LR_{optimizer.param_groups[0]['lr']}_BS_{train_loader.batch_size}")
+    writer = SummaryWriter(log_dir=f"{current_dir}/../tensorboard_logs/{current_date}_{hostname}_{net.__class__.__name__}_LR_{optimizer.param_groups[0]['lr']}_BS_{train_loader.batch_size}_E_{n_epochs}_L_{l}")
     
     # Initialize the best loss
     best_loss = float("inf")
