@@ -73,7 +73,6 @@ class NlosTransientDataset(Dataset):
 
         # Add the transform
         self.transform = transform
-        print("mamma")
 
     def __getitem__(self, index: int):
         return self.itof_data[index, ...], self.gt_depth[index, ...], self.gt_alpha[index, ...]
