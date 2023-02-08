@@ -189,10 +189,10 @@ def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader
         writer.add_scalar("Mask loss/val", val_loss_mask, epoch)
 
         # Add the images to tensorboard
-        writer.add_figure("Depth target/val", generate_fig(gt_depth), epoch)
-        writer.add_figure("Depth prediction/val", generate_fig(pred_depth), epoch)
-        writer.add_figure("Mask target/val", generate_fig(gt_mask), epoch)
-        writer.add_figure("Mask prediction/val", generate_fig(pred_mask), epoch)
+        writer.add_figure("Depth target/val", generate_fig(gt_depth.T), epoch)
+        writer.add_figure("Depth prediction/val", generate_fig(pred_depth.T), epoch)
+        writer.add_figure("Mask target/val", generate_fig(gt_mask.T), epoch)
+        writer.add_figure("Mask prediction/val", generate_fig(pred_mask.T), epoch)
 
     # Close the tensorboard writer
     writer.flush()

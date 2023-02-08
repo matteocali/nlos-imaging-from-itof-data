@@ -8,8 +8,8 @@ class ItofNormalize(object):
         - n_freq: number of frequencies used by the iToF sensor
     return:
         - itof_data: normalized iToF data
-        - gt_depth: normalized ground truth depth
-        - gt_alpha: normalized ground truth alpha
+        - gt_depth: ground truth depth
+        - gt_alpha: ground truth alpha
     """
 
     def __init__(self, n_freq: int):
