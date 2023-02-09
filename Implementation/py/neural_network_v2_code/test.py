@@ -67,9 +67,9 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_dts, batch_size=32, shuffle=True, num_workers=4)  # Create the test dataloader  # type: ignore
 
     # Load the model
-    state_dict_path = Path(__file__).parent.absolute() / "net_state" / args[1] + ".pt"                                    # Get the path to the model state dict
-    model = NlosNet(num_class=8, enc_channels=(6, 16, 32, 64, 128, 256), dec_channels=(256, 128, 64, 32, 16)).to(device)  # Create the model and move it to the device
-    model.load_state_dict(torch.load(args[1]))                                                                            # Load the model
+    state_dict_path = Path(__file__).parent.absolute() / "net_state" / args[1] + ".pt"                                                      # Get the path to the model state dict
+    model = NlosNet(enc_channels=(6, 16, 32, 64, 128, 256), dec_channels=(256, 128, 64, 32, 16), num_class=8, n_final_layers=3).to(device)  # Create the model and move it to the device
+    model.load_state_dict(torch.load(args[1]))                                                                                              # Load the model
 
     # Define the loss function
     depth_loss_fn = torch.nn.L1Loss()
