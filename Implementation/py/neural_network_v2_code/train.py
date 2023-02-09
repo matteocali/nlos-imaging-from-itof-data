@@ -5,7 +5,7 @@ import torch
 import glob
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from torch.nn import MSELoss
+from torch.nn import L1Loss
 from torch.nn import BCEWithLogitsLoss
 from utils.NlosTransientDataset import NlosTransientDataset
 from utils.ItofNormalize import ItofNormalize
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     dts_name = args[1]                 # Set the path to the csv folder
     batch_size = 16                    # Set the batch size
     n_epochs = 5000                    # Set the number of epochs
-    lr = 1e-3                          # Set the learning rate
+    lr = 1e-4                          # Set the learning rate
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -122,8 +122,7 @@ if __name__ == '__main__':
     optimizer = Adam(model.parameters(), lr=lr)
 
     # Create the loss function
-    loss_fn = MSELoss()
-    depth_loss_fn = MSELoss()
+    depth_loss_fn = L1Loss()
     mask_loss_fn = BCEWithLogitsLoss()
 
     # Train the model
@@ -135,7 +134,7 @@ if __name__ == '__main__':
         optimizer=optimizer, 
         depth_loss_fn=depth_loss_fn,
         mask_loss_fn=mask_loss_fn, 
-        l = 0.5,
+        l = 0.6,
         device=device, 
         n_epochs=n_epochs, 
         save_path=(net_state_path / f"{args[2]}model.pt"))

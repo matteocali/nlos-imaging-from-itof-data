@@ -10,13 +10,21 @@ from utils.utils import phi_func
 class NlosTransientDataset(Dataset):
     """
     NLOS Transient Dataset
-    param:
-        - dts_folder: path to the dataset folder
-        - csv_file: path to the csv file containing the list of the images
-        - transform: transformation to apply to the data
+        param:
+            - dts_folder: path to the dataset folder
+            - csv_file: path to the csv file containing the list of the images
+            - transform: transformation to apply to the data
     """
 
     def __init__(self, dts_folder: Path, csv_file: Path, transform=None):
+        """
+        Constructor of the NlosTransientDataset class
+            param:
+                - dts_folder: path to the dataset folder
+                - csv_file: path to the csv file containing the list of the images
+                - transform: transformation to apply to the data
+        """
+
         frequencies = np.array((20e06, 50e06, 60e06), dtype=np.float32)  # Define the frequencies used by the considered iToF sensor
         phi = phi_func(frequencies)                                      # Compute the phi matrix (iToF data)
         nf = phi.shape[0]                                                # Extract the number of frequencies
@@ -75,7 +83,21 @@ class NlosTransientDataset(Dataset):
         self.transform = transform
 
     def __getitem__(self, index: int):
+        """
+        Get the item at the given index
+            param:
+                - index: index of the item to get
+            return:
+                - the item at the given index
+        """
+
         return self.itof_data[index, ...], self.gt_depth[index, ...], self.gt_alpha[index, ...]
 
     def __len__(self) -> int:
+        """
+        Get the length of the dataset
+            return:
+                - the length of the dataset
+        """
+        
         return self.itof_data.shape[0]
