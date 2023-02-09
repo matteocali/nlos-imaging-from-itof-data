@@ -1,7 +1,5 @@
 import numpy as np
 import scipy.constants as const
-import torchvision
-import io
 from pathlib import Path
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -58,7 +56,22 @@ def save_np_as_img(data: np.ndarray, path: Path):
     # For each element of the numpy array
     for i in range(data.shape[0]):
         # Save the image
-        plt.imsave(str(path / f"{i}.png"), data[i, :, :], cmap="jet")
+        titles = ["Depth", "Mask"]
+        c_range = [(np.min(data[i, 0, ...]), np.max(data[i, 0, ...])), (0, 1)]
+        fig, ax = plt.subplots(1, 2)
+        for j in range(2):
+            img_t = ax[j].matshow(data[i, j, ...], cmap="jet")
+            if range is not None:
+                img_t.set_clim(c_range[0], c_range[1])
+            divider = make_axes_locatable(ax[j])
+            cax = divider.append_axes("right", size="5%", pad=0.05)
+            fig.colorbar(mappable=img_t, cax=cax)
+            ax[j].set_title(titles[j])
+            ax[j].set_xlabel("Column pixel")
+            ax[j].set_ylabel("Row pixel")
+        plt.tight_layout()
+        plt.imsave(str(path / f"{i}.png"), data[i, :, :])
+
 
 def generate_fig(data: tuple[np.ndarray, np.ndarray], c_range: tuple[float, float] = None):  # type: ignore
     """

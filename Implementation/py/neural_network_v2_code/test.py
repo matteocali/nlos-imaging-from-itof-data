@@ -20,10 +20,10 @@ def arg_parser(argv):
 
     # Argument containing the path where the raw data are located
     arg_data_path = ""
-    # Argument containing the path where the model are located
-    arg_model_path = ""
+    # Argument containing the name of the network to load
+    arg_net_name = ""
     # Argument containing the path where to save the output
-    arg_output_path = ""
+    arg_output_path = "results"
     # Help string
     arg_help = "{0} -i <input> -m <model> -o <output>".format(argv[0])
 
@@ -37,18 +37,18 @@ def arg_parser(argv):
 
     for opt, arg in opts:
         if opt in ("-i", "--input"):
-            arg_data_path = Path(arg)  # Set the path to the raw data
+            arg_data_path = Path(arg)    # Set the path to the raw data
         elif opt in ("-m", "--model"):
-            arg_model_path = Path(arg)   # Set the path to the model file
+            arg_net_name = arg           # Set the name of the model to load
         elif opt in ("-o", "--output"):
             arg_output_path = Path(arg)  # Set the path to the output file
 
     print("Input folder: ", arg_data_path)
-    print("Model file: ", arg_model_path)
+    print("Model name: ", arg_net_name)
     print("Output folder: ", arg_output_path)
     print()
 
-    return [arg_data_path, arg_model_path, arg_output_path]
+    return [arg_data_path, arg_net_name, arg_output_path]
 
 
 if __name__ == '__main__':
@@ -67,18 +67,22 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_dts, batch_size=32, shuffle=True, num_workers=4)  # Create the test dataloader  # type: ignore
 
     # Load the model
-    model = NlosNet(retain_dim=True, out_size=(320, 240)).to(device)  # Create the model and move it to the device
-    model.load_state_dict(torch.load(args[1]))                        # Load the model
+    state_dict_path = Path(__file__).parent.absolute() / "net_state" / args[1] + ".pt"                                    # Get the path to the model state dict
+    model = NlosNet(num_class=8, enc_channels=(6, 16, 32, 64, 128, 256), dec_channels=(256, 128, 64, 32, 16)).to(device)  # Create the model and move it to the device
+    model.load_state_dict(torch.load(args[1]))                                                                            # Load the model
 
     # Define the loss function
-    loss_fn = torch.nn.MSELoss()
+    depth_loss_fn = torch.nn.L1Loss()
+    mask_loss_fn = torch.nn.BCEWithLogitsLoss()
 
     # Test the model
     s_test_time = time.time()  # Start the test time
     test_loss, out = test(
         net=model, 
         data_loader=test_loader, 
-        loss_fn=loss_fn, 
+        depth_loss_fn=depth_loss_fn, 
+        mask_loss_fn=mask_loss_fn,
+        l = 0.6,
         device=device,
         out_path=(args[2] / f"{str(args[0].stem)[10:]}_results.npy"))  # type: ignore
     e_test_time = time.time()  # End the test time
