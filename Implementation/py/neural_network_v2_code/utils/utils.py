@@ -4,6 +4,7 @@ import torchvision
 import io
 from pathlib import Path
 from matplotlib import pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 def format_time(s_time: float, f_time: float):
@@ -59,8 +60,27 @@ def save_np_as_img(data: np.ndarray, path: Path):
         # Save the image
         plt.imsave(str(path / f"{i}.png"), data[i, :, :], cmap="jet")
 
-def generate_fig(data: np.ndarray):
-    fig, ax = plt.subplots(1, 1)
-    img = ax.matshow(data, cmap="jet")
-    fig.colorbar(mappable=img, ax=ax)
+def generate_fig(data: tuple[np.ndarray, np.ndarray], c_range: tuple[float, float] = None):  # type: ignore
+    """
+    Function used to generate the figures to visualize the target and the prediction on tensorboard
+        param:
+            - data: tuple containing the target and the prediction
+            - c_range: range of the colorbar
+        return:
+            - figure
+    """
+
+    titles = ["Target", "Prediction"]
+    fig, ax = plt.subplots(1, 2)
+    for i in range(2):
+        img_t = ax[i].matshow(data[i], cmap="jet")
+        if range is not None:
+            img_t.set_clim(c_range[0], c_range[1])
+        divider = make_axes_locatable(ax[i])
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        fig.colorbar(mappable=img_t, cax=cax)
+        ax[i].set_title(titles[i])
+        ax[i].set_xlabel("Column pixel")
+        ax[i].set_ylabel("Row pixel")
+    plt.tight_layout()
     return fig

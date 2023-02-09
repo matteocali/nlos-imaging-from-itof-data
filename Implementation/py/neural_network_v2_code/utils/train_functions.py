@@ -51,7 +51,8 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         loss = l * depth_loss + (1 - l) * mask_loss  # Compute the total loss
         
         # Backward pass
-        loss.backward(retain_graph=True)
+        #loss.backward(retain_graph=True)
+        loss.backward()
 
         # Update the weights
         optimizer.step()
@@ -189,10 +190,8 @@ def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader
         writer.add_scalar("Mask loss/val", val_loss_mask, epoch)
 
         # Add the images to tensorboard
-        writer.add_figure("Depth target/val", generate_fig(gt_depth.T), epoch)
-        writer.add_figure("Depth prediction/val", generate_fig(pred_depth.T), epoch)
-        writer.add_figure("Mask target/val", generate_fig(gt_mask.T), epoch)
-        writer.add_figure("Mask prediction/val", generate_fig(pred_mask.T), epoch)
+        writer.add_figure("Depth/val", generate_fig((gt_depth.T, pred_depth.T), (np.min(gt_depth), np.max(gt_depth))), epoch)
+        writer.add_figure("Mask/val", generate_fig((gt_mask.T, pred_mask.T), (0, 1)), epoch)
 
     # Close the tensorboard writer
     writer.flush()
