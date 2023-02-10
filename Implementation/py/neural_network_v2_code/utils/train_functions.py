@@ -33,11 +33,11 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
     # Set the network in training mode
     net.train()
 
-    for sample in data_loader:
-        # Get the input and the target
-        itof_data = sample["itof_data"].to(device)  # Extract the input itof data
-        gt_depth = sample["gt_depth"].to(device)    # Extract the ground truth depth
-        gt_mask = sample["gt_mask"].to(device)      # Extract the ground truth mask
+    for batch in data_loader:
+        # Get the input and the targetcc
+        itof_data = batch["itof_data"].to(device)  # Extract the input itof data
+        gt_depth = batch["gt_depth"].to(device)    # Extract the ground truth depth
+        gt_mask = batch["gt_mask"].to(device)      # Extract the ground truth mask
 
         # Reset the gradients
         optimizer.zero_grad()
@@ -45,13 +45,15 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         # Forward pass
         depth, mask = net(itof_data)
 
+        # Compute the masked depth (create correlation bertween the depth and the mask)
+        masked_depth = depth * mask
+
         # Compute the loss
-        depth_loss = depth_loss_fn(depth, gt_depth)  # Compute the loss over the depth
-        mask_loss = mask_loss_fn(mask, gt_mask)      # Compute the loss over the mask
-        loss = l * depth_loss + (1 - l) * mask_loss  # Compute the total loss
+        depth_loss = depth_loss_fn(masked_depth, gt_depth)  # Compute the loss over the depth
+        mask_loss = mask_loss_fn(mask, gt_mask)             # Compute the loss over the mask
+        loss = l * depth_loss + (1 - l) * mask_loss         # Compute the total loss
         
         # Backward pass
-        #loss.backward(retain_graph=True)
         loss.backward()
 
         # Update the weights
@@ -88,19 +90,22 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, depth_loss_fn: torch.n
     net.eval()
 
     with torch.no_grad():
-        for sample in data_loader:
+        for batch in data_loader:
             # Get the input and the target
-            itof_data = sample["itof_data"].to(device)  # Extract the input itof data
-            gt_depth = sample["gt_depth"].to(device)    # Extract the ground truth depth
-            gt_mask = sample["gt_mask"].to(device)      # Extract the ground truth mask
+            itof_data = batch["itof_data"].to(device)  # Extract the input itof data
+            gt_depth = batch["gt_depth"].to(device)    # Extract the ground truth depth
+            gt_mask = batch["gt_mask"].to(device)      # Extract the ground truth mask
 
             # Forward pass
             depth, mask = net(itof_data)
 
+            # Compute the masked depth (create correlation bertween the depth and the mask)
+            masked_depth = depth * mask
+
             # Compute the loss
-            depth_loss = depth_loss_fn(depth, gt_depth)  # Compute the loss over the depth
-            mask_loss = mask_loss_fn(mask, gt_mask)      # Compute the loss over the mask
-            loss = l * depth_loss + (1 - l) * mask_loss  # Compute the total loss
+            depth_loss = depth_loss_fn(masked_depth, gt_depth)  # Compute the loss over the depth
+            mask_loss = mask_loss_fn(mask, gt_mask)             # Compute the loss over the mask
+            loss = l * depth_loss + (1 - l) * mask_loss         # Compute the total loss
 
             # Append the loss
             epoch_loss.append([loss.item(), depth_loss.item(), mask_loss.item()])

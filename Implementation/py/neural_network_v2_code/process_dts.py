@@ -78,7 +78,6 @@ if __name__ == '__main__':
     processed_dts_path = Path(out_path.parent / "processed_data")                 # Set the path to the processed datasets  # type: ignore
     if processed_dts_path.exists() and len(list(processed_dts_path.iterdir())) > 0:  # Check if the folder already exists and is not empty
         print("The processed dataset already exists")
-        sys.exit(2)
     else:
         processed_dts_path.mkdir(parents=True, exist_ok=True)  # Crreate the datasets folder
         s_dts_time = time.time()                               # Start the timer for the dataset creation

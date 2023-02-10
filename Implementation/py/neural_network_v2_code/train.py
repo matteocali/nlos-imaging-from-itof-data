@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 from torch.optim import Adam
 from torch.nn import L1Loss
-from torch.nn import BCEWithLogitsLoss
+from torch.nn import BCELoss
 from utils.NlosNet import NlosNet
 from utils.train_functions import train
 from utils.utils import format_time
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     start_time = time.time()           # Start the timer
     args = arg_parser(sys.argv)        # Parse the input arguments
     dts_name = args[0]                 # Set the path to the csv folder
-    batch_size = 16                    # Set the batch size
+    batch_size = 32                    # Set the batch size
     n_epochs = 5000                    # Set the number of epochs
     lr = 1e-4                          # Set the learning rate
 
@@ -69,8 +69,8 @@ if __name__ == '__main__':
     val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")                          # Load the validation dataset
 
     # Create the dataloaders
-    train_loader = DataLoader(train_dts, batch_size=batch_size, shuffle=True, num_workers=4)  # Create the train dataloader  # type: ignore
-    val_loader = DataLoader(val_dts, batch_size=batch_size, shuffle=True, num_workers=4)      # Create the validation dataloader  # type: ignore
+    train_loader = DataLoader(train_dts, batch_size=batch_size, shuffle=True, num_workers=4)  # Create the train dataloader
+    val_loader = DataLoader(val_dts, batch_size=batch_size, shuffle=True, num_workers=4)      # Create the validation dataloader
 
     # Create the network state folder 
     net_state_path = Path("neural_network_v2_code/net_state")  # Set the path to the network state folder  # type: ignore
@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
     # Create the loss function
     depth_loss_fn = L1Loss()
-    mask_loss_fn = BCEWithLogitsLoss()
+    mask_loss_fn = BCELoss()
 
     # Train the model
     s_train_time = time.time()  # Start the timer for the training

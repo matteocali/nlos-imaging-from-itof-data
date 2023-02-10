@@ -1,6 +1,7 @@
 import torch
 import torchvision
 from torch import nn
+from torch.nn.functional import sigmoid
 
 
 class Block(nn.Module):
@@ -182,5 +183,4 @@ class NlosNet(nn.Module):
         # Run the final two branches
         depth = self.depth_estiamtor(out).squeeze(1)
         mask = self.mask_estiamtor(out).squeeze(1)
-        #out = torch.cat([depth, alpha], dim=1)
-        return depth, mask
+        return depth, sigmoid(mask)

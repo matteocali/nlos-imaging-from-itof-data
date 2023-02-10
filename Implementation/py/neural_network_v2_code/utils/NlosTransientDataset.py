@@ -10,7 +10,6 @@ from utils.utils import phi_func
 class NlosTransientDataset(Dataset):
     """
     NLOS Transient Dataset class
-    (note that the transformation is applied to the data when the data is loaded)
         param:
             - dts_folder: path to the dataset folder
             - csv_file: path to the csv file containing the list of the images
@@ -25,6 +24,9 @@ class NlosTransientDataset(Dataset):
                 - csv_file: path to the csv file containing the list of the images
                 - transform: transformation to apply to the data
         """
+
+        # Set the transform attribute
+        self.transform = transform
 
         frequencies = np.array((20e06, 50e06, 60e06), dtype=np.float32)  # Define the frequencies used by the considered iToF sensor
         phi = phi_func(frequencies)                                      # Compute the phi matrix (iToF data)
@@ -76,16 +78,10 @@ class NlosTransientDataset(Dataset):
         itof_data = np.moveaxis(itof_data, 3, 1)
 
         # Transform the data to torch tensors
-        itof_data = torch.from_numpy(itof_data)
-        gt_depth = torch.from_numpy(gt_depth)
-        gt_alpha = torch.from_numpy(gt_alpha)
+        self.itof_data = torch.from_numpy(itof_data)
+        self.gt_depth = torch.from_numpy(gt_depth)
+        self.gt_mask = torch.from_numpy(gt_alpha)
 
-        # Create the sample
-        self.sample = {"itof_data": itof_data, "gt_depth": gt_depth, "gt_mask": gt_alpha}
-
-        # Apply the transformation to the data
-        if transform is not None:
-            self.sample = transform(self.sample)
 
     def __getitem__(self, index: int):
         """
@@ -96,7 +92,14 @@ class NlosTransientDataset(Dataset):
                 - the item at the given index
         """
 
-        return self.sample
+        # Create the sample
+        sample = {"itof_data": self.itof_data[index, ...], "gt_depth": self.gt_depth[index, ...], "gt_mask": self.gt_mask[index, ...]}
+
+        # Apply the transformation to the data
+        if self.transform is not None:
+            sample = self.transform(sample)
+
+        return sample
 
     def __len__(self) -> int:
         """
@@ -105,4 +108,4 @@ class NlosTransientDataset(Dataset):
                 - the length of the dataset
         """
         
-        return self.sample["itof_data"].shape[0]
+        return self.itof_data.shape[0]
