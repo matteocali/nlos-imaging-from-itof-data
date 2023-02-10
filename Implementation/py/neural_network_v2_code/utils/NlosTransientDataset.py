@@ -42,9 +42,9 @@ class NlosTransientDataset(Dataset):
             temp_data = h["data"][:]            # type: ignore
         [dim_x, dim_y, dim_t] = temp_data.shape # type: ignore
 
-        self.itof_data = np.zeros((num_images, dim_x, dim_y, nf), dtype=np.float32)  # Create the iToF data tensor
-        self.gt_alpha = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)       # Create the ground truth alpha map tensor
-        self.gt_depth = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)       # Create the ground truth depth map tensor
+        itof_data = np.zeros((num_images, dim_x, dim_y, nf), dtype=np.float32)  # Create the iToF data tensor
+        gt_alpha = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)       # Create the ground truth alpha map tensor
+        gt_depth = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)       # Create the ground truth depth map tensor
 
         names = []
         count = 0
@@ -63,27 +63,27 @@ class NlosTransientDataset(Dataset):
             # Computation with the direct component
             v = np.matmul(temp_lin, np.transpose(phi))
             v = np.reshape(v, (dim_x, dim_y, phi.shape[0]))
-            self.itof_data[count, ...] = v
+            itof_data[count, ...] = v
 
             # Add the gt depth and alpha map
-            self.gt_depth[count, ...] = temp_gt_depth
-            self.gt_alpha[count, ...] = temp_gt_alpha
+            gt_depth[count, ...] = temp_gt_depth
+            gt_alpha[count, ...] = temp_gt_alpha
 
             # Increment the counter
             count += 1
 
         # Move the axis to have the channels as the second dimension instead of being the last one
-        self.itof_data = np.moveaxis(self.itof_data, 3, 1)
+        itof_data = np.moveaxis(itof_data, 3, 1)
 
         # Transform the data to torch tensors
-        self.itof_data = torch.from_numpy(self.itof_data)
-        self.gt_depth = torch.from_numpy(self.gt_depth)
-        self.gt_alpha = torch.from_numpy(self.gt_alpha)
+        itof_data = torch.from_numpy(itof_data)
+        gt_depth = torch.from_numpy(gt_depth)
+        gt_alpha = torch.from_numpy(gt_alpha)
 
         # Create the sample
-        self.sample = {"itof_data": self.itof_data, "gt_depth": self.gt_depth, "gt_mask": self.gt_alpha}
+        self.sample = {"itof_data": itof_data, "gt_depth": gt_depth, "gt_mask": gt_alpha}
 
-        # Add the transform
+        # Apply the transformation to the data
         if transform is not None:
             self.sample = transform(self.sample)
 
@@ -105,4 +105,4 @@ class NlosTransientDataset(Dataset):
                 - the length of the dataset
         """
         
-        return self.itof_data.shape[0]
+        return self.sample["itof_data"].shape[0]
