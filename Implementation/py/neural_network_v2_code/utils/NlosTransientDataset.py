@@ -9,7 +9,8 @@ from utils.utils import phi_func
 
 class NlosTransientDataset(Dataset):
     """
-    NLOS Transient Dataset
+    NLOS Transient Dataset class
+    (note that the transformation is applied to the data when the data is loaded)
         param:
             - dts_folder: path to the dataset folder
             - csv_file: path to the csv file containing the list of the images
@@ -79,8 +80,12 @@ class NlosTransientDataset(Dataset):
         self.gt_depth = torch.from_numpy(self.gt_depth)
         self.gt_alpha = torch.from_numpy(self.gt_alpha)
 
+        # Create the sample
+        self.sample = {"itof_data": self.itof_data, "gt_depth": self.gt_depth, "gt_mask": self.gt_alpha}
+
         # Add the transform
-        self.transform = transform
+        if transform is not None:
+            self.sample = transform(self.sample)
 
     def __getitem__(self, index: int):
         """
@@ -91,7 +96,7 @@ class NlosTransientDataset(Dataset):
                 - the item at the given index
         """
 
-        return self.itof_data[index, ...], self.gt_depth[index, ...], self.gt_alpha[index, ...]
+        return self.sample
 
     def __len__(self) -> int:
         """

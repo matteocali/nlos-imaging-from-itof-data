@@ -64,9 +64,9 @@ if __name__ == '__main__':
     print("Device: ", device, "\n")  # Print the device used
 
     # Load the processed datset
-    processed_dts_path = Path(__file__).parent.absolute() / "datasets" / dts_name / "processed_data")  # Set the path to the processed datasets  # type: ignore
-    train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")                              # Load the train dataset
-    val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")                           # Load the validation dataset
+    processed_dts_path = Path(__file__).parent.absolute() / "datasets" / dts_name / "processed_data"  # Set the path to the processed datasets  # type: ignore
+    train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")                             # Load the train dataset
+    val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")                          # Load the validation dataset
 
     # Create the dataloaders
     train_loader = DataLoader(train_dts, batch_size=batch_size, shuffle=True, num_workers=4)  # Create the train dataloader  # type: ignore

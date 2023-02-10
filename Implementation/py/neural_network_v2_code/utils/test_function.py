@@ -30,9 +30,9 @@ def test(net: nn.Module, data_loader: DataLoader, depth_loss_fn: torch.nn.Module
     with torch.no_grad():
         for sample in data_loader:
             # Get the input and the target
-            itof_data = sample[0].to(device)  # Extract the input itof data
-            gt_depth = sample[1].to(device)   # Extract the ground truth depth  
-            gt_mask = sample[2].to(device)    # Extract the ground truth mask
+            itof_data = sample["itof_data"].to(device)  # Extract the input itof data
+            gt_depth = sample["gt_depth"].to(device)    # Extract the ground truth depth
+            gt_mask = sample["gt_mask"].to(device)      # Extract the ground truth mask
 
             # Forward pass
             depth, mask = net(itof_data)
