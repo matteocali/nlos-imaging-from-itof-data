@@ -160,7 +160,7 @@ class NlosNet(nn.Module):
         # Final layers
         chs = [num_class]
         for i in range(n_final_layers):  # Initialize the number of channels for the final layers
-            chs.append(int(round(num_class / (2 * (i + 1)))))
+            chs.append(int(round(num_class / (2 ** (i + 1)))))
         chs = tuple(chs)
         self.depth_estiamtor = FinalConv(chs=chs)  # Initialize the depth estimator
         self.mask_estiamtor = FinalConv(chs=chs)  # Initialize the mask estimator

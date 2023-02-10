@@ -58,6 +58,7 @@ if __name__ == '__main__':
     batch_size = 32                    # Set the batch size
     n_epochs = 5000                    # Set the number of epochs
     lr = 1e-4                          # Set the learning rate
+    l = 0.5                            # Set the lambda parameter
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -77,7 +78,7 @@ if __name__ == '__main__':
     net_state_path.mkdir(parents=True, exist_ok=True)          # Create the network state folder
 
     # Create the model
-    model = NlosNet(enc_channels=(6, 16, 32, 64, 128, 256), dec_channels=(256, 128, 64, 32, 16), num_class=8, n_final_layers=3).to(device)  # Create the model and move it to the device
+    model = NlosNet(enc_channels=(6, 16, 32, 64, 128, 256), dec_channels=(256, 128, 64, 32, 16), num_class=16, n_final_layers=4).to(device)  # Create the model and move it to the device
 
     # Print the model summary
     summary(model, input_size=(batch_size, 6, 320, 240), device=str(device), mode="train")
@@ -99,7 +100,7 @@ if __name__ == '__main__':
         optimizer=optimizer, 
         depth_loss_fn=depth_loss_fn,
         mask_loss_fn=mask_loss_fn, 
-        l = 0.6,
+        l = l,
         device=device, 
         n_epochs=n_epochs, 
         save_path=(net_state_path / f"{args[1]}model.pt"))
