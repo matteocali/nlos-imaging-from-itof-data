@@ -178,7 +178,7 @@ def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader
         print(f"Epoch: {epoch + 1}/{n_epochs} | Train loss: {train_loss:.4f} | Val loss: {val_loss:.4f} | Best loss: {best_loss:.4f} | Time for epoch: {format_time(start_time, end_time)} | ETA: {eta}")
 
         # Print to file
-        with open(save_path.parent / "log.txt", "a") as f:
+        with open(save_path.parent.absolute() / "log.txt", "a") as f:
             f.write(f"Epoch: {epoch + 1}/{n_epochs} | Train loss: {train_loss:.4f} | Val loss: {val_loss:.4f} | Best loss: {best_loss:.4f} | Time for epoch: {format_time(start_time, time.time())} | ETA: {eta}\n")
 
         # Write the results to tensorboard

@@ -8,7 +8,7 @@ from torch.optim import Adam
 from torch.nn import L1Loss
 from torch.nn import BCEWithLogitsLoss
 from utils.NlosTransientDataset import NlosTransientDataset
-from utils.ItofNormalize import ItofNormalize
+from utils.CustomTransforms import ItofNormalize, ChangeBgValue
 from utils.NlosNet import NlosNet
 from utils.train_functions import train
 from utils.utils import format_time
