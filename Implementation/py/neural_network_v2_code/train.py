@@ -8,7 +8,7 @@ from torch.nn import L1Loss
 from torch.nn import BCELoss
 from utils.NlosNet import NlosNet
 from utils.train_functions import train
-from utils.utils import format_time
+from utils.utils import format_time, send_email
 from pathlib import Path
 from torchinfo import summary
 
@@ -108,3 +108,7 @@ if __name__ == '__main__':
         save_path=(net_state_path / f"{args[1]}_model.pt"))
     f_train_time = time.time()  # Stop the timer for the training
     print(f"The total computation time for training the model was {format_time(s_train_time, f_train_time)}\n")
+
+
+    # Send an email to notify the end of the training
+    send_email(receiver_email="matteocaly@gmail.com", subject="Training completed", body=f"The \"{args[1]}\" training is over (required time: {format_time(start_time, f_train_time)})")

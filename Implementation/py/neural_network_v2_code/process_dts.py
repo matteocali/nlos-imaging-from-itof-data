@@ -7,7 +7,7 @@ from pathlib import Path
 from utils.dts_splitter import dts_splitter
 from utils.NlosTransientDataset import NlosTransientDataset
 from utils.CustomTransforms import ItofNormalize, ChangeBgValue
-from utils.utils import format_time
+from utils.utils import format_time, send_email
 from torchvision.transforms import Compose
 
 
@@ -99,3 +99,6 @@ if __name__ == '__main__':
 
         f_dts_time = time.time()  # Stop the timer for the dataset creation
         print(f"The total computation time for generating the dataset was {format_time(s_dts_time, f_dts_time)}\n")
+
+        # Send an email to notify the end of the training
+        send_email(receiver_email="matteocaly@gmail.com", subject="Dataset creation completed", body=f"The \"{args[0]}\" dataset is fully processed (required time: {format_time(s_dts_time, f_dts_time)})")

@@ -1,8 +1,11 @@
 import numpy as np
 import scipy.constants as const
+import smtplib, ssl
 from pathlib import Path
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 
 def format_time(s_time: float, f_time: float):
@@ -97,3 +100,32 @@ def generate_fig(data: tuple[np.ndarray, np.ndarray], c_range: tuple[float, floa
         ax[i].set_ylabel("Row pixel")
     plt.tight_layout()
     return fig
+
+
+def send_email(receiver_email: str, subject: str, body: str):
+    """
+    Function used to send an email
+        param:
+            - receiver_email: email address of the receiver
+            - subject: subject of the email
+            - body: body of the email
+    """
+
+    email = 'py.script.notifier@gmail.com'
+    password = 'sxruxiufydfhknov'
+
+    message = MIMEMultipart()
+    message["To"] = receiver_email
+    message["From"] = email
+    message["Subject"] = subject
+
+    messageText = MIMEText(body, 'html')
+    message.attach(messageText)
+
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.ehlo('Gmail')
+    server.starttls()
+    server.login(email, password)
+    server.sendmail(email, receiver_email, message.as_string())
+
+    server.quit()
