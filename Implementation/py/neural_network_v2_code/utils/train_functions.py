@@ -9,8 +9,8 @@ from torch.utils.data import DataLoader
 from torch.optim import Optimizer
 from pathlib import Path
 from torch.utils.tensorboard.writer import SummaryWriter
-from utils.utils import format_time
-from utils.utils import generate_fig
+from utils.utils import format_time, generate_fig
+from utils.EarlyStopping import EarlyStopping
 
 
 def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, depth_loss_fn: torch.nn.Module, mask_loss_fn: torch.nn.Module, l: float, device: torch.device) -> tuple[float, float, float]:
@@ -48,10 +48,16 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         # Compute the masked depth (create correlation bertween the depth and the mask)
         masked_depth = depth * mask
 
+        # Compute the weight for the loss
+        loss_weight = torch.where(gt_mask == 1, 10, gt_mask)
+        loss_weight = torch.where(gt_mask == 0, 1, loss_weight)
+
         # Compute the loss
-        depth_loss = depth_loss_fn(masked_depth, gt_depth)  # Compute the loss over the depth
-        mask_loss = mask_loss_fn(mask, gt_mask)             # Compute the loss over the mask
-        loss = l * depth_loss + (1 - l) * mask_loss         # Compute the total loss
+        depth_loss = loss_weight * depth_loss_fn(masked_depth, gt_depth)  # Compute the loss over the depth
+        depth_loss = torch.mean(depth_loss)                               # Compute the mean of the loss over the depth
+        mask_loss = loss_weight * mask_loss_fn(mask, gt_mask)             # Compute the loss over the mask (weighted to enphatize the errro on the mask)
+        mask_loss = torch.mean(mask_loss)                                 # Compute the mean of the loss over the mask
+        loss = l * depth_loss + (1 - l) * mask_loss                       # Compute the total loss
         
         # Backward pass
         loss.backward()
@@ -102,10 +108,16 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, depth_loss_fn: torch.n
             # Compute the masked depth (create correlation bertween the depth and the mask)
             masked_depth = depth * mask
 
+            # Compute the weight for the mask loss
+            loss_weight = torch.where(gt_mask == 1, 10, gt_mask)
+            loss_weight = torch.where(gt_mask == 0, 1, loss_weight)
+
             # Compute the loss
-            depth_loss = depth_loss_fn(masked_depth, gt_depth)  # Compute the loss over the depth
-            mask_loss = mask_loss_fn(mask, gt_mask)             # Compute the loss over the mask
-            loss = l * depth_loss + (1 - l) * mask_loss         # Compute the total loss
+            depth_loss = loss_weight * depth_loss_fn(masked_depth, gt_depth)  # Compute the loss over the depth
+            depth_loss = torch.mean(depth_loss)                               # Compute the mean of the loss over the depth
+            mask_loss = loss_weight * mask_loss_fn(mask, gt_mask)             # Compute the loss over the mask (weighted to enphatize the errro on the mask)
+            mask_loss = torch.mean(mask_loss)                                 # Compute the mean of the loss over the mask
+            loss = l * depth_loss + (1 - l) * mask_loss                       # Compute the total loss
 
             # Append the loss
             epoch_loss.append([loss.item(), depth_loss.item(), mask_loss.item()])
@@ -118,10 +130,11 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, depth_loss_fn: torch.n
     return tuple([float(np.mean(loss)) for loss in zip(*epoch_loss)]), last_gt, last_pred
 
 
-def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, depth_loss_fn: torch.nn.Module, mask_loss_fn: torch.nn.Module, l: float, device: torch.device, n_epochs: int, save_path: Path) -> float:
+def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, depth_loss_fn: torch.nn.Module, mask_loss_fn: torch.nn.Module, l: float, device: torch.device, n_epochs: int, save_path: Path) -> None:
     """
     Function to train the network
         param:
+            - attempt_name: name of the attempt
             - net: network to train
             - train_loader: data loader containing the training set
             - val_loader: data loader containing the validation set
@@ -132,8 +145,6 @@ def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader
             - device: device used to train the network
             - n_epochs: number of epochs to train the network
             - save_path: path where to save the model
-        return:
-            - best_loss: best loss obtained during the training
     """
     
     # Initialize the tensorboard writer
@@ -142,8 +153,8 @@ def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader
     hostname = socket.gethostname()
     writer = SummaryWriter(log_dir=f"{current_dir}/../tensorboard_logs/{current_date}_{hostname}_{net.__class__.__name__}_LR_{optimizer.param_groups[0]['lr']}_BS_{train_loader.batch_size}_E_{n_epochs}_L_{l}")
     
-    # Initialize the best loss
-    best_loss = float("inf")
+    # Initialize the early stopping
+    early_stopping = EarlyStopping(tollerance=10, min_delta=0.05, save_path=save_path, net=net)
 
     # Initialize the variable that contains the overall time
     overall_time = 0
@@ -169,12 +180,8 @@ def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader
         mean_time = overall_time / (epoch + 1)
         eta = format_time(0, (n_epochs - epoch - 1) * mean_time)
 
-        # Check if the validation loss is the best
-        if val_loss < best_loss:
-            # Save the model
-            torch.save(net.state_dict(), save_path)
-            # Update the best loss
-            best_loss = val_loss
+        # Check if the validation loss is the best one and save the model or stop the training
+        stop, best_loss = early_stopping(val_loss)
 
         # Update the learning rate
         #update_lr(optimizer, epoch)
@@ -183,7 +190,7 @@ def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader
         print(f"Epoch: {epoch + 1}/{n_epochs} | Train loss: {train_loss:.4f} | Val loss: {val_loss:.4f} | Best loss: {best_loss:.4f} | Time for epoch: {format_time(start_time, end_time)} | ETA: {eta}")
 
         # Print to file
-        with open(save_path.parent.absolute() / "log.txt", "a") as f:
+        with open(save_path.parent.absolute() / f"{attempt_name}_log.txt", "a") as f:
             f.write(f"Epoch: {epoch + 1}/{n_epochs} | Train loss: {train_loss:.4f} | Val loss: {val_loss:.4f} | Best loss: {best_loss:.4f} | Time for epoch: {format_time(start_time, time.time())} | ETA: {eta}\n")
 
         # Write the results to tensorboard
@@ -198,15 +205,26 @@ def train(net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader
         writer.add_figure("Depth/val", generate_fig((gt_depth.T, pred_depth.T), (np.min(gt_depth), np.max(gt_depth))), epoch)
         writer.add_figure("Mask/val", generate_fig((gt_mask.T, pred_mask.T), (0, 1)), epoch)
 
+        # Stop the training if the early stopping is triggered
+        if stop:
+            print("Early stopping triggered")
+            with open(save_path.parent.absolute() / f"{attempt_name}_log.txt", "a") as f:
+                f.write("Early stopping triggered\n")
+            break
+
     # Close the tensorboard writer
     writer.flush()
     writer.close()
 
-    return best_loss
-
 
 def update_lr(optimizer: Optimizer, epoch: int) -> None:
-    # Update the learning rate
+    """
+    Function to update the learning rate
+        param:
+            - optimizer: optimizer used to update the weights
+            - epoch: current epoch
+    """
+
     if epoch == 10:
         for param_group in optimizer.param_groups:
             param_group["lr"] = param_group["lr"] * 0.1

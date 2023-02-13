@@ -83,7 +83,8 @@ if __name__ == '__main__':
         s_dts_time = time.time()                               # Start the timer for the dataset creation
 
         # Define the transforms to apply to the dataset
-        transforms = Compose([ItofNormalize(n_freq=3), ChangeBgValue(0, -10)])
+        # transforms = Compose([ItofNormalize(n_freq=3), ChangeBgValue(0, -10)])
+        transforms = Compose([ItofNormalize(n_freq=3)])
 
         # Create and save the datasets
         print("Creating the training dataset...")

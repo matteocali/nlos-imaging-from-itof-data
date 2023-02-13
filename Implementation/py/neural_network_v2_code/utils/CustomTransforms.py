@@ -8,22 +8,18 @@ class ItofNormalize(object):
 
     def __init__(self, n_freq: int):
         """
-        Default constructor
-        param:
-            - n_freq: number of frequencies used by the iToF sensor
+        Args:
+            n_freq (int): number of frequencies used by the iToF sensor
         """
 
         self.n_frequencies = n_freq  # Number of frequencies used by the iToF sensor
 
     def __call__(self, sample: dict):
         """
-        Function to normalize the iToF data with the amplitude at 20MHz
-        param:
-            - sample: dictionary containing the iToF data, the ground truth depth and the ground truth alpha
-        return:
-            - itof_data: normalized iToF data
-            - gt_depth: ground truth depth
-            - gt_alpha: ground truth alpha
+        Args:
+            sample (dict): dictionary containing the iToF data, the ground truth depth and the ground truth alpha
+        Returns:
+            dict: dictionary containing the normalized iToF data, the ground truth depth and the ground truth alpha
         """
 
         itof_data, gt_depth, gt_mask = sample["itof_data"], sample["gt_depth"], sample["gt_mask"]

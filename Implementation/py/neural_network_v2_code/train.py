@@ -41,7 +41,7 @@ def arg_parser(argv):
         if opt in ("-d", "--dataset"):
             dts_name = arg              # Set the name of the dataset
         elif opt in ("-n", "--name"):
-            arg_model_name = arg + "_"  # Set the name of the model
+            arg_model_name = arg        # Set the name of the model
 
     print("Dataset name: ", dts_name)
     print("Model name: ", arg_model_name)
@@ -58,7 +58,7 @@ if __name__ == '__main__':
     batch_size = 32                    # Set the batch size
     n_epochs = 5000                    # Set the number of epochs
     lr = 1e-4                          # Set the learning rate
-    l = 0.5                            # Set the lambda parameter
+    l = 0.2                            # Set the lambda parameter
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -78,7 +78,8 @@ if __name__ == '__main__':
     net_state_path.mkdir(parents=True, exist_ok=True)          # Create the network state folder
 
     # Create the model
-    model = NlosNet(enc_channels=(6, 16, 32, 64, 128, 256), dec_channels=(256, 128, 64, 32, 16), num_class=16, n_final_layers=4).to(device)  # Create the model and move it to the device
+    # model = NlosNet(enc_channels=(6, 16, 32, 64, 128, 256), dec_channels=(256, 128, 64, 32, 16), num_class=16, n_final_layers=4).to(device)  # Create the model and move it to the device
+    model = NlosNet(enc_channels=(6, 16, 32, 64, 128, 256), dec_channels=(256, 128, 64, 32, 16), num_class=8, n_final_layers=3).to(device)  # Create the model and move it to the device
 
     # Print the model summary
     summary(model, input_size=(batch_size, 6, 320, 240), device=str(device), mode="train")
@@ -88,12 +89,13 @@ if __name__ == '__main__':
     optimizer = Adam(model.parameters(), lr=lr)
 
     # Create the loss function
-    depth_loss_fn = L1Loss()
-    mask_loss_fn = BCELoss()
+    depth_loss_fn = L1Loss(reduction="none")
+    mask_loss_fn = BCELoss(reduction="none")
 
     # Train the model
     s_train_time = time.time()  # Start the timer for the training
-    best_loss = train(
+    train(
+        attempt_name=args[1],
         net=model, 
         train_loader=train_loader, 
         val_loader=val_loader, 
@@ -103,6 +105,6 @@ if __name__ == '__main__':
         l = l,
         device=device, 
         n_epochs=n_epochs, 
-        save_path=(net_state_path / f"{args[1]}model.pt"))
+        save_path=(net_state_path / f"{args[1]}_model.pt"))
     f_train_time = time.time()  # Stop the timer for the training
     print(f"The total computation time for training the model was {format_time(s_train_time, f_train_time)}\n")
