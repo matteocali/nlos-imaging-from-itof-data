@@ -78,8 +78,8 @@ if __name__ == '__main__':
     net_state_path.mkdir(parents=True, exist_ok=True)          # Create the network state folder
 
     # Create the model
-    # model = NlosNet(enc_channels=(6, 16, 32, 64, 128, 256), dec_channels=(256, 128, 64, 32, 16), num_class=16, n_final_layers=4).to(device)  # Create the model and move it to the device
-    model = NlosNet(enc_channels=(6, 16, 32, 64, 128, 256), dec_channels=(256, 128, 64, 32, 16), num_class=8, n_final_layers=3).to(device)  # Create the model and move it to the device
+    model = NlosNet(enc_channels=(6, 8, 16, 32, 64, 128), dec_channels=(128, 64, 32, 16, 8), num_class=8, n_final_layers=3).to(device)  # Create the model and move it to the device
+    #model = NlosNet(enc_channels=(6, 16, 32, 64, 128, 256), dec_channels=(256, 128, 64, 32, 16), num_class=8, n_final_layers=3).to(device)  # Create the model and move it to the device
 
     # Print the model summary
     summary(model, input_size=(batch_size, 6, 320, 240), device=str(device), mode="train")

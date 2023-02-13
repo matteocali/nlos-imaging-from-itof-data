@@ -6,7 +6,7 @@ from torch import save, nn
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
 
-    def __init__(self, tollerance: int = 5, min_delta: float = 0, save_path: Path = None, net: torch.nn.Module = None):  # type: ignore
+    def __init__(self, tollerance: int = 5, min_delta: float = 0, save_path: Path = None, net: nn.Module = None):  # type: ignore
         """
         Args:
             tollerance (int, optional): How long to wait after last time validation loss improved. Defaults to 5.
