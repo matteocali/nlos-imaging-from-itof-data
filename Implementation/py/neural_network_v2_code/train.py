@@ -122,4 +122,5 @@ if __name__ == '__main__':
 
 
     # Send an email to notify the end of the training
-    send_email(receiver_email="matteocaly@gmail.com", subject="Training completed", body=f"The \"{args[1]}\" training is over (required time: {format_time(start_time, f_train_time)})")
+    if not singularity:
+        send_email(receiver_email="matteocaly@gmail.com", subject="Training completed", body=f"The \"{args[1]}\" training is over (required time: {format_time(start_time, f_train_time)})")
