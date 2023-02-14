@@ -154,7 +154,7 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
     writer = SummaryWriter(log_dir=f"{current_dir}/../tensorboard_logs/{current_date}_{hostname}_{net.__class__.__name__}_LR_{optimizer.param_groups[0]['lr']}_BS_{train_loader.batch_size}_E_{n_epochs}_L_{l}")
     
     # Initialize the early stopping
-    early_stopping = EarlyStopping(tollerance=10, min_delta=0.05, save_path=save_path, net=net)
+    early_stopping = EarlyStopping(tollerance=100, min_delta=0.05, save_path=save_path, net=net)
 
     # Initialize the variable that contains the overall time
     overall_time = 0
@@ -181,7 +181,7 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
         eta = format_time(0, (n_epochs - epoch - 1) * mean_time)
 
         # Check if the validation loss is the best one and save the model or stop the training
-        stop, best_loss = early_stopping(val_loss)
+        best_loss, stop = early_stopping(val_loss)
 
         # Update the learning rate
         #update_lr(optimizer, epoch)

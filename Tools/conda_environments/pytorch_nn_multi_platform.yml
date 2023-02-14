@@ -1,0 +1,18 @@
+name: pytorch_nn
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - torchaudio
+  - pytorch
+  - torchvision
+  - pytorch-cuda=11.6
+  - h5py
+  - scipy
+  - tqdm
+  - autopep8
+  - matplotlib
+  - torchinfo
+  - tensorboard
+  - torch_tb_profiler
+prefix: /home/matteocali/miniconda3/envs/pytorch_nn

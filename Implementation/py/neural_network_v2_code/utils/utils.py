@@ -116,7 +116,7 @@ def send_email(receiver_email: str, subject: str, body: str):
 
     message = MIMEMultipart()
     message["To"] = receiver_email
-    message["From"] = email
+    message["From"] = "Python Notifier"
     message["Subject"] = subject
 
     messageText = MIMEText(body, 'html')
