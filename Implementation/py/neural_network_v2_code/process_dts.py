@@ -23,12 +23,13 @@ def arg_parser(argv):
     arg_name = "dts"                      # Argument containing the name of the dataset
     arg_data_path = ""                    # Argument containing the path where the raw data are located
     arg_shuffle = True                    # Argument containing the flag for shuffling the dataset
+    arg_bg_value = 0                      # Argument containing the background value
     arg_slurm = False                     # Argument defining if the code will be run on slurm
-    arg_help = "{0} -n <name> -i <input> -s <shuffle> -n <slurm>".format(argv[0])  # Help string
+    arg_help = "{0} -n <name> -i <input> -s <shuffle> -b <bg-value> -n <slurm>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:i:s:n:", ["help", "name=", "input=", "shuffle=", "slurm="])
+        opts, args = getopt.getopt(argv[1:], "hn:i:s:b:n:", ["help", "name=", "input=", "shuffle=", "bg-value=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -43,6 +44,8 @@ def arg_parser(argv):
                 arg_shuffle = True
             else:
                 arg_shuffle = False
+        elif opt in ("-b", "--bg-value"):
+            arg_bg_value = int(arg)  # Set the background value
         elif opt in ("-s", "--slurm"):
             if arg.lower() == "true":  # Check if the code is run on singularity
                 arg_slurm = True  # Set the singularity flag
@@ -52,15 +55,17 @@ def arg_parser(argv):
     print("Attempt name: ", arg_name)
     print("Input folder: ", arg_data_path)
     print("Shuffle: ", arg_shuffle)
+    print("Background value: ", arg_bg_value)
     print("Slurm: ", arg_slurm)
     print()
 
-    return [arg_name, arg_data_path, arg_shuffle, arg_slurm]
+    return [arg_name, arg_data_path, arg_shuffle, arg_bg_value, arg_slurm]
 
 
 if __name__ == '__main__':
     args = arg_parser(sys.argv)  # Parse the input arguments
-    slurm = args[3]              # Get the slurm flag
+    bg_value = args[3]           # Get the background value
+    slurm = args[4]              # Get the slurm flag
 
     # Check if the dataset has alreay been splitted
     if not slurm:
@@ -94,8 +99,10 @@ if __name__ == '__main__':
         s_dts_time = time.time()                               # Start the timer for the dataset creation
 
         # Define the transforms to apply to the dataset
-        # transforms = Compose([ItofNormalize(n_freq=3), ChangeBgValue(0, -10)])
-        transforms = Compose([ItofNormalize(n_freq=3)])
+        if bg_value != 0:
+            transforms = Compose([ItofNormalize(n_freq=3), ChangeBgValue(0, bg_value)])
+        else:
+            transforms = Compose([ItofNormalize(n_freq=3)])
 
         # Create and save the datasets
         print("Creating the training dataset...")

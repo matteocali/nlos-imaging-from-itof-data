@@ -1,0 +1,12 @@
+Epoch: 1/5000 | Train loss: 0.9182 | Val loss: 0.9241 | Best loss: 0.9241 | Time for epoch: 0:00:04 | ETA: 6:45:10
+Epoch: 2/5000 | Train loss: 0.9090 | Val loss: 0.9006 | Best loss: 0.9006 | Time for epoch: 0:00:04 | ETA: 6:24:38
+Epoch: 3/5000 | Train loss: 0.9154 | Val loss: 0.8976 | Best loss: 0.8976 | Time for epoch: 0:00:04 | ETA: 6:19:14
+Epoch: 4/5000 | Train loss: 0.9124 | Val loss: 0.9374 | Best loss: 0.8976 | Time for epoch: 0:00:04 | ETA: 6:15:12
+Epoch: 5/5000 | Train loss: 0.9049 | Val loss: 0.8998 | Best loss: 0.8976 | Time for epoch: 0:00:04 | ETA: 6:14:01
+Epoch: 6/5000 | Train loss: 0.9052 | Val loss: 0.8829 | Best loss: 0.8829 | Time for epoch: 0:00:05 | ETA: 6:12:28
+Epoch: 7/5000 | Train loss: 0.9038 | Val loss: 0.8921 | Best loss: 0.8829 | Time for epoch: 0:00:04 | ETA: 6:12:02
+Epoch: 8/5000 | Train loss: 0.9006 | Val loss: 0.8829 | Best loss: 0.8829 | Time for epoch: 0:00:04 | ETA: 6:12:44
+Epoch: 1/5000 | Train loss: 10.6101 | Val loss: 10.6101 | Best loss: 10.6101 | Time for epoch: 0:00:04 | ETA: 6:25:27
+Epoch: 2/5000 | Train loss: 10.6098 | Val loss: 10.6110 | Best loss: 10.6101 | Time for epoch: 0:00:04 | ETA: 6:13:44
+Epoch: 3/5000 | Train loss: 10.6080 | Val loss: 10.6119 | Best loss: 10.6101 | Time for epoch: 0:00:04 | ETA: 6:11:23
+Epoch: 4/5000 | Train loss: 10.6069 | Val loss: 10.6094 | Best loss: 10.6094 | Time for epoch: 0:00:04 | ETA: 6:12:21

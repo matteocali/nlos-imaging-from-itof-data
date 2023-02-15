@@ -1,5 +1,10 @@
 name: pytorch_nn
 channels:
+  - pytorch-test
+  - anaconda
+  - pytorch
+  - nvidia
+  - conda-forge
   - defaults
 dependencies:
   - python=3.10

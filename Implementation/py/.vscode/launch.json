@@ -11,8 +11,9 @@
             "request": "launch",
             "program": "/media/matteocali/shared_data/Matteo/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/process_dts.py",
             "args": [
-                "--name", "fixed_camera_full",
-                "--input", "/media/matteocali/shared_data/Matteo/NLoS imaging using iToF/mirror_dts/fixed_camera_full"],
+                "--name", "fixed_camera_diffuse_wall_-100",
+                "--input", "/media/matteocali/shared_data/Matteo/NLoS imaging using iToF/mirror_dts/fixed_camera_diffuse_wall",
+                "--bg-value", "-100"],
             "console": "integratedTerminal",
             "justMyCode": true
         },
@@ -23,8 +24,13 @@
             "request": "launch",
             "program": "/media/matteocali/shared_data/Matteo/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/train.py",
             "args": [
-                "--dataset", "fixed_camera_diffuse_wall",
-                "--name", "test2"],
+                "--dataset", "fixed_camera_diffuse_wall_-50",
+                "--name", "test",
+                "--lr", "0.0001",
+                "--lambda", "0.2",
+                "--n-out-channels", "8",
+                "--n-epochs", "5000",
+                "--slurm", "False"],
             "console": "integratedTerminal",
             "justMyCode": true
         },

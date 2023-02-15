@@ -2,6 +2,7 @@ import torch
 import torchvision
 from torch import nn
 from torch.nn.functional import sigmoid
+from math import sqrt
 
 
 class Block(nn.Module):
@@ -142,15 +143,14 @@ class FinalConv(nn.Module):
 
 class NlosNet(nn.Module):
 
-    def __init__(self, enc_channels: tuple = (6, 64, 128, 256, 512, 1024), dec_channels: tuple = (1024, 512, 256, 128, 64), pad: int = 1, num_class: int = 1, n_final_layers: int = 3) -> None:
+    def __init__(self, enc_channels: tuple = (6, 64, 128, 256, 512, 1024), dec_channels: tuple = (1024, 512, 256, 128, 64), pad: int = 1, num_class: int = 1) -> None:
         """
         NLOS Net
         param:
             - enc_channels: number of channels for each block of the encoder
             - dec_channels: number of channels for each block of the decoder
             - pad: padding for the blocks
-            - num_class: number of classes for the last UNet layer
-            - n_final_layers: number of layers for the final convolutional layers (depth and mask estimator)
+            - num_class: number of classes for the last UNet layer (power of 2)
         """
 
         super().__init__()
@@ -159,7 +159,8 @@ class NlosNet(nn.Module):
         self.head = nn.Conv2d(dec_channels[-1], num_class, kernel_size=1)  # Initialize the head (last layer of the UNet reduce the features layer to the one set by num_class)
         # Final layers
         chs = [num_class]
-        for i in range(n_final_layers):  # Initialize the number of channels for the final layers
+        n_final_layers = round(sqrt(num_class))  # Number of layers for the final layers
+        for i in range(n_final_layers):          # Initialize the number of channels for the final layers
             chs.append(int(round(num_class / (2 ** (i + 1)))))
         chs = tuple(chs)
         self.depth_estiamtor = FinalConv(chs=chs)  # Initialize the depth estimator

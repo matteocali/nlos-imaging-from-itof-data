@@ -151,7 +151,7 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
     current_dir = os.path.dirname(__file__)
     current_date = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     hostname = socket.gethostname()
-    writer = SummaryWriter(log_dir=f"{current_dir}/../tensorboard_logs/{current_date}_{hostname}_{net.__class__.__name__}_LR_{optimizer.param_groups[0]['lr']}_BS_{train_loader.batch_size}_E_{n_epochs}_L_{l}")
+    writer = SummaryWriter(log_dir=f"{current_dir}/../tensorboard_logs/{current_date}_{hostname}_{net.__class__.__name__}_LR_{optimizer.param_groups[0]['lr']}_L_{l}")
     
     # Initialize the early stopping
     early_stopping = EarlyStopping(tollerance=100, min_delta=0.05, save_path=save_path, net=net)
