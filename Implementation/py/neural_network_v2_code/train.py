@@ -26,15 +26,15 @@ def arg_parser(argv):
     dts_name = ""
     # Argument containing the name of the model
     arg_model_name = ""
-    # Argument defining if the code will be run on singularity
-    arg_singularity = False
+    # Argument defining if the code will be run on slurm
+    arg_slurm = False
     # Help string
-    arg_help = "{0} -d <dataset>, -n <name>, -s <singularity>".format(argv[0])
+    arg_help = "{0} -d <dataset>, -n <name>, -s <slurm>".format(argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(
-            argv[1:], "hd:n:s:", ["help", "dataset=", "name=", "singularity="])
+            argv[1:], "hd:n:s:", ["help", "dataset=", "name=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -44,18 +44,18 @@ def arg_parser(argv):
             dts_name = arg              # Set the name of the dataset
         elif opt in ("-n", "--name"):
             arg_model_name = arg        # Set the name of the model
-        elif opt in ("-s", "--singularity"):
+        elif opt in ("-s", "--slurm"):
             if arg.lower() == "true":   # Check if the code is run on singularity
-                arg_singularity = True  # Set the singularity flag
+                arg_slurm = True  # Set the singularity flag
             else:
-                arg_singularity = False
+                arg_slurm = False
 
     print("Dataset name: ", dts_name)
     print("Model name: ", arg_model_name)
-    print("Singularity: ", arg_singularity)
+    print("Slurm: ", arg_slurm)
     print()
 
-    return [dts_name, arg_model_name, arg_singularity]
+    return [dts_name, arg_model_name, arg_slurm]
 
 
 if __name__ == '__main__':
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     start_time = time.time()           # Start the timer
     args = arg_parser(sys.argv)        # Parse the input arguments
     dts_name = args[0]                 # Set the path to the csv folder
-    singularity = args[2]              # Set the singularity flag
+    slurm = args[2]                    # Set the slurm flag
     batch_size = 32                    # Set the batch size
     n_epochs = 5000                    # Set the number of epochs
     lr = 1e-4                          # Set the learning rate
@@ -74,10 +74,10 @@ if __name__ == '__main__':
     print("Device: ", device, "\n")  # Print the device used
 
     # Load the processed datset
-    if not singularity:
+    if not slurm:
         processed_dts_path = Path(__file__).parent.absolute() / "datasets" / dts_name / "processed_data"  # Set the path to the processed datasets
     else:
-        processed_dts_path = Path("datasets" / dts_name / "processed_data")                               # Set the path to the processed datasets
+        processed_dts_path = Path("datasets/" + dts_name + "/processed_data")                             # Set the path to the processed datasets
     train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")                                 # Load the train dataset
     val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")                              # Load the validation dataset
 
@@ -122,5 +122,5 @@ if __name__ == '__main__':
 
 
     # Send an email to notify the end of the training
-    if not singularity:
+    if not slurm:
         send_email(receiver_email="matteocaly@gmail.com", subject="Training completed", body=f"The \"{args[1]}\" training is over (required time: {format_time(start_time, f_train_time)})")

@@ -23,11 +23,12 @@ def arg_parser(argv):
     arg_name = "dts"                      # Argument containing the name of the dataset
     arg_data_path = ""                    # Argument containing the path where the raw data are located
     arg_shuffle = True                    # Argument containing the flag for shuffling the dataset
-    arg_help = "{0} -n <name> -i <input> -s <shuffle>".format(argv[0])  # Help string
+    arg_slurm = False                     # Argument defining if the code will be run on slurm
+    arg_help = "{0} -n <name> -i <input> -s <shuffle> -n <slurm>".format(argv[0])  # Help string
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:i:s:", ["help", "name=", "input=", "shuffle="])
+        opts, args = getopt.getopt(argv[1:], "hn:i:s:n:", ["help", "name=", "input=", "shuffle=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -38,24 +39,34 @@ def arg_parser(argv):
         elif opt in ("-i", "--input"):
             arg_data_path = Path(arg)  # Set the path to the raw data
         elif opt in ("-s", "--shuffle"):
-            if arg == "True":  # Set the shuffle flag
+            if arg.lower() == "true":  # Set the shuffle flag
                 arg_shuffle = True
             else:
                 arg_shuffle = False
+        elif opt in ("-s", "--slurm"):
+            if arg.lower() == "true":  # Check if the code is run on singularity
+                arg_slurm = True  # Set the singularity flag
+            else:
+                arg_slurm = False
         
     print("Attempt name: ", arg_name)
     print("Input folder: ", arg_data_path)
     print("Shuffle: ", arg_shuffle)
+    print("Slurm: ", arg_slurm)
     print()
 
-    return [arg_name, arg_data_path, arg_shuffle]
+    return [arg_name, arg_data_path, arg_shuffle, arg_slurm]
 
 
 if __name__ == '__main__':
     args = arg_parser(sys.argv)  # Parse the input arguments
+    slurm = args[3]              # Get the slurm flag
 
     # Check if the dataset has alreay been splitted
-    out_path = Path(__file__).parent.absolute() / "datasets" / args[0] / "csv_split"
+    if not slurm:
+        out_path = Path(__file__).parent.absolute() / "datasets" / args[0] / "csv_split"
+    else:
+        out_path = Path(__file__).parent.parent.parent.absolute() / "datasets" / args[0] / "csv_split"
     if out_path.exists() and len(list(out_path.glob("*.csv"))) > 0:
         print("The dataset has already been splitted - skipping...\n")
     else:
@@ -101,4 +112,5 @@ if __name__ == '__main__':
         print(f"The total computation time for generating the dataset was {format_time(s_dts_time, f_dts_time)}\n")
 
         # Send an email to notify the end of the training
-        send_email(receiver_email="matteocaly@gmail.com", subject="Dataset creation completed", body=f"The \"{args[0]}\" dataset is fully processed (required time: {format_time(s_dts_time, f_dts_time)})")
+        if not slurm:
+            send_email(receiver_email="matteocaly@gmail.com", subject="Dataset creation completed", body=f"The \"{args[0]}\" dataset is fully processed (required time: {format_time(s_dts_time, f_dts_time)})")
