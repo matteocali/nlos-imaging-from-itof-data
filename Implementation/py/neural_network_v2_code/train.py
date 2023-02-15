@@ -77,7 +77,7 @@ if __name__ == '__main__':
     if not slurm:
         processed_dts_path = Path(__file__).parent.absolute() / "datasets" / dts_name / "processed_data"  # Set the path to the processed datasets
     else:
-        processed_dts_path = Path("datasets/" + dts_name + "/processed_data")                             # Set the path to the processed datasets
+        processed_dts_path = Path(__file__).parent.parent.parent.absolute() / f"datasets/{dts_name}/processed_data"                             # Set the path to the processed datasets
     train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")                                 # Load the train dataset
     val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")                              # Load the validation dataset
 
