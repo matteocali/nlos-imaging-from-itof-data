@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.constants as const
-import smtplib, ssl
+import smtplib
+import torch
 from pathlib import Path
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -144,3 +145,15 @@ def update_lr(optimizer: Optimizer, epoch: int) -> None:
     if epoch == 10:
         for param_group in optimizer.param_groups:
             param_group["lr"] = param_group["lr"] * 0.1
+
+
+def mae(pred: torch.Tensor, gt: torch.Tensor) -> float:
+    pred = pred.numpy()
+    gt = gt.numpy()
+    pred_masked_ones = pred * gt
+    num_ones = np.sum(gt)
+    obj_mae = np.sum(np.abs(pred_masked_ones - gt)) / num_ones
+    pred_masked_zeros = pred * (1 - gt)
+    num_zeros = np.sum(1 - gt)
+    alpha_mae_bkg = np.sum(np.abs(pred_masked_zeros - np.zeros(gt.shape, dtype=np.float32))) / num_zeros
+    return np.sum(obj_mae + alpha_mae_bkg) / 2
