@@ -11,6 +11,7 @@ from pathlib import Path
 from torch.utils.tensorboard.writer import SummaryWriter
 from utils.utils import format_time, generate_fig
 from utils.EarlyStopping import EarlyStopping
+from utils.utils import update_lr
 
 
 def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, depth_loss_fn: torch.nn.Module, mask_loss_fn: torch.nn.Module, l: float, device: torch.device) -> tuple[float, float, float]:
@@ -215,16 +216,3 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
     # Close the tensorboard writer
     writer.flush()
     writer.close()
-
-
-def update_lr(optimizer: Optimizer, epoch: int) -> None:
-    """
-    Function to update the learning rate
-        param:
-            - optimizer: optimizer used to update the weights
-            - epoch: current epoch
-    """
-
-    if epoch == 10:
-        for param_group in optimizer.param_groups:
-            param_group["lr"] = param_group["lr"] * 0.1

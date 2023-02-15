@@ -4,6 +4,7 @@ import smtplib, ssl
 from pathlib import Path
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from torch.optim import Optimizer
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -24,6 +25,7 @@ def format_time(s_time: float, f_time: float):
         days, hours = divmod(hours, 24)
         return "%d:%02d:%02d:%02d" % (days, hours, minutes, seconds)
     return "%d:%02d:%02d" % (hours, minutes, seconds)
+
 
 def phi_func(freqs, dim_t=2000, exp_time=0.01):
     """
@@ -129,3 +131,16 @@ def send_email(receiver_email: str, subject: str, body: str):
     server.sendmail(email, receiver_email, message.as_string())
 
     server.quit()
+
+
+def update_lr(optimizer: Optimizer, epoch: int) -> None:
+    """
+    Function to update the learning rate
+        param:
+            - optimizer: optimizer used to update the weights
+            - epoch: current epoch
+    """
+
+    if epoch == 10:
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = param_group["lr"] * 0.1
