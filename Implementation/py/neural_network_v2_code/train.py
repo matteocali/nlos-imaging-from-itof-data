@@ -4,8 +4,7 @@ import time
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from torch.nn import L1Loss
-from torch.nn import BCELoss
+from utils.CustomLosses import BalancedMAELoss, BalancedBCELoss
 from utils.NlosNet import NlosNet
 from utils.train_functions import train
 from utils.utils import format_time, send_email
@@ -131,8 +130,8 @@ if __name__ == '__main__':
     optimizer = Adam(model.parameters(), lr=lr)
 
     # Create the loss function
-    depth_loss_fn = L1Loss(reduction="none")
-    mask_loss_fn = BCELoss(reduction="none")
+    depth_loss_fn = BalancedMAELoss(reduction="weight_mean")
+    mask_loss_fn = BalancedBCELoss(reduction="weight_mean")
 
     # Train the model
     s_train_time = time.time()  # Start the timer for the training

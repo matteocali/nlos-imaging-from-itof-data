@@ -1,6 +1,6 @@
 import torch
 
-class BalancedMAELoss:
+class BalancedMAELoss(torch.nn.Module):
     """
     Custom loss function for the neural network.
     This loss function is a weighted mean absolute error loss function.
@@ -13,6 +13,7 @@ class BalancedMAELoss:
             reduction (str): reduction method (mean, sum, weight_mean, none)
         """
 
+        super().__init__()
         self.reduction = reduction
         if reduction == "weight_mean":
             reduction = "none"
@@ -43,7 +44,7 @@ class BalancedMAELoss:
         return mae
 
 
-class BalancedBCELoss:
+class BalancedBCELoss(torch.nn.Module):
     """
     Custom loss function for the neural network.
     This loss function is a binary cross entropy error loss function.
@@ -56,6 +57,7 @@ class BalancedBCELoss:
             reduction (str): reduction method (mean, sum, weight_mean, none)
         """
 
+        super().__init__()
         self.reduction = reduction
         if reduction == "weight_mean":
             reduction = "none"
