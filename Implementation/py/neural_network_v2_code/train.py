@@ -86,8 +86,8 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dts, batch_size=batch_size, shuffle=True, num_workers=4)      # Create the validation dataloader
 
     # Create the network state folder 
-    net_state_path = Path("neural_network_v2_code/net_state")  # Set the path to the network state folder  # type: ignore
-    net_state_path.mkdir(parents=True, exist_ok=True)          # Create the network state folder
+    net_state_path = Path(__file__).parent.absolute() / "net_state"  # Set the path to the network state folder  # type: ignore
+    net_state_path.mkdir(parents=True, exist_ok=True)                # Create the network state folder
 
     # Create the model
     model = NlosNet(enc_channels=(6, 16, 32, 64, 128, 256), dec_channels=(256, 128, 64, 32, 16), num_class=4, n_final_layers=2).to(device)  # Create the model and move it to the device
