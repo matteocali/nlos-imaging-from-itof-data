@@ -48,35 +48,52 @@ def phi_func(freqs, dim_t=2000, exp_time=0.01):
     return phi
 
 
-def save_np_as_img(data: np.ndarray, path: Path):
+def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float], index: int, path: Path):
     """
-    Function used to save each element of the numpy array as an image
+    Function used to save the test plots
         param:
-            - data: numpy array
-            - path: path where to save the images
+            - depth_data: (gt_depth, predicted depth)
+            - mask_data: (gt_mask, predicted mask)
+            - losses: tuple containing the loss and the accuracy
+            - index: index of the test sample
+            - path: path where to save the plots
     """
 
-    # Create the folder where to save the images
-    path.mkdir(parents=True, exist_ok=True)
+    # Generate the plot
+    fig, ax = plt.subplots(2, 2, figsize=(16, 11))
 
-    # For each element of the numpy array
-    for i in range(data.shape[0]):
-        # Save the image
-        titles = ["Depth", "Mask"]
-        c_range = [(np.min(data[i, 0, ...]), np.max(data[i, 0, ...])), (0, 1)]
-        fig, ax = plt.subplots(1, 2)
-        for j in range(2):
-            img_t = ax[j].matshow(data[i, j, ...], cmap="jet")
-            if range is not None:
-                img_t.set_clim(c_range[0], c_range[1])
-            divider = make_axes_locatable(ax[j])
-            cax = divider.append_axes("right", size="5%", pad=0.05)
-            fig.colorbar(mappable=img_t, cax=cax)
-            ax[j].set_title(titles[j])
-            ax[j].set_xlabel("Column pixel")
-            ax[j].set_ylabel("Row pixel")
-        plt.tight_layout()
-        plt.imsave(str(path / f"{i}.png"), data[i, :, :])
+    # Generate the plts for the depth
+    titles = ["Grount truth depth", "Predicted depth"]
+    for i in range(2):
+        img = ax[0, i].matshow(depth_data[i].T, cmap="jet")  # type: ignore
+        img.set_clim(np.min(depth_data[0]), np.max(mask_data[0]))
+        divider = make_axes_locatable(ax[0, i])  # type: ignore
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        fig.colorbar(mappable=img, cax=cax)
+        if i ==1:
+            box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)
+            ax[0, i].text(20, 20, f"MAE: {round(losses[0], 3)}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)  # type: ignore
+        ax[0, i].set_title(titles[i])        # type: ignore
+        ax[0, i].set_xlabel("Column pixel")  # type: ignore
+        ax[0, i].set_ylabel("Row pixel")     # type: ignore
+    # Generate the plts for the mask
+    titles = ["Grount truth mask", "Predicted mask"]
+    for i in range(2):
+        img = ax[1, i].matshow(mask_data[i].T, cmap="jet")  # type: ignore
+        img.set_clim(np.min(mask_data[0]), np.max(mask_data[0]))
+        divider = make_axes_locatable(ax[1, i])  # type: ignore
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        fig.colorbar(mappable=img, cax=cax)
+        if i ==1:
+            box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)
+            ax[0, i].text(20, 20, f"MAE: {round(losses[0], 3)}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)  # type: ignore
+        ax[1, i].set_title(titles[i])        # type: ignore
+        ax[1, i].set_xlabel("Column pixel")  # type: ignore
+        ax[1, i].set_ylabel("Row pixel")     # type: ignore
+    
+    plt.tight_layout()
+    plt.savefig(str(path / f"{index}.svg"))
+    plt.close()
 
 
 def generate_fig(data: tuple[np.ndarray, np.ndarray], c_range: tuple[float, float] = None):  # type: ignore

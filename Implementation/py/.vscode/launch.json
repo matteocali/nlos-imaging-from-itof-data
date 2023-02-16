@@ -43,9 +43,9 @@
             "request": "launch",
             "program": "/media/matteocali/shared_data/Matteo/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/test.py",
             "args": [
-                "--input", "neural_network_v2_code/test_processed_datasets/processed_test_dts.pt",
-                "--model", "neural_network_v2_code/net_state/test_model.pt",
-                "--output", "neural_network_v2_code/results"],
+                "--dts-name", "fixed_camera_diffuse_wall",
+                "--model", "test_model_lr_0.0001_l_0.5_ochannel_8_aug_True",
+                "--bg-value", "0"],
             "console": "integratedTerminal",
             "justMyCode": true
         }
