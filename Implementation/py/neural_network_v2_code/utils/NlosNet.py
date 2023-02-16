@@ -1,7 +1,6 @@
 import torch
 import torchvision
 from torch import nn
-from torch.nn.functional import sigmoid
 from math import sqrt
 
 
@@ -184,4 +183,4 @@ class NlosNet(nn.Module):
         # Run the final two branches
         depth = self.depth_estiamtor(out).squeeze(1)
         mask = self.mask_estiamtor(out).squeeze(1)
-        return depth, sigmoid(mask)
+        return depth, torch.sigmoid(mask)

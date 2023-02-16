@@ -143,7 +143,12 @@ if __name__ == '__main__':
     # Print the model summary
     summary(model, input_size=(batch_size, 6, 320, 240),
             device=str(device), mode="train")
-    print("")
+    print()
+
+    # Print the info on the dataset
+    print("\nTrain dataset size: ", len(train_dts))
+    print("Validation dataset size: ", len(val_dts))
+    print()
 
     # Create the optimizer
     optimizer = Adam(model.parameters(), lr=lr)
