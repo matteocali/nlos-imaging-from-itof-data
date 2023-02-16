@@ -31,6 +31,7 @@
                 "--lambda", "0.5",
                 "--n-out-channels", "8",
                 "--n-epochs", "5000",
+                "-data-augment", "True",
                 "--slurm", "False"],
             "console": "integratedTerminal",
             "justMyCode": true
