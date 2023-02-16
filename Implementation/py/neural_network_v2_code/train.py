@@ -34,16 +34,18 @@ def arg_parser(argv):
     arg_n_out_channels = 8
     # Argument defining the number of epochs
     arg_n_epochs = 5000
+    # Argument to set the flag for the data augmentation
+    arg_augment = False
     # Argument defining if the code will be run on slurm
     arg_slurm = False
     # Help string
-    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -c <n-out-channels>, -e <n-epochs>, -s <slurm>".format(
+    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -c <n-out-channels>, -e <n-epochs>, -a <data-augment>, -s <slurm>".format(
         argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(
-            argv[1:], "hd:n:r:l:c:e:s:", ["help", "dataset=", "name=", "lr=", "lambda=", "n-out-channels=", "n-epochs=", "slurm="])
+            argv[1:], "hd:n:r:l:c:e:a:s:", ["help", "dataset=", "name=", "lr=", "lambda=", "n-out-channels=", "n-epochs=", "data-augment=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -62,6 +64,11 @@ def arg_parser(argv):
             arg_n_out_channels = int(arg)
         elif opt in ("-e", "--n-epochs"):
             arg_n_epochs = int(arg)        # Set the number of epochs
+        elif opt in ("-a", "--data-augment"):
+            if arg.lower() == "true":      # Check if the data augmentation is enabled
+                arg_augment = True         # Set the data augmentation flag
+            else:
+                arg_augment = False
         elif opt in ("-s", "--slurm"):
             if arg.lower() == "true":      # Check if the code is run on singularity
                 arg_slurm = True           # Set the singularity flag
@@ -70,10 +77,15 @@ def arg_parser(argv):
 
     print("Dataset name: ", dts_name)
     print("Model name: ", arg_model_name)
+    print("Learning rate: ", arg_lr)
+    print("Lambda: ", arg_l)
+    print("Number of output channels: ", arg_n_out_channels)
+    print("Number of epochs: ", arg_n_epochs)
+    print("Data augmentation: ", arg_augment)
     print("Slurm: ", arg_slurm)
     print()
 
-    return [dts_name, arg_model_name, arg_lr, arg_l, arg_n_out_channels, arg_n_epochs, arg_slurm]
+    return [dts_name, arg_model_name, arg_lr, arg_l, arg_n_out_channels, arg_n_epochs, arg_augment, arg_slurm]
 
 
 if __name__ == '__main__':
@@ -87,7 +99,8 @@ if __name__ == '__main__':
     l = args[3]                  # Set the lambda parameter
     n_out_channels = args[4]     # Set the number of the u-net output channels
     n_epochs = args[5]           # Set the number of epochs
-    slurm = args[6]              # Set the slurm flag
+    augment = args[6]            # Set the data augmentation flag
+    slurm = args[7]              # Set the slurm flag
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -102,7 +115,11 @@ if __name__ == '__main__':
         processed_dts_path = Path(__file__).parent.parent.parent.absolute(
         ) / f"datasets/{dts_name}/processed_data"
     # Load the train dataset
-    train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")
+    if augment:
+        augment_dts_path = processed_dts_path.parent.absolute() / "augmented_data"  # Set the path to the augmented dataset
+        train_dts = torch.load(augment_dts_path / "augmented_train_dts.pt")
+    else:
+        train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")
     # Load the validation dataset
     val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")
 
@@ -148,7 +165,7 @@ if __name__ == '__main__':
         l=l,
         device=device,
         n_epochs=n_epochs,
-        save_path=(net_state_path / f"{args[1]}_model_lr_{lr}_l_{l}_ochannel_{n_out_channels}.pt"))
+        save_path=(net_state_path / f"{args[1]}_model_lr_{lr}_l_{l}_ochannel_{n_out_channels}_aug_{str(augment)}.pt"))
     f_train_time = time.time()  # Stop the timer for the training
     print(
         f"The total computation time for training the model was {format_time(s_train_time, f_train_time)}\n")

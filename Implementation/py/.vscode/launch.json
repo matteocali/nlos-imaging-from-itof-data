@@ -11,7 +11,7 @@
             "request": "launch",
             "program": "/media/matteocali/shared_data/Matteo/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/process_dts.py",
             "args": [
-                "--name", "fixed_camera_diffuse_wall",
+                "--name", "fixed_camera_diffuse_wall_-100",
                 "--input", "/media/matteocali/shared_data/Matteo/NLoS imaging using iToF/mirror_dts/fixed_camera_diffuse_wall",
                 "--bg-value", "0",
                 "--data-augment", "True"],
