@@ -66,7 +66,7 @@ def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[
     titles = ["Grount truth depth", "Predicted depth"]
     for i in range(2):
         img = ax[0, i].matshow(depth_data[i].T, cmap="jet")  # type: ignore
-        img.set_clim(np.min(depth_data[0]), np.max(mask_data[0]))
+        img.set_clim(np.min(depth_data[0]), np.max(depth_data[0]))
         divider = make_axes_locatable(ax[0, i])  # type: ignore
         cax = divider.append_axes("right", size="5%", pad=0.05)
         fig.colorbar(mappable=img, cax=cax)
@@ -86,13 +86,13 @@ def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[
         fig.colorbar(mappable=img, cax=cax)
         if i ==1:
             box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)
-            ax[0, i].text(20, 20, f"MAE: {round(losses[0], 3)}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)  # type: ignore
+            ax[1, i].text(20, 20, f"MAE: {round(losses[1], 3)}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)  # type: ignore
         ax[1, i].set_title(titles[i])        # type: ignore
         ax[1, i].set_xlabel("Column pixel")  # type: ignore
         ax[1, i].set_ylabel("Row pixel")     # type: ignore
     
     plt.tight_layout()
-    plt.savefig(str(path / f"{index}.svg"))
+    plt.savefig(str(path / f"{index + 1}.svg"))
     plt.close()
 
 

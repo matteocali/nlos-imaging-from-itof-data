@@ -36,12 +36,17 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
             depth, mask = net(itof_data)
 
             # Force the mask to assume only value 0 or 1
-            mask = torch.round(mask)
+            #mask = torch.round(mask)
+            mid = ((mask.max() + mask.min()) / 2).item()
+            mask = torch.where(mask <= mid, 0, 1)
 
             # Change the background value if needed
             if bg != 0:
                 depth = torch.where(depth == bg, 0, depth)
                 gt_depth = torch.where(gt_depth == bg, 0, gt_depth)
+
+            # Apply the mask to the depth
+            depth = depth * mask
 
             # Compute the loss
             depth_loss = loss_fn(depth, gt_depth, gt_mask)  # Compute the loss over the depth
