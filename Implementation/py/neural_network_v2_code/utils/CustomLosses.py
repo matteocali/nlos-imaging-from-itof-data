@@ -1,5 +1,6 @@
 import torch
 
+
 class BalancedMAELoss(torch.nn.Module):
     """
     Custom loss function for the neural network.
@@ -20,7 +21,7 @@ class BalancedMAELoss(torch.nn.Module):
         # Create the mean absolute error loss function
         self.mae = torch.nn.L1Loss(reduction=reduction)
 
-    def __call__(self, pred: torch.Tensor, target: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    def __call__(self, pred: torch.Tensor, target: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:  # type: ignore
         """
         Args:
             pred (torch.Tensor): predicted value
@@ -64,7 +65,7 @@ class BalancedBCELoss(torch.nn.Module):
         # Create the mean absolute error loss function
         self.bce = torch.nn.BCELoss(reduction=reduction)
 
-    def __call__(self, pred: torch.Tensor, target: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    def __call__(self, pred: torch.Tensor, target: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:  # type: ignore
         """
         Args:
             pred (torch.Tensor): predicted value
@@ -76,6 +77,9 @@ class BalancedBCELoss(torch.nn.Module):
         
         # Calculate the mean absolute error
         bce = self.bce(pred, target)
+
+        if mask is None:
+            mask = target
 
         # Calculate the mean absolute error of the masked pixels
         if self.reduction == "weight_mean":

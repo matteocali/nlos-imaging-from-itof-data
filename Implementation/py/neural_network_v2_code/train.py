@@ -2,6 +2,7 @@ import sys
 import getopt
 import time
 import torch
+import numpy as np
 from torch.utils.data import DataLoader
 from torch.optim import Adam
 from utils.CustomLosses import BalancedMAELoss, BalancedBCELoss
@@ -77,6 +78,7 @@ def arg_parser(argv):
 
 if __name__ == '__main__':
     torch.manual_seed(2097710)   # Set the random seed
+    np.random.seed(2097710)      # Set the random seed
     start_time = time.time()     # Start the timer
     args = arg_parser(sys.argv)  # Parse the input arguments
     dts_name = args[0]           # Set the path to the csv folder

@@ -50,9 +50,9 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         masked_depth = depth * mask
 
         # Compute the loss
-        depth_loss = depth_loss_fn(masked_depth, gt_depth)  # Compute the loss over the depth
-        mask_loss = mask_loss_fn(mask, gt_mask)             # Compute the loss over the mask (weighted to enphatize the errro on the mask)
-        loss = l * depth_loss + (1 - l) * mask_loss         # Compute the total loss
+        depth_loss = depth_loss_fn(masked_depth, gt_depth, gt_mask)  # Compute the loss over the depth
+        mask_loss = mask_loss_fn(mask, gt_mask)                      # Compute the loss over the mask (weighted to enphatize the errro on the mask)
+        loss = l * depth_loss + (1 - l) * mask_loss                  # Compute the total loss
         
         # Backward pass
         loss.backward()
@@ -104,9 +104,9 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, depth_loss_fn: torch.n
             masked_depth = depth * mask
 
             # Compute the loss
-            depth_loss = depth_loss_fn(masked_depth, gt_depth)  # Compute the loss over the depth
-            mask_loss = mask_loss_fn(mask, gt_mask)             # Compute the loss over the mask (weighted to enphatize the errro on the mask)
-            loss = l * depth_loss + (1 - l) * mask_loss         # Compute the total loss
+            depth_loss = depth_loss_fn(masked_depth, gt_depth, gt_mask)  # Compute the loss over the depth
+            mask_loss = mask_loss_fn(mask, gt_mask)                      # Compute the loss over the mask (weighted to enphatize the errro on the mask)
+            loss = l * depth_loss + (1 - l) * mask_loss                  # Compute the total loss
 
             # Append the loss
             epoch_loss.append([loss.item(), depth_loss.item(), mask_loss.item()])

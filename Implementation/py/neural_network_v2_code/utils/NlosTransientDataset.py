@@ -1,6 +1,9 @@
 import torch
 import numpy as np
 import h5py as h5
+import torchvision.transforms as T
+import utils.CustomTransforms as CT
+from tqdm import tqdm
 from tqdm import tqdm
 from torch.utils.data import Dataset
 from pathlib import Path
@@ -10,19 +13,14 @@ from utils.utils import phi_func
 class NlosTransientDataset(Dataset):
     """
     NLOS Transient Dataset class
-        param:
-            - dts_folder: path to the dataset folder
-            - csv_file: path to the csv file containing the list of the images
-            - transform: transformation to apply to the data
     """
 
     def __init__(self, dts_folder: Path, csv_file: Path, transform=None):
         """
-        Constructor of the NlosTransientDataset class
-            param:
-                - dts_folder: path to the dataset folder
-                - csv_file: path to the csv file containing the list of the images
-                - transform: transformation to apply to the data
+        Args:
+            dts_folder (Path): path to the dataset folder
+            csv_file (Path): path to the csv file containing the list of the images
+            transform (callable, optional): Optional transform to be applied on a sample
         """
 
         # Set the transform attribute
@@ -85,11 +83,10 @@ class NlosTransientDataset(Dataset):
 
     def __getitem__(self, index: int):
         """
-        Get the item at the given index
-            param:
-                - index: index of the item to get
-            return:
-                - the item at the given index
+        Args:
+            index (int): index of the item to get
+        Returns:
+            sample (dict): the sample at the given index
         """
 
         # Create the sample
@@ -101,11 +98,64 @@ class NlosTransientDataset(Dataset):
 
         return sample
 
+
     def __len__(self) -> int:
         """
-        Get the length of the dataset
-            return:
-                - the length of the dataset
+        Returns:
+            length (int): the length of the dataset
         """
         
         return self.itof_data.shape[0]
+    
+    
+    def augment_dts(self, batch_size: int) -> None:
+        """
+        Augment the dataset by applying: 
+            - random rotations
+            - random translations
+            - horizzontal flip
+            - vertical_flip
+            - random noise
+        to a random group of elements (of size batch size) sampled at random.
+
+        params:
+            batch_size: the size of the batch to sample
+        returns:
+            the augmented dataset
+        """
+
+        # Define the transforms to apply to the dataset
+        transforms = {
+            "random rotate": CT.RandomRotation(degrees=180, interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),
+            "random translate": CT.RandomAffine(degrees=0, translate=(0.2, 0.2), interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),
+            "random hflip": T.RandomHorizontalFlip(p=1.0),
+            "random vflip": T.RandomVerticalFlip(p=1.0),
+            "random oise": CT.AddGaussianNoise(mean=0.0, std=1.0)
+        }
+        
+        # Sample a random batch of elements for each transform
+        indices = [np.random.choice(self.itof_data.shape[0], batch_size, replace=False) for _ in range(len(transforms.keys()))]
+
+        # Apply the transforms to the dataset
+        for i, (key, transform) in tqdm(enumerate(transforms.items()), desc="Applying transforms", total=len(transforms.keys())):
+            for index in tqdm(indices[i], desc=f"Applying {key}", total=batch_size, leave=False):
+                # Extract the sample
+                itof_data = self.itof_data[index, ...].unsqueeze(0)
+                gt_depth = self.gt_depth[index, ...].unsqueeze(0)
+                gt_mask = self.gt_mask[index, ...].unsqueeze(0)
+
+                # Concatenate all the data before applying the transform in order to apply the exact same traasformation to all the data
+                data = torch.cat((itof_data, gt_depth.unsqueeze(0), gt_mask.unsqueeze(0)), dim=1)
+
+                # Apply the transform
+                data = transform(data)
+
+                # Extract the data from the transformed tensor
+                itof_data = data[0, 0:6, ...].unsqueeze(0)
+                gt_depth = data[0, 6, ...].unsqueeze(0)
+                gt_mask = data[0, 7, ...].unsqueeze(0)
+
+                # Update the dataset
+                self.itof_data = torch.cat((self.itof_data, itof_data), dim=0)
+                self.gt_depth = torch.cat((self.gt_depth, gt_depth), dim=0)
+                self.gt_mask = torch.cat((self.gt_mask, gt_mask), dim=0)

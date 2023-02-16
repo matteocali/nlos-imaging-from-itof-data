@@ -1,4 +1,5 @@
 import torch
+import torchvision.transforms as T
 
 
 class ItofNormalize(object):
@@ -66,3 +67,127 @@ class ChangeBgValue(object):
         gt_depth = torch.where(gt_depth == self.bg_value, self.target_value, gt_depth)
 
         return {"itof_data": itof_data, "gt_depth": gt_depth, "gt_mask": gt_mask}
+
+
+class RandomRotation(T.RandomRotation):
+    """
+    Transformation class to rotate the iToF data.
+    If fill is set to float("inf"), the filling area will be set to the original value of the input image nont to a fixed value.
+    """
+
+    def __init__(self, degrees: int, interpolation: T.InterpolationMode = T.InterpolationMode.NEAREST, expand: bool = False, center = None, fill: float = 0):
+        """
+        Args:
+            degrees (int): Range of degrees to select from. If degrees is a number instead of sequence like (min, max), the range of degrees will be (-degrees, +degrees).
+            interpolation (InterpolationMode): Desired interpolation enum defined by
+                :class:`torchvision.transforms.InterpolationMode`. Default is ``InterpolationMode.NEAREST``.
+            expand (bool): Optional expansion flag. If true, expands the output
+                to make it large enough to hold the entire rotated image. If false or omitted,
+                make the output image the same size as the input image. Note that the expand flag assumes rotation around the center and no translation.
+            center (2-tuple, optional): Optional center of rotation (x, y). Origin is the upper left corner.
+                Default is the center of the image.
+            fill (sequence or number, optional): Pixel fill value for area outside the rotated image. If int or float, the value is used for all bands respectively.
+        """
+
+        self.wrap = False
+        if fill == float("inf"):
+            fill = int(-1e10)
+            self.wrap = True
+        super().__init__(degrees, interpolation, expand, center, int(fill))
+    
+
+    def __call__(self, sample: torch.Tensor):
+        """
+        Args:
+            sample (Tensor): Tensor image of size (C, H, W) to be rotated.
+        Returns:
+            Tensor: Rotated Tensor image.
+        """
+
+        m_sample = super(RandomRotation, self).__call__(sample)  # Call the super class to rotate the imnage
+
+        if self.wrap:
+            m_sample = torch.where(m_sample == -1e10, sample, m_sample)  # If the fill value is set to float("inf"), set the filling area to the original value of the input image
+
+        return m_sample
+
+
+class RandomAffine(T.RandomAffine):
+    """
+    Transformation class to rotate the iToF data.
+    If fill is set to float("inf"), the filling area will be set to the original value of the input image nont to a fixed value.
+    """
+
+    def __init__(self, degrees: int, translate = None, scale = None, shear = None, interpolation: T.InterpolationMode = T.InterpolationMode.NEAREST, fill: float = 0, center = None):
+        """
+        Args:
+            degrees (int): Range of degrees to select from. If degrees is a number instead of sequence like (min, max), the range of degrees will be (-degrees, +degrees).
+            translate (tuple, optional): tuple of maximum absolute fraction for horizontal
+                and vertical translations. For example translate=(a, b), then horizontal shift
+                is randomly sampled in the range -img_width * a < dx < img_width * a and vertical shift is randomly sampled in the range
+                -img_height * b < dy < img_height * b. Will not translate by default.
+            scale (tuple, optional): scaling factor interval, e.g (a, b), then scale is
+                randomly sampled from the range a <= scale <= b. Will keep original scale by default.
+            shear (sequence or float, optional): Range of degrees to select from.
+                If shear is a number, a shear parallel to the x axis in the range (-shear, +shear) will be apllied. Else if shear is a 2-tuple,
+                a shear parallel to the x axis in the range (shear[0], shear[1]) will be applied. Else if shear is a 4-tuple,
+                a shear parallel to the x axis in the range (shear[0], shear[1]) and a shear parallel to the y axis in the range (shear[2], shear[3]) will be applied.
+            interpolation (InterpolationMode): Desired interpolation enum defined by
+                :class:`torchvision.transforms.InterpolationMode`. Default is ``InterpolationMode.NEAREST``.
+            fill (sequence or number, optional): Pixel fill value for area outside the rotated image. If int or float, the value is used for all bands respectively.
+            center (2-tuple, optional): Optional center of rotation (x, y). Origin is the upper left corner.
+                Default is the center of the image.
+        """
+
+        self.wrap = False
+        if fill == float("inf"):
+            fill = int(-1e10)
+            self.wrap = True
+        super().__init__(degrees, translate, scale, shear, interpolation, int(fill), center)
+    
+
+    def __call__(self, sample: torch.Tensor):
+        """
+        Args:
+            sample (Tensor): Tensor image of size (C, H, W) to be rotated.
+        Returns:
+            Tensor: Rotated Tensor image.
+        """
+
+        m_sample = super(RandomAffine, self).__call__(sample)  # Call the super to and transform the imnage
+
+        if self.wrap:
+            m_sample = torch.where(m_sample == -1e10, sample, m_sample)  # If the fill value is set to float("inf"), set the filling area to the original value of the input image
+
+        return m_sample
+
+
+class AddGaussianNoise(object):
+    """Add gaussian noise to a tensor."""
+
+    def __init__(self, mean: float = 0., std: float = 1.):
+        """
+        Args:
+            mean (float): mean of the gaussian distribution
+            std (float): standard deviation of the gaussian distribution
+        """
+
+        self.std = std
+        self.mean = mean
+        
+    def __call__(self, tensor):
+        """
+        Args:
+            tensor (Tensor): Tensor image of size (C, H, W) to be normalized.
+        Returns:
+            Tensor: Normalized Tensor image.
+        """
+
+        return tensor + torch.randn(tensor.size()) * self.std + self.mean
+    
+    def __repr__(self):
+        """
+        Returns:
+            str: string representation of the object
+        """
+        return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
