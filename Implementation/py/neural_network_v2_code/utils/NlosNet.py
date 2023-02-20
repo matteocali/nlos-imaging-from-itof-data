@@ -2,6 +2,7 @@ import torch
 import torchvision
 from torch import nn
 from math import sqrt
+from utils.utils import hard_thresholding
 
 
 class Block(nn.Module):
@@ -111,16 +112,19 @@ class Decoder(nn.Module):
 class FinalConv(nn.Module):
     """Final convolutional layers of the proposed network architecture"""
 
-    def __init__(self, chs: tuple = (8, 4, 2), pad: int = 1) -> None:
+    def __init__(self, chs: list = [8, 4, 2], additional_layers: int = 0, pad: int = 1) -> None:
         """
         Final convolutional layers
         param:
             - n_layer: number of layers
+            - additional_layers: number of additional CNN layers
             - pad: padding
         """
 
         super().__init__()
         self.n_layers = len(chs) - 1
+        for _ in range(additional_layers):
+            chs.append(chs[-1])
         self.conv = nn.ModuleList([nn.Conv2d(chs[i], chs[i + 1], kernel_size=3, padding=pad) for i in range(self.n_layers)])
         self.relu = nn.ReLU()
 
@@ -142,7 +146,7 @@ class FinalConv(nn.Module):
 
 class NlosNet(nn.Module):
 
-    def __init__(self, enc_channels: tuple = (6, 64, 128, 256, 512, 1024), dec_channels: tuple = (1024, 512, 256, 128, 64), pad: int = 1, num_class: int = 1) -> None:
+    def __init__(self, enc_channels: tuple = (6, 64, 128, 256, 512, 1024), dec_channels: tuple = (1024, 512, 256, 128, 64), pad: int = 1, num_class: int = 1, additional_cnn_layers: int = 0) -> None:
         """
         NLOS Net
         param:
@@ -150,20 +154,22 @@ class NlosNet(nn.Module):
             - dec_channels: number of channels for each block of the decoder
             - pad: padding for the blocks
             - num_class: number of classes for the last UNet layer (power of 2)
+            - additional_cnn_layers: number of additional CNN layers
         """
 
         super().__init__()
-        self.encoder = Encoder(enc_channels, pad)  # Initialize the encoder
-        self.decoder = Decoder(dec_channels, pad)  # Initialize the decoder
+        self.encoder = Encoder(enc_channels, pad)                          # Initialize the encoder
+        self.decoder = Decoder(dec_channels, pad)                          # Initialize the decoder
         self.head = nn.Conv2d(dec_channels[-1], num_class, kernel_size=1)  # Initialize the head (last layer of the UNet reduce the features layer to the one set by num_class)
+        
         # Final layers
         chs = [num_class]
         n_final_layers = round(sqrt(num_class))  # Number of layers for the final layers
         for i in range(n_final_layers):          # Initialize the number of channels for the final layers
             chs.append(int(round(num_class / (2 ** (i + 1)))))
-        chs = tuple(chs)
-        self.depth_estiamtor = FinalConv(chs=chs)  # Initialize the depth estimator
-        self.mask_estiamtor = FinalConv(chs=chs)  # Initialize the mask estimator
+        self.depth_estiamtor = FinalConv(chs=chs, additional_layers=additional_cnn_layers)  # Initialize the depth estimator
+        self.mask_estiamtor = FinalConv(chs=chs, additional_layers=additional_cnn_layers)   # Initialize the mask estimator
+
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -181,6 +187,6 @@ class NlosNet(nn.Module):
         # Run the head to move back to the number of classes
         out = self.head(out)
         # Run the final two branches
-        depth = self.depth_estiamtor(out).squeeze(1)
-        mask = self.mask_estiamtor(out).squeeze(1)
-        return depth, torch.sigmoid(mask)
+        depth = self.depth_estiamtor(out)
+        mask = self.mask_estiamtor(out)
+        return depth.squeeze(1), torch.sigmoid(mask).squeeze(1)

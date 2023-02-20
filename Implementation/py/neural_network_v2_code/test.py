@@ -62,13 +62,15 @@ if __name__ == '__main__':
 
     # Load the dataset
     dts_path = Path(__file__).parent.absolute() / f"datasets/{args[0]}/processed_data/processed_test_dts.pt"  # Get the path to the dataset
-    test_dts = torch.load(dts_path)                                                                          # Load the test dataset
-    test_loader = DataLoader(test_dts, batch_size=1, shuffle=True, num_workers=4)                          # Create the test dataloader
+    test_dts = torch.load(dts_path)                                                                           # Load the test dataset
+    test_loader = DataLoader(test_dts, batch_size=1, shuffle=True, num_workers=4)                             # Create the test dataloader
 
     # Load the model
-    state_dict_path = Path(__file__).parent.absolute() / f"net_state/{args[1]}.pt"                                    # Get the path to the model state dict
-    model = NlosNet(enc_channels=(6, 16, 32, 64, 128, 256), dec_channels=(256, 128, 64, 32, 16), num_class=8).to(device)  # Create the model and move it to the device
-    model.load_state_dict(torch.load(state_dict_path))                                                                            # Load the model
+    state_dict_path = Path(__file__).parent.absolute() / f"net_state/{args[1]}.pt"  # Get the path to the model state dict
+    model = NlosNet(enc_channels=(6, 16, 32, 64, 128, 256), 
+                    dec_channels=(256, 128, 64, 32, 16), 
+                    num_class=8, additional_cnn_layers=2).to(device)                # Create the model and move it to the device
+    model.load_state_dict(torch.load(state_dict_path))                              # Load the model
 
     # Define the loss function
     loss_fn = CL.BalancedMAELoss(reduction="weight_mean")
@@ -78,17 +80,15 @@ if __name__ == '__main__':
     out_path = out_folder / f"{args[0]}__{args[1]}"
     if not out_path.exists():
         out_path.mkdir(parents=True, exist_ok=True)
-    #out_path = out_folder / f"{str(args[0].stem)[10:]}_results.npy"
 
     # Test the model
     s_test_time = time.time()  # Start the test time
-    test(
-        net=model, 
-        data_loader=test_loader, 
-        loss_fn=loss_fn,
-        device=device,
-        bg=args[2],
-        out_path=out_path)
+    test(net=model, 
+         data_loader=test_loader, 
+         loss_fn=loss_fn,
+         device=device,
+         bg=args[2],
+         out_path=out_path)
     e_test_time = time.time()  # End the test time
 
     # Print the time spent 

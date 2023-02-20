@@ -4,7 +4,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from pathlib import Path
-from utils.utils import save_test_plots
+from utils.utils import save_test_plots, hard_thresholding
 
 
 def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, device: torch.device, out_path: Path, bg: int = 0) -> None:
@@ -36,9 +36,7 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
             depth, mask = net(itof_data)
 
             # Force the mask to assume only value 0 or 1
-            #mask = torch.round(mask)
-            mid = ((mask.max() + mask.min()) / 2).item()
-            mask = torch.where(mask <= mid, 0, 1)
+            mask = hard_thresholding(mask, threshold_type="mid_value")
 
             # Change the background value if needed
             if bg != 0:

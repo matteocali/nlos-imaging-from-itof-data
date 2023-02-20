@@ -162,3 +162,22 @@ def update_lr(optimizer: Optimizer, epoch: int) -> None:
     if epoch == 10:
         for param_group in optimizer.param_groups:
             param_group["lr"] = param_group["lr"] * 0.1
+
+
+def hard_thresholding(x: torch.Tensor, threshold_type: str = "round") -> torch.Tensor:
+    """
+    Function used to perform the hard thresholding
+        param:
+            - x: input tensor
+            - threshold_type: thresholding type
+        return:
+            - output tensor
+    """
+
+    if threshold_type == "round":
+        return torch.round(x)
+    elif threshold_type == "mid_value":
+        mid = ((x.max() + x.min()) / 2).item()
+        return torch.where(x <= mid, 0., 1.)
+    else:
+        raise ValueError("Thresholding type not recognized")
