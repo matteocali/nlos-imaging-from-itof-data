@@ -7,3 +7,4 @@
 !*_best_weights.h5
 *.v2
 *.pyc
+__pycache__/

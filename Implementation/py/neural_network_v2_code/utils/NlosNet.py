@@ -124,7 +124,7 @@ class FinalConv(nn.Module):
         self.n_layers = len(chs) + additional_layers - 1
         channels = list(chs)
         for _ in range(additional_layers):
-            channels.append(chs[-1])
+            channels = [chs[0]] + channels
         self.conv = nn.ModuleList([nn.Conv2d(channels[i], channels[i + 1], kernel_size=3, padding=pad) for i in range(self.n_layers)])
         self.relu = nn.ReLU()
 
@@ -169,8 +169,6 @@ class NlosNet(nn.Module):
             chs.append(int(round(num_class / (2 ** (i + 1)))))
         self.depth_estiamtor = FinalConv(chs=tuple(chs), additional_layers=additional_cnn_layers)  # Initialize the depth estimator
         self.mask_estiamtor = FinalConv(chs=tuple(chs), additional_layers=additional_cnn_layers)   # Initialize the mask estimator
-
-        print()
 
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
