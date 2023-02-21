@@ -54,7 +54,8 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         masked_depth = depth * mask_d
 
         # Compute the losses
-        depth_loss = depth_loss_fn(masked_depth, gt_depth, gt_mask)  # Compute the loss over the depth
+        #depth_loss = depth_loss_fn(masked_depth, gt_depth, gt_mask)  # Compute the loss over the depth
+        depth_loss = depth_loss_fn(depth, gt_depth, gt_depth)        # Compute the loss over the depth
         mask_loss = mask_loss_fn(mask, gt_mask)                      # Compute the loss over the mask
 
         if l == 0.5:

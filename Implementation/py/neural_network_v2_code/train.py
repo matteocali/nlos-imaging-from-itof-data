@@ -162,7 +162,8 @@ if __name__ == '__main__':
     optimizer = Adam(model.parameters(), lr=lr)
 
     # Create the loss function
-    depth_loss_fn = BalancedMAELoss(reduction="weight_mean")
+    #depth_loss_fn = BalancedMAELoss(reduction="weight_mean")
+    depth_loss_fn = BalancedMAELoss(reduction="only_gt")
     mask_loss_fn = BalancedBCELoss(reduction="weight_mean")
 
     # Train the model
