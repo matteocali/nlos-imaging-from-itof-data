@@ -11,12 +11,12 @@ class BalancedMAELoss(torch.nn.Module):
     def __init__(self, reduction: str = "none"):
         """
         Args:
-            reduction (str): reduction method (mean, sum, weight_mean, none)
+            reduction (str): reduction method (mean, sum, weight_mean, only_gt, none)
         """
 
         super().__init__()
         self.reduction = reduction
-        if reduction == "weight_mean":
+        if reduction == "weight_mean" or reduction == "only_gt":
             reduction = "none"
         # Create the mean absolute error loss function
         self.mae = torch.nn.L1Loss(reduction=reduction)
@@ -41,6 +41,9 @@ class BalancedMAELoss(torch.nn.Module):
             bg_mae = mae * (1 - mask)
             mean_bg_mae = torch.sum(bg_mae) / torch.sum(1 - mask)
             mae = (mean_obj_mae + mean_bg_mae) / 2
+        elif self.reduction == "only_gt":
+            mae = mae * mask
+            mae = torch.sum(mae) / torch.sum(mask)
         
         return mae
 
