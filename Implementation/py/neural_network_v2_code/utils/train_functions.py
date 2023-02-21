@@ -127,7 +127,7 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, depth_loss_fn: torch.n
 
             # Update the last gt_depth and the last predicted depth
             last_gt = (gt_depth.to("cpu").numpy()[-1, ...], gt_mask.to("cpu").numpy()[-1, ...])
-            last_pred = (depth.to("cpu").numpy()[-1, ...], mask.to("cpu").numpy()[-1, ...])
+            last_pred = (masked_depth.to("cpu").numpy()[-1, ...], mask.to("cpu").numpy()[-1, ...])
 
     # Return the average loss over al the batches
     return tuple([float(np.mean(loss)) for loss in zip(*epoch_loss)]), last_gt, last_pred
