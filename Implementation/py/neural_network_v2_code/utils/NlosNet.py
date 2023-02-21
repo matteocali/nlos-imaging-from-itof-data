@@ -2,7 +2,6 @@ import torch
 import torchvision
 from torch import nn
 from math import sqrt
-from utils.utils import hard_thresholding
 
 
 class Block(nn.Module):
@@ -112,7 +111,7 @@ class Decoder(nn.Module):
 class FinalConv(nn.Module):
     """Final convolutional layers of the proposed network architecture"""
 
-    def __init__(self, chs: list = [8, 4, 2], additional_layers: int = 0, pad: int = 1) -> None:
+    def __init__(self, chs: tuple = (8, 4, 2), additional_layers: int = 0, pad: int = 1) -> None:
         """
         Final convolutional layers
         param:
@@ -122,10 +121,11 @@ class FinalConv(nn.Module):
         """
 
         super().__init__()
-        self.n_layers = len(chs) - 1
+        self.n_layers = len(chs) + additional_layers - 1
+        channels = list(chs)
         for _ in range(additional_layers):
-            chs.append(chs[-1])
-        self.conv = nn.ModuleList([nn.Conv2d(chs[i], chs[i + 1], kernel_size=3, padding=pad) for i in range(self.n_layers)])
+            channels.append(chs[-1])
+        self.conv = nn.ModuleList([nn.Conv2d(channels[i], channels[i + 1], kernel_size=3, padding=pad) for i in range(self.n_layers)])
         self.relu = nn.ReLU()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -167,8 +167,10 @@ class NlosNet(nn.Module):
         n_final_layers = round(sqrt(num_class))  # Number of layers for the final layers
         for i in range(n_final_layers):          # Initialize the number of channels for the final layers
             chs.append(int(round(num_class / (2 ** (i + 1)))))
-        self.depth_estiamtor = FinalConv(chs=chs, additional_layers=additional_cnn_layers)  # Initialize the depth estimator
-        self.mask_estiamtor = FinalConv(chs=chs, additional_layers=additional_cnn_layers)   # Initialize the mask estimator
+        self.depth_estiamtor = FinalConv(chs=tuple(chs), additional_layers=additional_cnn_layers)  # Initialize the depth estimator
+        self.mask_estiamtor = FinalConv(chs=tuple(chs), additional_layers=additional_cnn_layers)   # Initialize the mask estimator
+
+        print()
 
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:

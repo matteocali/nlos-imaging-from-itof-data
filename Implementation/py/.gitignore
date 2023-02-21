@@ -6,4 +6,4 @@
 *.h5
 !*_best_weights.h5
 *.v2
-*.npy
+*.pyc
