@@ -46,12 +46,16 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         # Forward pass
         depth, mask = net(itof_data)
 
+        # Detach the mask from the graph in order to avoid the (of depth * mask) gradient to be propagated over the mask branch
+        mask_d = mask.detach()
+        # Force the mask to assume only value 0 or 1
+        mask_d = torch.where(mask > 0.5, 1, 0)
+        # Compute the masked depth (create correlation bertween the depth and the mask)
+        masked_depth = depth * mask_d
+
         # Compute the losses
-        mask_loss = mask_loss_fn(mask, gt_mask)                      # Compute the loss over the mask (weighted to enphatize the errro on the mask)
-        
-        mask = mask.detach()                                         # Detach the mask from the graph in order to avoid the (of depth * mask) gradient to be propagated over the mask branch
-        masked_depth = depth * mask                                  # Compute the masked depth (create correlation bertween the depth and the mask)
         depth_loss = depth_loss_fn(masked_depth, gt_depth, gt_mask)  # Compute the loss over the depth
+        mask_loss = mask_loss_fn(mask, gt_mask)                      # Compute the loss over the mask
 
         if l == 0.5:
             loss = depth_loss + mask_loss                            # Compute the total loss
@@ -104,11 +108,14 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, depth_loss_fn: torch.n
             # Forward pass
             depth, mask = net(itof_data)
 
+            # Force the mask to assume only value 0 or 1
+            mask_d = torch.where(mask > 0.5, 1, 0)
+            # Compute the masked depth (create correlation bertween the depth and the mask)
+            masked_depth = depth * mask_d
+
             # Compute the loss
-            mask_loss = mask_loss_fn(mask, gt_mask)                      # Compute the loss over the mask (weighted to enphatize the errro on the mask)
-            
-            masked_depth = depth * mask                                  # Compute the masked depth (create correlation bertween the depth and the mask)
             depth_loss = depth_loss_fn(masked_depth, gt_depth, gt_mask)  # Compute the loss over the depth
+            mask_loss = mask_loss_fn(mask, gt_mask)                      # Compute the loss over the mask
             
             if l == 0.5:
                 loss = depth_loss + mask_loss                            # Compute the total loss

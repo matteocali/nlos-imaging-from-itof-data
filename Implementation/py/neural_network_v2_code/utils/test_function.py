@@ -36,7 +36,8 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
             depth, mask = net(itof_data)
 
             # Force the mask to assume only value 0 or 1
-            mask = hard_thresholding(mask, threshold_type="mid_value")
+            mask = torch.where(mask > 0.5, 1, 0)
+            #mask = hard_thresholding(mask, threshold_type="mid_value")
 
             # Change the background value if needed
             if bg != 0:
