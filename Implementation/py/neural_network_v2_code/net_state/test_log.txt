@@ -77,3 +77,5 @@ Epoch: 6/5000 | Train loss: 1.9797 | Val loss: 2.0083 | Best loss: 1.9743 | Time
 Epoch: 1/5000 | Train loss: 1.9783 | Val loss: 2.0001 | Best loss: 2.0001 | Time for epoch: 0:00:05 | ETA: 7:12:37
 Epoch: 2/5000 | Train loss: 1.9730 | Val loss: 1.9924 | Best loss: 1.9924 | Time for epoch: 0:00:05 | ETA: 7:06:28
 Epoch: 3/5000 | Train loss: 1.9731 | Val loss: 1.9956 | Best loss: 1.9924 | Time for epoch: 0:00:04 | ETA: 7:01:46
+Epoch: 1/5000 | Train loss: 3.9225 | Val loss: 3.8862 | Best loss: 3.8862 | Time for epoch: 0:00:05 | ETA: 7:15:34
+Epoch: 2/5000 | Train loss: 3.8937 | Val loss: 3.8718 | Best loss: 3.8718 | Time for epoch: 0:00:05 | ETA: 7:06:55

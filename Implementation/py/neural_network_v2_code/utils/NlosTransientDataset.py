@@ -107,6 +107,22 @@ class NlosTransientDataset(Dataset):
         
         return self.itof_data.shape[0]
     
+
+    def get_bg_obj_ratio(self) -> float:
+        """
+        Returns:
+            bg_obj_ratio (dict): the ratio of the number of background pixels over the number of object pixels
+        """
+
+        # Compute the number of background and object pixels
+        bg_pixels = np.sum(self.gt_mask.numpy() == 0)
+        obj_pixels = np.sum(self.gt_mask.numpy() == 1)
+
+        # Compute the ratio
+        bg_obj_ratio = bg_pixels / obj_pixels
+
+        return bg_obj_ratio
+
     
     def augment_dts(self, batch_size: int) -> None:
         """

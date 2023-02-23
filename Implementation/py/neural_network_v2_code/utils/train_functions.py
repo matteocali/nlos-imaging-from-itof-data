@@ -49,13 +49,13 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         # Detach the mask from the graph in order to avoid the (of depth * mask) gradient to be propagated over the mask branch
         mask_d = mask.detach()
         # Force the mask to assume only value 0 or 1
-        mask_d = torch.where(mask > 0.5, 1, 0)
+        mask_d = torch.where(torch.sigmoid(mask) > 0.5, 1, 0)
         # Compute the masked depth (create correlation bertween the depth and the mask)
         masked_depth = depth * mask_d
 
         # Compute the losses
-        #depth_loss = depth_loss_fn(masked_depth, gt_depth, gt_mask)  # Compute the loss over the depth
-        depth_loss = depth_loss_fn(depth, gt_depth, gt_depth)        # Compute the loss over the depth
+        depth_loss = depth_loss_fn(masked_depth, gt_depth, gt_mask)  # Compute the loss over the depth
+        #depth_loss = depth_loss_fn(depth, gt_depth, gt_depth)        # Compute the loss over the depth
         mask_loss = mask_loss_fn(mask, gt_mask)                      # Compute the loss over the mask
 
         if l == 0.5:
@@ -110,7 +110,7 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, depth_loss_fn: torch.n
             depth, mask = net(itof_data)
 
             # Force the mask to assume only value 0 or 1
-            mask_d = torch.where(mask > 0.5, 1, 0)
+            mask_d = torch.where(torch.sigmoid(mask) > 0.5, 1, 0)
             # Compute the masked depth (create correlation bertween the depth and the mask)
             masked_depth = depth * mask_d
 
@@ -128,7 +128,7 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, depth_loss_fn: torch.n
 
             # Update the last gt_depth and the last predicted depth
             last_gt = (gt_depth.to("cpu").numpy()[-1, ...], gt_mask.to("cpu").numpy()[-1, ...])
-            last_pred = (masked_depth.to("cpu").numpy()[-1, ...], mask.to("cpu").numpy()[-1, ...])
+            last_pred = (masked_depth.to("cpu").numpy()[-1, ...], torch.sigmoid(mask).to("cpu").numpy()[-1, ...])
 
     # Return the average loss over al the batches
     return tuple([float(np.mean(loss)) for loss in zip(*epoch_loss)]), last_gt, last_pred

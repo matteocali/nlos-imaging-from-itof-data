@@ -134,6 +134,9 @@ if __name__ == '__main__':
     # Create the validation dataloader
     val_loader = DataLoader(val_dts, batch_size=batch_size,
                             shuffle=True, num_workers=4)
+    
+    # Compute the ratio between the number of background and object pixels
+    bg_obj_ratio = train_dts.get_bg_obj_ratio()
 
     # Create the network state folder
     # Set the path to the network state folder  # type: ignore
@@ -156,6 +159,7 @@ if __name__ == '__main__':
     # Print the info on the dataset
     print("\nTrain dataset size: ", len(train_dts))
     print("Validation dataset size: ", len(val_dts))
+    print("Ratio between bg and obj pixels: ", round(bg_obj_ratio, 2))
     print()
 
     # Create the optimizer
@@ -164,7 +168,7 @@ if __name__ == '__main__':
     # Create the loss function
     #depth_loss_fn = BalancedMAELoss(reduction="weight_mean")
     depth_loss_fn = BalancedMAELoss(reduction="only_gt")
-    mask_loss_fn = BalancedBCELoss(reduction="weight_mean")
+    mask_loss_fn = torch.nn.BCEWithLogitsLoss(reduction="mean", pos_weight=torch.Tensor([bg_obj_ratio]).to(device))
 
     # Train the model
     s_train_time = time.time()  # Start the timer for the training

@@ -189,4 +189,4 @@ class NlosNet(nn.Module):
         # Run the final two branches
         depth = self.depth_estiamtor(out)
         mask = self.mask_estiamtor(out)
-        return depth.squeeze(1), torch.sigmoid(mask).squeeze(1)
+        return depth.squeeze(1), mask.squeeze(1)
