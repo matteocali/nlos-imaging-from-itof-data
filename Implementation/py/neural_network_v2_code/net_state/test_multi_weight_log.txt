@@ -1,0 +1,1 @@
+Epoch: 1/5000 | Train loss: 3.5128 | Val loss: 3.2773 | Best loss: 3.2773 | Time for epoch: 0:04:21 | ETA: 15:02:56:01

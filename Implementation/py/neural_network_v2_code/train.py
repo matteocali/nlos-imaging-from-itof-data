@@ -164,7 +164,7 @@ if __name__ == '__main__':
     # Create the loss function
     #depth_loss_fn = BalancedMAELoss(reduction="weight_mean")
     depth_loss_fn = BalancedMAELoss(reduction="only_gt")
-    mask_loss_fn = BalancedBCELoss(reduction="weight_mean")
+    mask_loss_fn = BalancedBCELoss(reduction="dual_weight_mean")
 
     # Train the model
     s_train_time = time.time()  # Start the timer for the training

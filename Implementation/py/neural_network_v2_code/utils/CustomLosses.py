@@ -104,16 +104,21 @@ class BalancedBCELoss(torch.nn.Module):
             bg_mask = 1 - mask
             hard_pred = torch.where(pred > 0.5, 1, 0)
             border_mask = hard_pred - mask
+            no_border = True if border_mask.all() == obj_mask.all() else False
 
             # Compute the various partial losses
-            obj_bce = bce * obj_mask                                          # loss for the object
-            mean_obj_bce = torch.sum(obj_bce) / torch.sum(obj_mask)           # mean loss for the object
-            border_bce = bce * border_mask                                    # loss for the border
-            mean_border_bce = torch.sum(border_bce) / torch.sum(border_mask)  # mean loss for the border
-            bg_bce = bce * bg_mask                                            # loss for the background
-            mean_bg_bce = torch.sum(bg_bce) / torch.sum(bg_mask)              # mean loss for the background
+            obj_bce = bce * obj_mask                                              # loss for the object
+            mean_obj_bce = torch.sum(obj_bce) / torch.sum(obj_mask)               # mean loss for the object
+            bg_bce = bce * bg_mask                                                # loss for the background
+            mean_bg_bce = torch.sum(bg_bce) / torch.sum(bg_mask)                  # mean loss for the background
+            if not no_border:
+                border_bce = bce * border_mask                                    # loss for the border
+                mean_border_bce = torch.sum(border_bce) / torch.sum(border_mask)  # mean loss for the border
 
-            # Compute the final loss
-            bce = (mean_obj_bce + mean_border_bce + mean_bg_bce) / 3
+                # Compute the final loss
+                bce = (mean_obj_bce + mean_border_bce + mean_bg_bce) / 3
+            else:
+                # Compute the final loss
+                bce = (mean_obj_bce + mean_bg_bce) / 2
         
         return bce
