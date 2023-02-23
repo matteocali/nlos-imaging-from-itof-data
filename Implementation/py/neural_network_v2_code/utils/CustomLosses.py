@@ -58,12 +58,12 @@ class BalancedBCELoss(torch.nn.Module):
     def __init__(self, reduction: str = "none"):
         """
         Args:
-            reduction (str): reduction method (mean, sum, weight_mean, none)
+            reduction (str): reduction method (mean, sum, weight_mean, dual_weight_mean, none)
         """
 
         super().__init__()
         self.reduction = reduction
-        if reduction == "weight_mean":
+        if reduction == "weight_mean" or reduction == "dual_weight_mean":
             reduction = "none"
         # Create the mean absolute error loss function
         self.bce = torch.nn.BCELoss(reduction=reduction)
@@ -86,10 +86,34 @@ class BalancedBCELoss(torch.nn.Module):
 
         # Calculate the mean absolute error of the masked pixels
         if self.reduction == "weight_mean":
-            obj_bce = bce * mask
-            mean_obj_bce = torch.sum(obj_bce) / torch.sum(mask)
-            bg_bce = bce * (1 - mask)
-            mean_bg_bce = torch.sum(bg_bce) / torch.sum(1 - mask)
+            # Compute the various partial masks
+            obj_mask = mask
+            bg_mask = 1 - mask
+
+            # Compute the various partial masks
+            obj_bce = bce * obj_mask
+            mean_obj_bce = torch.sum(obj_bce) / torch.sum(obj_mask)
+            bg_bce = bce * bg_mask
+            mean_bg_bce = torch.sum(bg_bce) / torch.sum(bg_mask)
+
+            # Compute the final loss
             bce = (mean_obj_bce + mean_bg_bce) / 2
+        elif self.reduction == "dual_weight_mean":
+            # Compute the various partial masks
+            obj_mask = mask
+            bg_mask = 1 - mask
+            hard_pred = torch.where(pred > 0.5, 1, 0)
+            border_mask = hard_pred - mask
+
+            # Compute the various partial losses
+            obj_bce = bce * obj_mask                                          # loss for the object
+            mean_obj_bce = torch.sum(obj_bce) / torch.sum(obj_mask)           # mean loss for the object
+            border_bce = bce * border_mask                                    # loss for the border
+            mean_border_bce = torch.sum(border_bce) / torch.sum(border_mask)  # mean loss for the border
+            bg_bce = bce * bg_mask                                            # loss for the background
+            mean_bg_bce = torch.sum(bg_bce) / torch.sum(bg_mask)              # mean loss for the background
+
+            # Compute the final loss
+            bce = (mean_obj_bce + mean_border_bce + mean_bg_bce) / 3
         
         return bce
