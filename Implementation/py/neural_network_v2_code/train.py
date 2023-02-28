@@ -30,6 +30,10 @@ def arg_parser(argv):
     arg_lr = 1e-4
     # Argument defining the lambda parameter
     arg_l = 0.2
+    # Argument defining the encoder channels
+    arg_encoder_channels = (6, 16, 32, 64, 128, 256)
+    # Argument defining the decoder channels
+    arg_decoder_channels = (256, 128, 64, 32, 16)
     # Argument defining the number of the u-net output channels
     arg_n_out_channels = 16
     # Argument defining the number of additional CNN layers
@@ -41,13 +45,13 @@ def arg_parser(argv):
     # Argument defining if the code will be run on slurm
     arg_slurm = False
     # Help string
-    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -a <data-augment>, -s <slurm>".format(
+    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -i <encoder-channels>, -o <decoder-channels>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -a <data-augment>, -s <slurm>".format(
         argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(
-            argv[1:], "hd:n:r:l:c:p:e:a:s:", ["help", "dataset=", "name=", "lr=", "lambda=", "n-out-channels=", "additional-layers=", "n-epochs=", "data-augment=", "slurm="])
+            argv[1:], "hd:n:r:l:i:o:c:p:e:a:s:", ["help", "dataset=", "name=", "lr=", "lambda=", "encoder-channels=", "decoder-channels=", "n-out-channels=", "additional-layers=", "n-epochs=", "data-augment=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -61,10 +65,33 @@ def arg_parser(argv):
             arg_lr = float(arg)               # Set the learning rate
         elif opt in ("-l", "--lambda"):
             arg_l = float(arg)                # Set the lambda parameter
+        elif opt in ("-i", "--encoder-channels"):
+            arg_encoder_channels = tuple(
+                int(x) for x in arg.split(", ")
+            )                                 # Set the encoder channels
+            if len(arg_encoder_channels) == 0:
+                arg_encoder_channels = tuple(
+                    int(x) for x in arg.split(",")
+                )                            # Set the encoder channels
+            if len(arg_encoder_channels) != 6:
+                print("The encoder channels must be a tuple of 6 integers")
+                sys.exit(2)
+        elif opt in ("-o", "--decoder-channels"):
+            arg_decoder_channels = tuple(
+                int(x) for x in arg.split(", "))  # Set the decoder channels
+            if len(arg_decoder_channels) == 0:
+                arg_decoder_channels = tuple(
+                    int(x) for x in arg.split(",")
+                )                                 # Set the decoder channels
+            if len(arg_decoder_channels) != 5:
+                print("The decoder channels must be a tuple of 5 integers")
+                sys.exit(2)
         elif opt in ("-c", "--n-out-channels"):
-            arg_n_out_channels = int(arg)     # Set the number of the u-net output channels
+            # Set the number of the u-net output channels
+            arg_n_out_channels = int(arg)
         elif opt in ("-p", "--additional-layers"):
-            arg_additional_layers = int(arg)  # Set the number of additional CNN layers
+            # Set the number of additional CNN layers
+            arg_additional_layers = int(arg)
         elif opt in ("-e", "--n-epochs"):
             arg_n_epochs = int(arg)           # Set the number of epochs
         elif opt in ("-a", "--data-augment"):
@@ -82,6 +109,8 @@ def arg_parser(argv):
     print("Model name: ", arg_model_name)
     print("Learning rate: ", arg_lr)
     print("Lambda: ", arg_l)
+    print("Encoder channels: ", arg_encoder_channels)
+    print("Decoder channels: ", arg_decoder_channels)
     print("Number of output channels: ", arg_n_out_channels)
     print("Number of additional layers: ", arg_additional_layers)
     print("Number of epochs: ", arg_n_epochs)
@@ -89,7 +118,7 @@ def arg_parser(argv):
     print("Slurm: ", arg_slurm)
     print()
 
-    return [dts_name, arg_model_name, arg_lr, arg_l, arg_n_out_channels, arg_additional_layers, arg_n_epochs, arg_augment, arg_slurm]
+    return [dts_name, arg_model_name, arg_lr, arg_l, arg_encoder_channels, arg_decoder_channels, arg_n_out_channels, arg_additional_layers, arg_n_epochs, arg_augment, arg_slurm]
 
 
 if __name__ == '__main__':
@@ -101,11 +130,13 @@ if __name__ == '__main__':
     batch_size = 32              # Set the batch size
     lr = args[2]                 # Set the learning rate
     l = args[3]                  # Set the lambda parameter
-    n_out_channels = args[4]     # Set the number of the u-net output channels
-    additional_layers = args[5]  # Set the number of additional CNN layers
-    n_epochs = args[6]           # Set the number of epochs
-    augment = args[7]            # Set the data augmentation flag
-    slurm = args[8]              # Set the slurm flag
+    encoder_channels = args[4]   # Set the encoder channels
+    decoder_channels = args[5]   # Set the decoder channels
+    n_out_channels = args[6]     # Set the number of the u-net output channels
+    additional_layers = args[7]  # Set the number of additional CNN layers
+    n_epochs = args[8]           # Set the number of epochs
+    augment = args[9]            # Set the data augmentation flag
+    slurm = args[10]              # Set the slurm flag
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -121,7 +152,8 @@ if __name__ == '__main__':
         ) / f"datasets/{dts_name}/processed_data"
     # Load the train dataset
     if augment:
-        augment_dts_path = processed_dts_path.parent.absolute() / "augmented_data"  # Set the path to the augmented dataset
+        augment_dts_path = processed_dts_path.parent.absolute(
+        ) / "augmented_data"  # Set the path to the augmented dataset
         train_dts = torch.load(augment_dts_path / "augmented_train_dts.pt")
     else:
         train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")
@@ -134,7 +166,7 @@ if __name__ == '__main__':
     # Create the validation dataloader
     val_loader = DataLoader(val_dts, batch_size=batch_size,
                             shuffle=True, num_workers=4)
-    
+
     # Compute the ratio between the number of background and object pixels
     bg_obj_ratio = train_dts.get_bg_obj_ratio()
 
@@ -145,13 +177,13 @@ if __name__ == '__main__':
     net_state_path.mkdir(parents=True, exist_ok=True)
 
     # Create the model
-    model = NlosNet(enc_channels=(6, 16, 32, 64, 128, 256), 
-                    dec_channels=(256, 128, 64, 32, 16),
-                    num_class=n_out_channels, 
+    model = NlosNet(enc_channels=encoder_channels,
+                    dec_channels=decoder_channels,
+                    num_class=n_out_channels,
                     additional_cnn_layers=additional_layers).to(device)  # Create the model and move it to the device
 
     # Print the model summary
-    summary(model, 
+    summary(model,
             input_size=(batch_size, 6, 320, 240),
             device=str(device), mode="train")
     print()
@@ -168,7 +200,8 @@ if __name__ == '__main__':
     # Create the loss function
     #depth_loss_fn = BalancedMAELoss(reduction="weight_mean")
     depth_loss_fn = BalancedMAELoss(reduction="only_gt")
-    mask_loss_fn = torch.nn.BCEWithLogitsLoss(reduction="mean", pos_weight=torch.Tensor([bg_obj_ratio]).to(device))
+    mask_loss_fn = torch.nn.BCEWithLogitsLoss(
+        reduction="mean", pos_weight=torch.Tensor([bg_obj_ratio]).to(device))
 
     # Train the model
     s_train_time = time.time()  # Start the timer for the training
@@ -189,6 +222,6 @@ if __name__ == '__main__':
 
     # Send an email to notify the end of the training
     if not slurm:
-        send_email(receiver_email="matteocaly@gmail.com", 
+        send_email(receiver_email="matteocaly@gmail.com",
                    subject="Training completed",
                    body=f"The \"{args[1]}\" training is over (required time: {format_time(start_time, f_train_time)})")
