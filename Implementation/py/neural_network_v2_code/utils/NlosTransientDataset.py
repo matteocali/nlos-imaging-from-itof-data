@@ -142,8 +142,8 @@ class NlosTransientDataset(Dataset):
 
         # Define the transforms to apply to the dataset
         transforms = {
-            #"random rotate": CT.RandomRotation(degrees=180, interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),
-            #"random translate": CT.RandomAffine(degrees=0, translate=(0.2, 0.2), interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),
+            "random rotate": CT.RandomRotation(degrees=180, interpolation=T.InterpolationMode.NEAREST, fill=-1e5),
+            "random translate": CT.RandomAffine(degrees=0, translate=(0.2, 0.2), interpolation=T.InterpolationMode.NEAREST, fill=-1e5),
             "random hflip": T.RandomHorizontalFlip(p=1.0),
             "random vflip": T.RandomVerticalFlip(p=1.0),
             "random noise": CT.AddGaussianNoise(mean=0.0, std=1.0)
