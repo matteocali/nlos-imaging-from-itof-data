@@ -142,11 +142,11 @@ class NlosTransientDataset(Dataset):
 
         # Define the transforms to apply to the dataset
         transforms = {
-            "random rotate": CT.RandomRotation(degrees=180, interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),
-            "random translate": CT.RandomAffine(degrees=0, translate=(0.2, 0.2), interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),
+            #"random rotate": CT.RandomRotation(degrees=180, interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),
+            #"random translate": CT.RandomAffine(degrees=0, translate=(0.2, 0.2), interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),
             "random hflip": T.RandomHorizontalFlip(p=1.0),
             "random vflip": T.RandomVerticalFlip(p=1.0),
-            "random oise": CT.AddGaussianNoise(mean=0.0, std=1.0)
+            "random noise": CT.AddGaussianNoise(mean=0.0, std=1.0)
         }
         
         # Sample a random batch of elements for each transform
@@ -168,8 +168,9 @@ class NlosTransientDataset(Dataset):
 
                 # Extract the data from the transformed tensor
                 itof_data = data[0, 0:6, ...].unsqueeze(0)
-                gt_depth = data[0, 6, ...].unsqueeze(0)
-                gt_mask = data[0, 7, ...].unsqueeze(0)
+                if key != "random noise":  # The noise transform does not change the ground truth
+                    gt_depth = data[0, 6, ...].unsqueeze(0)
+                    gt_mask = data[0, 7, ...].unsqueeze(0)
 
                 # Update the dataset
                 self.itof_data = torch.cat((self.itof_data, itof_data), dim=0)
