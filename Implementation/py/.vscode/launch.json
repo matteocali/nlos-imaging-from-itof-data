@@ -34,7 +34,7 @@
                 "--n-out-channels", "16",
                 "--additional-layers", "0",
                 "--n-epochs", "5000",
-                "--data-augment", "False",
+                "--data-augment", "True",
                 "--slurm", "False"],
             "console": "integratedTerminal",
             "justMyCode": true
