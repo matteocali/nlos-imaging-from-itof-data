@@ -41,17 +41,17 @@ def arg_parser(argv):
     # Argument defining the number of epochs
     arg_n_epochs = 5000
     # Argument to set the flag for the data augmentation
-    arg_augment = False
+    arg_augment_size = 0
     # Argument defining if the code will be run on slurm
     arg_slurm = False
     # Help string
-    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -i <encoder-channels>, -o <decoder-channels>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -a <data-augment>, -s <slurm>".format(
+    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -i <encoder-channels>, -o <decoder-channels>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -a <data-augment-size>, -s <slurm>".format(
         argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(
-            argv[1:], "hd:n:r:l:i:o:c:p:e:a:s:", ["help", "dataset=", "name=", "lr=", "lambda=", "encoder-channels=", "decoder-channels=", "n-out-channels=", "additional-layers=", "n-epochs=", "data-augment=", "slurm="])
+            argv[1:], "hd:n:r:l:i:o:c:p:e:a:s:", ["help", "dataset=", "name=", "lr=", "lambda=", "encoder-channels=", "decoder-channels=", "n-out-channels=", "additional-layers=", "n-epochs=", "data-augment-size=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -94,11 +94,8 @@ def arg_parser(argv):
             arg_additional_layers = int(arg)
         elif opt in ("-e", "--n-epochs"):
             arg_n_epochs = int(arg)           # Set the number of epochs
-        elif opt in ("-a", "--data-augment"):
-            if arg.lower() == "true":         # Check if the data augmentation is enabled
-                arg_augment = True            # Set the data augmentation flag
-            else:
-                arg_augment = False
+        elif opt in ("-a", "--data-augment-size"):
+                arg_augment_size = int(arg)            # Set the data augmentation batch size
         elif opt in ("-s", "--slurm"):
             if arg.lower() == "true":         # Check if the code is run on singularity
                 arg_slurm = True              # Set the singularity flag
@@ -114,11 +111,11 @@ def arg_parser(argv):
     print("Number of output channels: ", arg_n_out_channels)
     print("Number of additional layers: ", arg_additional_layers)
     print("Number of epochs: ", arg_n_epochs)
-    print("Data augmentation: ", arg_augment)
+    print("Data augmentation batch size: ", arg_augment_size)
     print("Slurm: ", arg_slurm)
     print()
 
-    return [dts_name, arg_model_name, arg_lr, arg_l, arg_encoder_channels, arg_decoder_channels, arg_n_out_channels, arg_additional_layers, arg_n_epochs, arg_augment, arg_slurm]
+    return [dts_name, arg_model_name, arg_lr, arg_l, arg_encoder_channels, arg_decoder_channels, arg_n_out_channels, arg_additional_layers, arg_n_epochs, arg_augment_size, arg_slurm]
 
 
 if __name__ == '__main__':
@@ -136,7 +133,7 @@ if __name__ == '__main__':
     additional_layers = args[7]  # Set the number of additional CNN layers
     n_epochs = args[8]           # Set the number of epochs
     augment = args[9]            # Set the data augmentation flag
-    slurm = args[10]              # Set the slurm flag
+    slurm = args[10]             # Set the slurm flag
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -151,10 +148,10 @@ if __name__ == '__main__':
         processed_dts_path = Path(__file__).parent.parent.parent.absolute(
         ) / f"datasets/{dts_name}/processed_data"
     # Load the train dataset
-    if augment:
+    if augment > 0:
         augment_dts_path = processed_dts_path.parent.absolute(
         ) / "augmented_data"  # Set the path to the augmented dataset
-        train_dts = torch.load(augment_dts_path / "augmented_train_dts.pt")
+        train_dts = torch.load(augment_dts_path / f"augmented_train_dts_{augment}.pt")
     else:
         train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")
     # Load the validation dataset

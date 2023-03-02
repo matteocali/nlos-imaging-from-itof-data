@@ -20,20 +20,20 @@ def arg_parser(argv):
             - list containing the input and output path
     """
 
-    arg_name = "dts"     # Argument containing the name of the dataset
-    arg_data_path = ""   # Argument containing the path where the raw data are located
-    arg_shuffle = True   # Argument containing the flag for shuffling the dataset
-    arg_bg_value = 0     # Argument containing the background value
-    arg_slurm = False    # Argument defining if the code will be run on slurm
-    arg_augment = False  # Argument defining if the dataset will be augmented
+    arg_name = "dts"      # Argument containing the name of the dataset
+    arg_data_path = ""    # Argument containing the path where the raw data are located
+    arg_shuffle = True    # Argument containing the flag for shuffling the dataset
+    arg_bg_value = 0      # Argument containing the background value
+    arg_slurm = False     # Argument defining if the code will be run on slurm
+    arg_augment_size = 0  # Argument defining if the dataset will be augmented
     # Help string
-    arg_help = "{0} -n <name> -i <input> -b <bg-value> -s <shuffle> -a <data-augment> -n <slurm>".format(
+    arg_help = "{0} -n <name> -i <input> -b <bg-value> -s <shuffle> -a <data-augment-size> -n <slurm>".format(
         argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(argv[1:], "hn:i:b:s:a:n:", [
-                                   "help", "name=", "input=", "bg-value=", "shuffle=", "data-augment=", "slurm="])
+                                   "help", "name=", "input=", "bg-value=", "shuffle=", "data-augment-size=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -50,11 +50,8 @@ def arg_parser(argv):
                 arg_shuffle = True
             else:
                 arg_shuffle = False
-        elif opt in ("-a", "--data-augment"):
-            if arg.lower() == "true":  # Check if the dataset will be augmented
-                arg_augment = True  # Set the data augmentation flag
-            else:
-                arg_augment = False
+        elif opt in ("-a", "--data-augment-size"):
+            arg_augment_size = int(arg)  # Set the data augmentation batch value
         elif opt in ("-s", "--slurm"):
             if arg.lower() == "true":  # Check if the code is run on slurm
                 arg_slurm = True  # Set the slurm flag
@@ -65,11 +62,11 @@ def arg_parser(argv):
     print("Input folder: ", arg_data_path)
     print("Background value: ", arg_bg_value)
     print("Shuffle: ", arg_shuffle)
-    print("Data augmentation: ", arg_augment)
+    print("Data augmentation batch size: ", arg_augment_size)
     print("Slurm: ", arg_slurm)
     print()
 
-    return [arg_name, arg_data_path, arg_bg_value, arg_shuffle, arg_augment, arg_slurm]
+    return [arg_name, arg_data_path, arg_bg_value, arg_shuffle, arg_augment_size, arg_slurm]
 
 
 if __name__ == '__main__':
@@ -152,11 +149,12 @@ if __name__ == '__main__':
             f"The total computation time for generating the dataset was {format_time(s_dts_time, f_dts_time)}\n")
 
     # Create the augmented dataset if required
-    if data_augment:
+    if data_augment > 0:
         # Defien the path to the augmented dataset
         augmented_data_path = processed_dts_path.parent.absolute() / "augmented_data"
+        augment_data_name = augmented_data_path / f"augmented_train_dts_{data_augment}.pt"
         # Check if the folder already exists and is not empty
-        if augmented_data_path.exists() and len(list(augmented_data_path.iterdir())) > 0:
+        if augment_data_name.exists():
             print("The augmented dataset already exists - skipping...\n")
         else:
             augmented_data_path.mkdir(parents=True, exist_ok=True)  # Create the folder
@@ -171,7 +169,7 @@ if __name__ == '__main__':
             # Augment the training dataset
             train_dts.augment_dts(batch_size=80)  # type: ignore
             # Save the augmented training dataset
-            torch.save(train_dts, augmented_data_path / "augmented_train_dts.pt")  # type: ignore
+            torch.save(train_dts, augment_data_name)  # type: ignore
             # End the timer for the dataset augmentation
             f_aug_time = time.time()
             print(f"The total computation time for generating the augmented dataset was {format_time(s_aug_time, f_aug_time)}\n")
