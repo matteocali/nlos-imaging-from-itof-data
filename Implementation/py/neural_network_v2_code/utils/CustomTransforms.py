@@ -28,15 +28,15 @@ class ItofNormalize(object):
         
         # Move the axis to have the channels as the second dimension instead of being the last one
         itof_data = torch.moveaxis(itof_data, 0, 2)
+        ampl_20 = itof_data[..., 0].unsqueeze(-1)
 
         v_a = torch.sqrt(torch.square(itof_data[..., 0]) + torch.square(itof_data[..., self.n_frequencies]))
         v_a = torch.unsqueeze(v_a, dim=-1)
         
         # Scale the iToF raw data
-        itof_data /= v_a
+        itof_data = itof_data / v_a
 
         # Add a dimension containing the amplitude at 20MHz that wil not be divided by v_ but just normalized on its own
-        ampl_20 = itof_data[..., 0].unsqueeze(-1)
         bounds = {"actual": {"lower": torch.min(ampl_20).item(), "upper": torch.max(ampl_20).item()}, "desired": {"lower": torch.min(itof_data).item(), "upper": torch.max(itof_data).item()}}
         ampl_20 = normalize(ampl_20, bounds)  # type: ignore
         itof_data = torch.concatenate((ampl_20, itof_data), dim=2)  # type: ignore

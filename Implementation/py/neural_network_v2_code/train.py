@@ -181,7 +181,7 @@ if __name__ == '__main__':
 
     # Print the model summary
     summary(model,
-            input_size=(batch_size, 6, 320, 240),
+            input_size=(batch_size, 7, 320, 240),
             device=str(device), mode="train")
     print()
 
@@ -195,8 +195,7 @@ if __name__ == '__main__':
     optimizer = Adam(model.parameters(), lr=lr)
 
     # Create the loss function
-    #depth_loss_fn = BalancedMAELoss(reduction="weight_mean")
-    depth_loss_fn = BalancedMAELoss(reduction="only_gt")
+    depth_loss_fn = BalancedMAELoss(reduction="weight_mean")
     mask_loss_fn = torch.nn.BCEWithLogitsLoss(
         reduction="mean", pos_weight=torch.Tensor([bg_obj_ratio]).to(device))
 
