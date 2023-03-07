@@ -43,7 +43,7 @@ class NlosTransientDataset(Dataset):
         [dim_x, dim_y, dim_t] = temp_data.shape  # type: ignore
         focal = hfov2focal(hdim=dim_x, hfov=60)  # Compute the focal length
 
-        itof_data = np.zeros((num_images, dim_x, dim_y, nf), dtype=np.float32)       # Create the iToF data tensor
+        itof_data = np.zeros((num_images, dim_x, dim_y, nf), dtype=np.float32)   # Create the iToF data tensor
         gt_alpha = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)            # Create the ground truth alpha map tensor
         gt_depth = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)            # Create the ground truth depth map tensor in radial coordinates
         gt_depth_cartesian = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)  # Create the ground truth depth map tensor in cartesian coordinates
