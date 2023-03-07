@@ -23,7 +23,7 @@ class ItofNormalize(object):
             dict: dictionary containing the normalized iToF data, the ground truth depth and the ground truth alpha
         """
 
-        itof_data, gt_depth, gt_mask = sample["itof_data"], sample["gt_depth"], sample["gt_mask"]
+        itof_data, gt_depth, gt_depth_cartesian, gt_mask = sample["itof_data"], sample["gt_depth"], sample["gt_depth_cartesian"], sample["gt_mask"]
 
         v_a = torch.sqrt(torch.square(itof_data[..., 0]) + torch.square(itof_data[..., self.n_frequencies]))
         v_a = torch.unsqueeze(v_a, dim=-1)
@@ -31,7 +31,7 @@ class ItofNormalize(object):
         # Scale the iToF raw data
         itof_data /= v_a
 
-        return {"itof_data": itof_data, "gt_depth": gt_depth, "gt_mask": gt_mask}
+        return {"itof_data": itof_data, "gt_depth": gt_depth, "gt_depth_cartesian": gt_depth_cartesian, "gt_mask": gt_mask}
 
 
 class ChangeBgValue(object):
@@ -61,12 +61,12 @@ class ChangeBgValue(object):
             - gt_alpha: ground truth alpha
         """
 
-        itof_data, gt_depth, gt_mask = sample["itof_data"], sample["gt_depth"], sample["gt_mask"]
+        itof_data, gt_depth, gt_depth_cartesian, gt_mask = sample["itof_data"], sample["gt_depth"], sample["gt_depth_cartesian"], sample["gt_mask"]
 
         # Change the background value from bg_value to target_value (for the gt_depth)
         gt_depth = torch.where(gt_depth == self.bg_value, self.target_value, gt_depth)
 
-        return {"itof_data": itof_data, "gt_depth": gt_depth, "gt_mask": gt_mask}
+        return {"itof_data": itof_data, "gt_depth": gt_depth, "gt_depth_cartesian": gt_depth_cartesian, "gt_mask": gt_mask}
 
 
 class RandomRotation(T.RandomRotation):
