@@ -68,8 +68,8 @@ class NlosTransientDataset(Dataset):
             itof_data[count, ...] = v
 
             # Add the gt depth and alpha map
-            gt_depth[count, ...] = temp_gt_depth
-            gt_depth_cartesian[count, ...] = depth_cartesian2radial(temp_gt_depth, focal)  # type: ignore
+            gt_depth_cartesian[count, ...] = temp_gt_depth
+            gt_depth[count, ...] = depth_cartesian2radial(temp_gt_depth, focal)  # type: ignore
             gt_alpha[count, ...] = temp_gt_alpha
 
             # Increment the counter
@@ -80,8 +80,8 @@ class NlosTransientDataset(Dataset):
 
         # Transform the data to torch tensors
         self.itof_data = torch.from_numpy(itof_data)
-        self.gt_depth_cartesian = torch.from_numpy(gt_depth)
-        self.gt_depth = torch.from_numpy(gt_depth_cartesian)
+        self.gt_depth_cartesian = torch.from_numpy(gt_depth_cartesian)
+        self.gt_depth = torch.from_numpy(gt_depth)
         self.gt_mask = torch.from_numpy(gt_alpha)
 
 
@@ -94,7 +94,7 @@ class NlosTransientDataset(Dataset):
         """
 
         # Create the sample
-        sample = {"itof_data": self.itof_data[index, ...], "gt_depth": self.gt_depth[index, ...], "gt_depth_cartesian": self.gt_depth_cartesian, "gt_mask": self.gt_mask[index, ...]}
+        sample = {"itof_data": self.itof_data[index, ...], "gt_depth": self.gt_depth[index, ...], "gt_depth_cartesian": self.gt_depth_cartesian[index, ...], "gt_mask": self.gt_mask[index, ...]}
 
         # Apply the transformation to the data
         if self.transform is not None:
@@ -106,7 +106,7 @@ class NlosTransientDataset(Dataset):
     def __len__(self) -> int:
         """
         Returns:
-            length (int): the length of the dataset
+            length (int): the length of the datasetuando vuoi
         """
         
         return self.itof_data.shape[0]
