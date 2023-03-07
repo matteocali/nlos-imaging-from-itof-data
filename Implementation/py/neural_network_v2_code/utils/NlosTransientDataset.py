@@ -7,7 +7,7 @@ from tqdm import tqdm
 from tqdm import tqdm
 from torch.utils.data import Dataset
 from pathlib import Path
-from utils.utils import phi_func, hfov2focal, depth_radial2cartesian, depth_cartesian2radial
+from utils.utils import phi_func, hfov2focal, depth_cartesian2radial
 
 
 class NlosTransientDataset(Dataset):
