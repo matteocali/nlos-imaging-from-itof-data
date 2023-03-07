@@ -181,3 +181,119 @@ def hard_thresholding(x: torch.Tensor, threshold_type: str = "round") -> torch.T
         return torch.where(x <= mid, 0., 1.)
     else:
         raise ValueError("Thresholding type not recognized")
+
+
+def hfov2focal(hdim: int, hfov: float) -> float:
+    """
+    Function used to convert the horizontal field of view to the focal length
+        param:
+            - hdim: horizontal dimension of the image (pixels)
+            - hfov: horizontal field of view (degrees)
+        return:
+            - focal length
+    """
+
+    return 0.5 * hdim / np.tan(0.5 * hfov * np.pi / 180)
+
+
+def depth_cartesian2radial(depth: torch.Tensor or np.ndarray, focal: float) -> torch.Tensor or np.ndarray:
+    """
+    Function used to convert the depth map from cartesian to radial coordinates
+        param:
+            - depth: depth map in cartesian coordinates
+            - focal: focal length of the camera
+        return:
+            - depth map in radial coordinates
+    """
+
+    if isinstance(depth, np.ndarray):
+        env = np
+    else:
+        env = torch
+
+    res_v = depth.shape[0]
+    res_h = depth.shape[1]
+    
+    axis_v = env.linspace(-res_v/2 + 1/2, res_v/2 - 1/2, res_v)
+    axis_h = env.linspace(-res_h/2 + 1/2, res_h/2 - 1/2, res_h)
+
+    conversion_matrix = env.zeros((res_v, res_h))
+    for i in range(res_v):
+        for j in range(res_h):
+            conversion_matrix[i, j] = 1 / env.sqrt(1 + (axis_v[i] / focal)**2 + (axis_h[j] / focal)**2)  # type: ignore
+
+    return depth / conversion_matrix
+
+
+def depth_radial2cartesian(depth: torch.Tensor or np.ndarray, focal: float) -> torch.Tensor or np.ndarray:
+    """
+    Function used to convert the depth map from radial to cartesian coordinates
+        param:
+            - depth: depth map in radial coordinates
+            - focal: focal length of the camera
+        return:
+            - depth map in cartesian coordinates
+    """
+
+    if isinstance(depth, np.ndarray):
+        env = np
+    else:
+        env = torch
+
+    res_v = depth.shape[0]
+    res_h = depth.shape[1]
+    axis_v = env.linspace(-res_v/2 + 1/2, res_v/2 - 1/2, res_v)
+    axis_h = env.linspace(-res_h/2 + 1/2, res_h/2 - 1/2, res_h)
+
+    conversion_matrix = env.zeros((res_v, res_h))
+    for i in range(res_v):
+        for j in range(res_h):
+            conversion_matrix[i, j] = env.sqrt(1 + (axis_v[i] / focal)**2 + (axis_h[j] / focal)**2)  # type: ignore
+
+    return depth * conversion_matrix
+
+
+# def depth_cartesian2radial(depth: torch.Tensor, focal: float, center: tuple[float, float]) -> torch.Tensor:
+#     """
+#     Function used to convert the depth map from cartesian to radial coordinates
+#         param:
+#             - depth: depth map in cartesian coordinates
+#             - focal: focal length of the camera
+#             - center: center of the image
+#         return:
+#             - depth map in radial coordinates
+#     """
+
+#     # Create the meshgrid
+#     x, y = torch.meshgrid(torch.arange(depth.shape[1]), torch.arange(depth.shape[0]))
+#     # Convert the meshgrid to radial coordinates
+#     x = (x - center[0]) / focal
+#     y = (y - center[1]) / focal
+#     # Compute the radius
+#     r = torch.sqrt(x ** 2 + y ** 2)
+#     # Compute the depth in radial coordinates
+#     depth_radial = depth * r
+#     return depth_radial
+
+
+# def depth_radial2cartesian(depth: torch.Tensor, focal: float, center: tuple[float, float]) -> torch.Tensor:
+#     """
+#     Function used to convert the depth map from radial to cartesian coordinates
+#         param:
+#             - depth: depth map in radial coordinates
+#             - focal: focal length of the camera
+#             - center: center of the image
+#         return:
+#             - depth map in cartesian coordinates
+#     """
+
+#     # Create the meshgrid
+#     x, y = torch.meshgrid(torch.arange(depth.shape[1]), torch.arange(depth.shape[0]))
+#     # Convert the meshgrid to radial coordinates
+#     x = (x - center[0]) / focal
+#     y = (y - center[1]) / focal
+#     # Compute the radius
+#     r = torch.sqrt(x ** 2 + y ** 2)
+#     # Compute the depth in cartesian coordinates
+#     depth_cartesian = depth / r
+#     return depth_cartesian

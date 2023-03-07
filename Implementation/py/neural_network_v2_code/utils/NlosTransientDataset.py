@@ -7,7 +7,7 @@ from tqdm import tqdm
 from tqdm import tqdm
 from torch.utils.data import Dataset
 from pathlib import Path
-from utils.utils import phi_func
+from utils.utils import phi_func, hfov2focal, depth_radial2cartesian, depth_cartesian2radial
 
 
 class NlosTransientDataset(Dataset):
@@ -39,12 +39,14 @@ class NlosTransientDataset(Dataset):
         # Load the first image to get the size of the images
         num_images = len(images)
         with h5.File(images[0], "r") as h:
-            temp_data = h["data"][:]            # type: ignore
-        [dim_x, dim_y, dim_t] = temp_data.shape # type: ignore
+            temp_data = h["data"][:]             # type: ignore
+        [dim_x, dim_y, dim_t] = temp_data.shape  # type: ignore
+        focal = hfov2focal(hdim=dim_x, hfov=60)  # Compute the focal length
 
-        itof_data = np.zeros((num_images, dim_x, dim_y, nf), dtype=np.float32)  # Create the iToF data tensor
-        gt_alpha = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)       # Create the ground truth alpha map tensor
-        gt_depth = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)       # Create the ground truth depth map tensor
+        itof_data = np.zeros((num_images, dim_x, dim_y, nf), dtype=np.float32)       # Create the iToF data tensor
+        gt_alpha = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)            # Create the ground truth alpha map tensor
+        gt_depth = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)            # Create the ground truth depth map tensor in radial coordinates
+        gt_depth_cartesian = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)  # Create the ground truth depth map tensor in cartesian coordinates
 
         names = []
         count = 0
@@ -67,6 +69,7 @@ class NlosTransientDataset(Dataset):
 
             # Add the gt depth and alpha map
             gt_depth[count, ...] = temp_gt_depth
+            gt_depth_cartesian[count, ...] = depth_cartesian2radial(temp_gt_depth, focal)  # type: ignore
             gt_alpha[count, ...] = temp_gt_alpha
 
             # Increment the counter
@@ -77,7 +80,8 @@ class NlosTransientDataset(Dataset):
 
         # Transform the data to torch tensors
         self.itof_data = torch.from_numpy(itof_data)
-        self.gt_depth = torch.from_numpy(gt_depth)
+        self.gt_depth_cartesian = torch.from_numpy(gt_depth)
+        self.gt_depth = torch.from_numpy(gt_depth_cartesian)
         self.gt_mask = torch.from_numpy(gt_alpha)
 
 
@@ -90,7 +94,7 @@ class NlosTransientDataset(Dataset):
         """
 
         # Create the sample
-        sample = {"itof_data": self.itof_data[index, ...], "gt_depth": self.gt_depth[index, ...], "gt_mask": self.gt_mask[index, ...]}
+        sample = {"itof_data": self.itof_data[index, ...], "gt_depth": self.gt_depth[index, ...], "gt_depth_cartesian": self.gt_depth_cartesian, "gt_mask": self.gt_mask[index, ...]}
 
         # Apply the transformation to the data
         if self.transform is not None:
@@ -157,11 +161,12 @@ class NlosTransientDataset(Dataset):
             for index in tqdm(indices[i], desc=f"Applying {key}", total=batch_size, leave=False):
                 # Extract the sample
                 itof_data = self.itof_data[index, ...].unsqueeze(0)
+                gt_depth_cartesian = self.gt_depth_cartesian[index, ...].unsqueeze(0)
                 gt_depth = self.gt_depth[index, ...].unsqueeze(0)
                 gt_mask = self.gt_mask[index, ...].unsqueeze(0)
 
                 # Concatenate all the data before applying the transform in order to apply the exact same traasformation to all the data
-                data = torch.cat((itof_data, gt_depth.unsqueeze(0), gt_mask.unsqueeze(0)), dim=1)
+                data = torch.cat((itof_data, gt_depth_cartesian.unsqueeze(0), gt_depth.unsqueeze(0), gt_mask.unsqueeze(0)), dim=1)
 
                 # Apply the transform
                 data = transform(data)
@@ -169,10 +174,12 @@ class NlosTransientDataset(Dataset):
                 # Extract the data from the transformed tensor
                 itof_data = data[0, 0:6, ...].unsqueeze(0)
                 if key != "random noise":  # The noise transform does not change the ground truth
-                    gt_depth = data[0, 6, ...].unsqueeze(0)
-                    gt_mask = data[0, 7, ...].unsqueeze(0)
+                    gt_depth_cartesian = data[0, 6, ...].unsqueeze(0)
+                    gt_depth = data[0, 7, ...].unsqueeze(0)
+                    gt_mask = data[0, 8, ...].unsqueeze(0)
 
                 # Update the dataset
                 self.itof_data = torch.cat((self.itof_data, itof_data), dim=0)
+                self.gt_depth_cartesian = torch.cat((self.gt_depth_cartesian, gt_depth_cartesian), dim=0)
                 self.gt_depth = torch.cat((self.gt_depth, gt_depth), dim=0)
                 self.gt_mask = torch.cat((self.gt_mask, gt_mask), dim=0)
