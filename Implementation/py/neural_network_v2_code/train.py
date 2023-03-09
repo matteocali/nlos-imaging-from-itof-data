@@ -218,7 +218,7 @@ if __name__ == '__main__':
     optimizer = Adam(model.parameters(), lr=lr)
 
     # Create the loss function
-    depth_loss_fn = BalancedMAELoss(reduction="mean")
+    depth_loss_fn = BalancedMAELoss(reduction="weight_mean")
     mask_loss_fn = torch.nn.BCEWithLogitsLoss(
         reduction="mean", pos_weight=torch.Tensor([bg_obj_ratio]).to(device))
 
