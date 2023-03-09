@@ -31,9 +31,7 @@ def arg_parser(argv):
     # Argument defining the lambda parameter
     arg_l = 0.2
     # Argument defining the encoder channels
-    arg_encoder_channels = (6, 16, 32, 64, 128, 256)
-    # Argument defining the decoder channels
-    arg_decoder_channels = (256, 128, 64, 32, 16)
+    arg_encoder_channels = (16, 32, 64, 128, 256)
     # Argument defining the number of the u-net output channels
     arg_n_out_channels = 16
     # Argument defining the number of additional CNN layers
@@ -45,13 +43,13 @@ def arg_parser(argv):
     # Argument defining if the code will be run on slurm
     arg_slurm = False
     # Help string
-    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -i <encoder-channels>, -o <decoder-channels>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -a <data-augment-size>, -s <slurm>".format(
+    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -i <encoder-channels>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -a <data-augment-size>, -s <slurm>".format(
         argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(
-            argv[1:], "hd:n:r:l:i:o:c:p:e:a:s:", ["help", "dataset=", "name=", "lr=", "lambda=", "encoder-channels=", "decoder-channels=", "n-out-channels=", "additional-layers=", "n-epochs=", "data-augment-size=", "slurm="])
+            argv[1:], "hd:n:r:l:i:c:p:e:a:s:", ["help", "dataset=", "name=", "lr=", "lambda=", "encoder-channels=", "n-out-channels=", "additional-layers=", "n-epochs=", "data-augment-size=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -73,18 +71,8 @@ def arg_parser(argv):
                 arg_encoder_channels = tuple(
                     int(x) for x in arg.split(",")
                 )                            # Set the encoder channels
-            if len(arg_encoder_channels) != 6:
+            if len(arg_encoder_channels) != 5:
                 print("The encoder channels must be a tuple of 6 integers")
-                sys.exit(2)
-        elif opt in ("-o", "--decoder-channels"):
-            arg_decoder_channels = tuple(
-                int(x) for x in arg.split(", "))  # Set the decoder channels
-            if len(arg_decoder_channels) == 0:
-                arg_decoder_channels = tuple(
-                    int(x) for x in arg.split(",")
-                )                                 # Set the decoder channels
-            if len(arg_decoder_channels) != 5:
-                print("The decoder channels must be a tuple of 5 integers")
                 sys.exit(2)
         elif opt in ("-c", "--n-out-channels"):
             # Set the number of the u-net output channels
@@ -95,7 +83,8 @@ def arg_parser(argv):
         elif opt in ("-e", "--n-epochs"):
             arg_n_epochs = int(arg)           # Set the number of epochs
         elif opt in ("-a", "--data-augment-size"):
-                arg_augment_size = int(arg)            # Set the data augmentation batch size
+            # Set the data augmentation batch size
+            arg_augment_size = int(arg)
         elif opt in ("-s", "--slurm"):
             if arg.lower() == "true":         # Check if the code is run on singularity
                 arg_slurm = True              # Set the singularity flag
@@ -107,7 +96,6 @@ def arg_parser(argv):
     print("Learning rate: ", arg_lr)
     print("Lambda: ", arg_l)
     print("Encoder channels: ", arg_encoder_channels)
-    print("Decoder channels: ", arg_decoder_channels)
     print("Number of output channels: ", arg_n_out_channels)
     print("Number of additional layers: ", arg_additional_layers)
     print("Number of epochs: ", arg_n_epochs)
@@ -115,7 +103,7 @@ def arg_parser(argv):
     print("Slurm: ", arg_slurm)
     print()
 
-    return [dts_name, arg_model_name, arg_lr, arg_l, arg_encoder_channels, arg_decoder_channels, arg_n_out_channels, arg_additional_layers, arg_n_epochs, arg_augment_size, arg_slurm]
+    return [dts_name, arg_model_name, arg_lr, arg_l, arg_encoder_channels, arg_n_out_channels, arg_additional_layers, arg_n_epochs, arg_augment_size, arg_slurm]
 
 
 if __name__ == '__main__':
@@ -128,12 +116,11 @@ if __name__ == '__main__':
     lr = args[2]                 # Set the learning rate
     l = args[3]                  # Set the lambda parameter
     encoder_channels = args[4]   # Set the encoder channels
-    decoder_channels = args[5]   # Set the decoder channels
-    n_out_channels = args[6]     # Set the number of the u-net output channels
-    additional_layers = args[7]  # Set the number of additional CNN layers
-    n_epochs = args[8]           # Set the number of epochs
-    augment = args[9]            # Set the data augmentation flag
-    slurm = args[10]             # Set the slurm flag
+    n_out_channels = args[5]     # Set the number of the u-net output channels
+    additional_layers = args[6]  # Set the number of additional CNN layers
+    n_epochs = args[7]           # Set the number of epochs
+    augment = args[8]            # Set the data augmentation flag
+    slurm = args[9]              # Set the slurm flag
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -151,7 +138,8 @@ if __name__ == '__main__':
     if augment > 0:
         augment_dts_path = processed_dts_path.parent.absolute(
         ) / "augmented_data"  # Set the path to the augmented dataset
-        train_dts = torch.load(augment_dts_path / f"augmented_train_dts_{augment}.pt")
+        train_dts = torch.load(
+            augment_dts_path / f"augmented_train_dts_{augment}.pt")
     else:
         train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")
     # Load the validation dataset
@@ -168,10 +156,21 @@ if __name__ == '__main__':
     bg_obj_ratio = train_dts.get_bg_obj_ratio()
 
     # Create the network state folder
-    # Set the path to the network state folder  # type: ignore
+    # Set the path to the network state folder
     net_state_path = Path(__file__).parent.absolute() / "net_state"
     # Create the network state folder
     net_state_path.mkdir(parents=True, exist_ok=True)
+
+    # Get input dimensions
+    dims = [train_dts[0]["itof_data"].shape[0],
+            train_dts[0]["itof_data"].shape[1],
+            train_dts[0]["itof_data"].shape[2]]
+
+    # Set the decoder channels as the reversed encoder channels
+    decoder_channels = encoder_channels[::-1]
+
+    # Add the input channels to the encoder channels
+    encoder_channels = (dims[0], *encoder_channels)
 
     # Create the model
     model = NlosNet(enc_channels=encoder_channels,
@@ -180,9 +179,9 @@ if __name__ == '__main__':
                     additional_cnn_layers=additional_layers).to(device)  # Create the model and move it to the device
 
     # Print the model summary
-    summary(model,
-            input_size=(batch_size, 7, 320, 240),
-            device=str(device), mode="train")
+    net_summary = summary(model,
+                          input_size=(batch_size, dims[0], dims[1], dims[2]),
+                          device=str(device), mode="train")
     print()
 
     # Print the info on the dataset
@@ -191,11 +190,35 @@ if __name__ == '__main__':
     print("Ratio between bg and obj pixels: ", round(bg_obj_ratio, 2))
     print()
 
+    # Save the info on the training on a log file
+    with open(net_state_path / f"{args[1]}_log.txt", "w") as f:
+        f.write("--- ATTEMPT AND NETWORK SETUP DATA ---\n")
+        f.write("Dataset: " + dts_name + "\n")
+        f.write("Model name: " + args[1] + "\n")
+        f.write("Learning rate: " + str(lr) + "\n")
+        f.write("Lambda: " + str(l) + "\n")
+        f.write("Encoder channels: " + str(encoder_channels) + "\n")
+        f.write("Decoder channels: " + str(decoder_channels) + "\n")
+        f.write("Number of output channels: " + str(n_out_channels) + "\n")
+        f.write("Number of additional CNN layers: " +
+                str(additional_layers) + "\n")
+        f.write("Number of epochs: " + str(n_epochs) + "\n")
+        f.write("Data augmentation: " + str(augment) + "\n")
+        f.write("Device: " + str(device) + "\n\n\n")
+        f.write("--- NETWORK SUMMARY ---\n")
+        f.write(str(net_summary) + "\n\n\n")
+        f.write("--- DATASET SUMMARY ---\n")
+        f.write("Train dataset size: " + str(len(train_dts)) + "\n")
+        f.write("Validation dataset size: " + str(len(val_dts)) + "\n")
+        f.write("Ratio between bg and obj pixels: " +
+                str(round(bg_obj_ratio, 2)) + "\n\n\n")
+        f.write("--- TRAINING SUMMARY ---\n")
+
     # Create the optimizer
     optimizer = Adam(model.parameters(), lr=lr)
 
     # Create the loss function
-    depth_loss_fn = BalancedMAELoss(reduction="weight_mean")
+    depth_loss_fn = BalancedMAELoss(reduction="mean")
     mask_loss_fn = torch.nn.BCEWithLogitsLoss(
         reduction="mean", pos_weight=torch.Tensor([bg_obj_ratio]).to(device))
 

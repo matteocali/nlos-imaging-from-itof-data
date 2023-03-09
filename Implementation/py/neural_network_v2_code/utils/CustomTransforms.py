@@ -71,6 +71,7 @@ class ChangeBgValue(object):
         return:
             - itof_data: iToF data
             - gt_depth: ground truth depth
+            - gt_depth_cartesian: ground truth depth in cartesian coordinates
             - gt_alpha: ground truth alpha
         """
 
@@ -78,6 +79,7 @@ class ChangeBgValue(object):
 
         # Change the background value from bg_value to target_value (for the gt_depth)
         gt_depth = torch.where(gt_depth == self.bg_value, self.target_value, gt_depth)
+        gt_depth_cartesian = torch.where(gt_depth_cartesian == self.bg_value, self.target_value, gt_depth_cartesian)
 
         return {"itof_data": itof_data, "gt_depth": gt_depth, "gt_depth_cartesian": gt_depth_cartesian, "gt_mask": gt_mask}
 

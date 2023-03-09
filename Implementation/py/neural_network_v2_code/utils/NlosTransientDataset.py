@@ -134,8 +134,8 @@ class NlosTransientDataset(Dataset):
             - random rotations
             - random translations
             - horizzontal flip
-            - vertical_flip
-            - random noise
+            - vertical flip
+            - gaussian random noise
         to a random group of elements (of size batch size) sampled at random.
 
         params:

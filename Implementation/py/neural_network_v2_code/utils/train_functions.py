@@ -32,7 +32,7 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
     epoch_loss = []  # Initialize the list that will contain the loss for each batch
 
     # Set the network in training mode
-    net.train()
+    net.train(True)
 
     for batch in data_loader:
         # Get the input and the targetcc
@@ -71,6 +71,9 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         # Append the loss
         epoch_loss.append([loss.item(), depth_loss.item(), mask_loss.item()])
 
+    # Disable the training mode
+    net.train(False)
+
     # Return the average loss over al the batches
     return tuple([float(np.mean(loss)) for loss in zip(*epoch_loss)])
 
@@ -91,7 +94,7 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, depth_loss_fn: torch.n
     
     epoch_loss = []
 
-    # Initialize the last gt_depth and the last_pred depth
+    # Initialize the last_gt and the last_pred depth
     last_gt = tuple(np.empty((1, 1)))
     last_pred = tuple(np.empty((1, 1)))
 
@@ -128,7 +131,7 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, depth_loss_fn: torch.n
 
             # Update the last gt_depth and the last predicted depth
             last_gt = (gt_depth_cartesian.to("cpu").numpy()[-1, ...], gt_mask.to("cpu").numpy()[-1, ...])
-            last_pred = (depth_radial2cartesian(masked_depth.to("cpu").numpy()[-1, ...], hfov2focal(hdim=gt_depth.shape[1], hfov=60)), torch.sigmoid(mask).to("cpu").numpy()[-1, ...])
+            last_pred = (depth_radial2cartesian(masked_depth.to("cpu").numpy()[-1, ...], hfov2focal(hdim=gt_depth.shape[1], hfov=60)), torch.where(torch.sigmoid(mask) > 0.5, 1, 0).to("cpu").numpy()[-1, ...])
 
     # Return the average loss over al the batches
     return tuple([float(np.mean(loss)) for loss in zip(*epoch_loss)]), last_gt, last_pred  # type: ignore
