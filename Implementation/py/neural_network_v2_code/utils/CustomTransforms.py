@@ -5,7 +5,41 @@ from utils.utils import normalize
 
 class ItofNormalize(object):
     """
-    Transformation class to normalize the iToF data with the amplitude at 20MHz
+    Transformation class to normalize the iToF data dividing by the amplitude at 20MHz.
+    """
+
+    def __init__(self, n_freq: int):
+        """
+        Args:
+            n_freq (int): number of frequencies used by the iToF sensor
+        """
+
+        self.n_frequencies = n_freq  # Number of frequencies used by the iToF sensor
+
+    def __call__(self, sample: dict):
+        """
+        Args:
+            sample (dict): dictionary containing the iToF data, the ground truth depth and the ground truth alpha
+        Returns:
+            dict: dictionary containing the normalized iToF data, the ground truth depth and the ground truth alpha
+        """
+
+        itof_data, gt_depth, gt_depth_cartesian, gt_mask = sample["itof_data"], sample["gt_depth"], sample["gt_depth_cartesian"], sample["gt_mask"]
+
+        # Compute the normalization factor for the iToF data
+        v_a = torch.sqrt(torch.square(itof_data[0, ...]) + torch.square(itof_data[self.n_frequencies, ...]))
+        v_a = v_a.unsqueeze(0)
+        
+        # Scale the iToF raw data
+        itof_data = itof_data / v_a
+
+        return {"itof_data": itof_data, "gt_depth": gt_depth, "gt_depth_cartesian": gt_depth_cartesian, "gt_mask": gt_mask}
+
+
+class ItofNormalizeWithAddLayer(object):
+    """
+    Transformation class to normalize the iToF data dividing by the amplitude at 20MHz.
+    Other than that it also add at the beginning of the iToF data the amplitude at 20MHz normalized on its own.
     """
 
     def __init__(self, n_freq: int):
@@ -26,23 +60,20 @@ class ItofNormalize(object):
 
         itof_data, gt_depth, gt_depth_cartesian, gt_mask = sample["itof_data"], sample["gt_depth"], sample["gt_depth_cartesian"], sample["gt_mask"]
         
-        # Move the axis to have the channels as the second dimension instead of being the last one
-        itof_data = torch.moveaxis(itof_data, 0, 2)
-        ampl_20 = itof_data[..., 0].unsqueeze(-1)
+        # Extract the amplitude at 20MHz
+        ampl_20 = itof_data[0, ...].unsqueeze(0)
 
-        v_a = torch.sqrt(torch.square(itof_data[..., 0]) + torch.square(itof_data[..., self.n_frequencies]))
-        v_a = torch.unsqueeze(v_a, dim=-1)
+        # Compute the normalization factor for the iToF data
+        v_a = torch.sqrt(torch.square(itof_data[0, ...]) + torch.square(itof_data[self.n_frequencies, ...]))
+        v_a = v_a.unsqueeze(0)
         
         # Scale the iToF raw data
         itof_data = itof_data / v_a
 
-        # Add a dimension containing the amplitude at 20MHz that wil not be divided by v_ but just normalized on its own
+        # Add a dimension containing the amplitude at 20MHz that will not be divided by v_a but just normalized on its own
         bounds = {"actual": {"lower": torch.min(ampl_20).item(), "upper": torch.max(ampl_20).item()}, "desired": {"lower": torch.min(itof_data).item(), "upper": torch.max(itof_data).item()}}
         ampl_20 = normalize(ampl_20, bounds)  # type: ignore
-        itof_data = torch.concatenate((ampl_20, itof_data), dim=2)  # type: ignore
-
-        # Move the axis to have the channels as the second dimension instead of being the last one
-        itof_data = torch.moveaxis(itof_data, 2, 0)
+        itof_data = torch.cat((ampl_20, itof_data), dim=0)  # type: ignore
 
         return {"itof_data": itof_data, "gt_depth": gt_depth, "gt_depth_cartesian": gt_depth_cartesian, "gt_mask": gt_mask}
 

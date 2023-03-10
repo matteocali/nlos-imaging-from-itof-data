@@ -6,7 +6,7 @@ import torch
 from pathlib import Path
 from utils.dts_splitter import dts_splitter
 from utils.NlosTransientDataset import NlosTransientDataset
-from utils.CustomTransforms import ItofNormalize, ChangeBgValue
+from utils.CustomTransforms import ItofNormalize, ItofNormalizeWithAddLayer, ChangeBgValue
 from utils.utils import format_time, send_email
 from torchvision.transforms import Compose
 
@@ -20,20 +20,21 @@ def arg_parser(argv):
             - list containing the input and output path
     """
 
-    arg_name = "dts"      # Argument containing the name of the dataset
-    arg_data_path = ""    # Argument containing the path where the raw data are located
-    arg_shuffle = True    # Argument containing the flag for shuffling the dataset
-    arg_bg_value = 0      # Argument containing the background value
-    arg_slurm = False     # Argument defining if the code will be run on slurm
-    arg_augment_size = 0  # Argument defining if the dataset will be augmented
+    arg_name = "dts"       # Argument containing the name of the dataset
+    arg_data_path = ""     # Argument containing the path where the raw data are located
+    arg_shuffle = True     # Argument containing the flag for shuffling the dataset
+    arg_bg_value = 0       # Argument containing the background value
+    arg_add_layer = False  # Argument defining if the iToF data will contains an additional 20MHz layer
+    arg_slurm = False      # Argument defining if the code will be run on slurm
+    arg_augment_size = 0   # Argument defining if the dataset will be augmented
     # Help string
-    arg_help = "{0} -n <name> -i <input> -b <bg-value> -s <shuffle> -a <data-augment-size> -n <slurm>".format(
+    arg_help = "{0} -n <name> -i <input> -b <bg-value> -s <shuffle> -l <add-layer> -a <data-augment-size> -n <slurm>".format(
         argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:i:b:s:a:n:", [
-                                   "help", "name=", "input=", "bg-value=", "shuffle=", "data-augment-size=", "slurm="])
+        opts, args = getopt.getopt(argv[1:], "hn:i:b:s:l:a:n:", [
+                                   "help", "name=", "input=", "bg-value=", "shuffle=", "add-layer=", "data-augment-size=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -50,6 +51,11 @@ def arg_parser(argv):
                 arg_shuffle = True
             else:
                 arg_shuffle = False
+        elif opt in ("-l", "--add-layer"):
+            if arg.lower() == "true":  # Set the add_layer flag
+                arg_add_layer = True   
+            else:
+                arg_add_layer = False
         elif opt in ("-a", "--data-augment-size"):
             arg_augment_size = int(arg)  # Set the data augmentation batch value
         elif opt in ("-s", "--slurm"):
@@ -62,11 +68,12 @@ def arg_parser(argv):
     print("Input folder: ", arg_data_path)
     print("Background value: ", arg_bg_value)
     print("Shuffle: ", arg_shuffle)
+    print("Add layer: ", arg_add_layer)
     print("Data augmentation batch size: ", arg_augment_size)
     print("Slurm: ", arg_slurm)
     print()
 
-    return [arg_name, arg_data_path, arg_bg_value, arg_shuffle, arg_augment_size, arg_slurm]
+    return [arg_name, arg_data_path, arg_bg_value, arg_shuffle, arg_add_layer, arg_augment_size, arg_slurm]
 
 
 if __name__ == '__main__':
@@ -74,8 +81,9 @@ if __name__ == '__main__':
     torch.manual_seed(20797710)  # Set torch random seed
     args = arg_parser(sys.argv)  # Parse the input arguments
     bg_value = args[2]           # Get the background value
-    data_augment = args[4]       # Get the data augmentation flag
-    slurm = args[5]              # Get the slurm flag
+    add_layer = args[4]          # Get the add_layer flag
+    data_augment = args[5]       # Get the data augmentation flag
+    slurm = args[6]              # Get the slurm flag
 
     # Check if the dataset has alreay been splitted
     if not slurm:
@@ -120,11 +128,14 @@ if __name__ == '__main__':
         s_dts_time = time.time()
 
         # Define the transforms to apply to the dataset
-        if bg_value != 0:
-            transforms = Compose(
-                [ItofNormalize(n_freq=3), ChangeBgValue(0, bg_value)])
+        transforms_elm = []
+        if not add_layer:
+            transforms_elm.append(ItofNormalize(n_freq=3))
         else:
-            transforms = Compose([ItofNormalize(n_freq=3)])
+            transforms_elm.append(ItofNormalizeWithAddLayer(n_freq=3))
+        if bg_value != 0:
+            transforms_elm.append(ChangeBgValue(0, bg_value))
+        transforms = Compose(transforms_elm)
 
         # Create and save the datasets
         print("Creating the training dataset...")
