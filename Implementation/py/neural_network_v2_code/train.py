@@ -134,7 +134,7 @@ if __name__ == '__main__':
         # Set the path to the processed datasets
         processed_dts_path = Path(__file__).parent.parent.parent.absolute(
         ) / f"datasets/{dts_name}/processed_data"
-    # Load the train dataset
+    # Load the augmented dataset
     if augment > 0:
         augment_dts_path = processed_dts_path.parent.absolute(
         ) / "augmented_data"  # Set the path to the augmented dataset

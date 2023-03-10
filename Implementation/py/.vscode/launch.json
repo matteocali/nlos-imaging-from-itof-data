@@ -47,8 +47,12 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/test.py",
             "args": [
-                "--dts-name", "fixed_camera_diffuse_wall",
-                "--model", "test_custom_fixed_depth_only_model_lr_0.0001_l_0.5_ochannel_8_aug_False",
+                "--dts-name", "fixed_camera_diffuse_wall_add_layer",
+                "--model", "test_new_bce_radial_depth_add_layer_bal_loss_aug_model_lr_0.0001_l_0.5_ochannel_16_addlayers_0_aug_100",
+                "--lr", "0.0001",
+                "--encoder-channels", "32, 64, 128, 256, 512",
+                "--n-out-channels", "16",
+                "--additional-layers", "0",
                 "--bg-value", "0"],
             "console": "integratedTerminal",
             "justMyCode": true

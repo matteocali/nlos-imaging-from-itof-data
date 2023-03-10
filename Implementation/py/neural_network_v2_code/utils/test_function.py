@@ -4,7 +4,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from pathlib import Path
-from utils.utils import save_test_plots, hard_thresholding
+from utils.utils import save_test_plots, depth_radial2cartesian, hfov2focal
 
 
 def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, device: torch.device, out_path: Path, bg: int = 0) -> None:
@@ -28,33 +28,34 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
     with torch.no_grad():
         for i, sample in tqdm(enumerate(data_loader), desc="Testing", total=len(data_loader)):
             # Get the input and the target
-            itof_data = sample["itof_data"].to(device)  # Extract the input itof data
-            gt_depth = sample["gt_depth"].to(device)    # Extract the ground truth depth
-            gt_mask = sample["gt_mask"].to(device)      # Extract the ground truth mask
+            itof_data = sample["itof_data"].to(device)                    # Extract the input itof data
+            gt_depth_cartesian = sample["gt_depth_cartesian"].to(device)  # Extract the ground truth depth
+            gt_depth = sample["gt_depth"].to(device)                      # Extract the ground truth depth
+            gt_mask = sample["gt_mask"].to(device)                        # Extract the ground truth mask
 
             # Forward pass
             depth, mask = net(itof_data)
 
-            # Force the mask to assume only value 0 or 1
-            mask = torch.where(mask > 0.5, 1, 0)
-            #mask = hard_thresholding(mask, threshold_type="mid_value")
+            # Force the mask to assume only value 0 or 1
+            mask = torch.where(torch.sigmoid(mask) > 0.5, 1, 0)
+            # Compute the masked depth (create correlation bertween the depth and the mask)
+            depth = depth * mask
 
             # Change the background value if needed
             if bg != 0:
                 depth = torch.where(depth == bg, 0, depth)
                 gt_depth = torch.where(gt_depth == bg, 0, gt_depth)
 
-            # Apply the mask to the depth
-            depth = depth * mask
-
             # Compute the loss
-            depth_loss = loss_fn(depth, gt_depth, gt_mask)  # Compute the loss over the depth
-            mask_loss = loss_fn(mask, gt_mask, gt_mask)     # Compute the loss over the mask
+            depth_loss = loss_fn(depth, gt_depth)  # Compute the loss over the depth
+            mask_loss = loss_fn(mask, gt_mask)     # Compute the loss over the mask
 
             # Extract the data
             t_depth = depth.unsqueeze(0).to("cpu")
+            t_depth = depth_radial2cartesian(t_depth, hfov2focal(hdim=gt_depth.shape[1], hfov=60))  # Convert the depth from radial to cartesian coordinates
             depth = depth.squeeze(0).to("cpu").numpy()
-            gt_depth = gt_depth.squeeze(0).to("cpu").numpy()
+            depth = depth_radial2cartesian(depth, hfov2focal(hdim=gt_depth.shape[1], hfov=60))      # Convert the depth from radial to cartesian coordinates
+            gt_depth_cartesian = gt_depth_cartesian.squeeze(0).to("cpu").numpy()
             t_mask = mask.unsqueeze(0).to("cpu")
             mask = mask.squeeze(0).to("cpu").numpy()
             gt_mask = gt_mask.squeeze(0).to("cpu").numpy()
@@ -65,7 +66,7 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
 
             # Save the plots
             save_test_plots(
-                (gt_depth, depth), 
+                (gt_depth_cartesian, depth),  # type: ignore
                 (gt_mask, mask), 
                 (depth_loss.item(), mask_loss.item()), 
                 i,
