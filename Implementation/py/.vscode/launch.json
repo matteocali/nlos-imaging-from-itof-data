@@ -34,8 +34,8 @@
                 "--encoder-channels", "32, 64, 128, 256, 512",
                 "--n-out-channels", "16",
                 "--additional-layers", "0",
-                "--n-epochs", "3000",
-                "--data-augment", "0",
+                "--n-epochs", "2000",
+                "--data-augment", "100",
                 "--slurm", "False"],
             "console": "integratedTerminal",
             "justMyCode": true

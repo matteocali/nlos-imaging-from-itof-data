@@ -19,7 +19,6 @@ class BalancedMAELoss(torch.nn.Module):
         self.reduction = reduction
         if pos_weight is not None:
             self.pos_weight = pos_weight
-            self.reduction = "mean"
             reduction = "none"
         elif reduction == "weight_mean" or reduction == "only_gt":
             reduction = "none"
