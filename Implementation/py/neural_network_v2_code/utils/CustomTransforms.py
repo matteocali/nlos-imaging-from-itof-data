@@ -1,10 +1,11 @@
 import torch
 import torchvision.transforms as T
+from utils.utils import normalize
 
 
 class ItofNormalize(object):
     """
-    Transformation class to normalize the iToF data with the amplitude at 20MHz
+    Transformation class to normalize the iToF data dividing by the amplitude at 20MHz.
     """
 
     def __init__(self, n_freq: int):
@@ -23,15 +24,53 @@ class ItofNormalize(object):
             dict: dictionary containing the normalized iToF data, the ground truth depth and the ground truth alpha
         """
 
-        itof_data, gt_depth, gt_mask = sample["itof_data"], sample["gt_depth"], sample["gt_mask"]
+        itof_data, gt_depth, gt_depth_cartesian, gt_mask = sample["itof_data"], sample["gt_depth"], sample["gt_depth_cartesian"], sample["gt_mask"]
 
-        v_a = torch.sqrt(torch.square(itof_data[..., 0]) + torch.square(itof_data[..., self.n_frequencies]))
-        v_a = torch.unsqueeze(v_a, dim=-1)
+        # Compute the normalization factor for the iToF data
+        v_a = torch.sqrt(torch.square(itof_data[0, ...]) + torch.square(itof_data[self.n_frequencies, ...]))
+        v_a = v_a.unsqueeze(0)
         
         # Scale the iToF raw data
-        itof_data /= v_a
+        itof_data = itof_data / v_a
 
-        return {"itof_data": itof_data, "gt_depth": gt_depth, "gt_mask": gt_mask}
+        return {"itof_data": itof_data, "gt_depth": gt_depth, "gt_depth_cartesian": gt_depth_cartesian, "gt_mask": gt_mask}
+
+
+class ItofNormalizeWithAddLayer(object):
+    """
+    Transformation class to normalize the iToF data dividing by the amplitude at 20MHz.
+    Other than that it also add at the beginning of the iToF data the amplitude at 20MHz normalized on its own.
+    """
+
+    def __init__(self, n_freq: int):
+        """
+        Args:
+            n_freq (int): number of frequencies used by the iToF sensor
+        """
+
+        self.n_frequencies = n_freq  # Number of frequencies used by the iToF sensor
+
+    def __call__(self, sample: dict):
+        """
+        Args:
+            sample (dict): dictionary containing the iToF data, the ground truth depth and the ground truth alpha
+        Returns:
+            dict: dictionary containing the normalized iToF data, the ground truth depth and the ground truth alpha
+        """
+
+        itof_data, gt_depth, gt_depth_cartesian, gt_mask = sample["itof_data"], sample["gt_depth"], sample["gt_depth_cartesian"], sample["gt_mask"]
+        
+        # Compute the amplitude at 20MHz (normalization factor for the iToF data)
+        ampl_20 = torch.sqrt(torch.square(itof_data[0, ...]) + torch.square(itof_data[self.n_frequencies, ...])).unsqueeze(0)
+        
+        # Scale the iToF raw data
+        itof_data = itof_data / ampl_20
+        
+        # Add a dimension containing the amplitude at 20MHz rescaled by 10e9
+        ampl_20 = ampl_20 / 10e9  # Rescale the amplitude at 20MHz
+        itof_data = torch.cat((ampl_20, itof_data), dim=0)  # type: ignore
+
+        return {"itof_data": itof_data, "gt_depth": gt_depth, "gt_depth_cartesian": gt_depth_cartesian, "gt_mask": gt_mask}
 
 
 class ChangeBgValue(object):
@@ -58,15 +97,17 @@ class ChangeBgValue(object):
         return:
             - itof_data: iToF data
             - gt_depth: ground truth depth
+            - gt_depth_cartesian: ground truth depth in cartesian coordinates
             - gt_alpha: ground truth alpha
         """
 
-        itof_data, gt_depth, gt_mask = sample["itof_data"], sample["gt_depth"], sample["gt_mask"]
+        itof_data, gt_depth, gt_depth_cartesian, gt_mask = sample["itof_data"], sample["gt_depth"], sample["gt_depth_cartesian"], sample["gt_mask"]
 
         # Change the background value from bg_value to target_value (for the gt_depth)
         gt_depth = torch.where(gt_depth == self.bg_value, self.target_value, gt_depth)
+        gt_depth_cartesian = torch.where(gt_depth_cartesian == self.bg_value, self.target_value, gt_depth_cartesian)
 
-        return {"itof_data": itof_data, "gt_depth": gt_depth, "gt_mask": gt_mask}
+        return {"itof_data": itof_data, "gt_depth": gt_depth, "gt_depth_cartesian": gt_depth_cartesian, "gt_mask": gt_mask}
 
 
 class RandomRotation(T.RandomRotation):

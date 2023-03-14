@@ -8,15 +8,19 @@ class BalancedMAELoss(torch.nn.Module):
     Given a mask will average the absolute error of the masked pixels and the bg.
     """
 
-    def __init__(self, reduction: str = "none"):
+    def __init__(self, reduction: str = "none", pos_weight: torch.Tensor or None = None):  # type: ignore
         """
         Args:
             reduction (str): reduction method (mean, sum, weight_mean, only_gt, none)
+            pos_weight (torch.Tensor or None): weight to be applied to pixel corresponding to the positive class
         """
 
         super().__init__()
         self.reduction = reduction
-        if reduction == "weight_mean" or reduction == "only_gt":
+        if pos_weight is not None:
+            self.pos_weight = pos_weight
+            reduction = "none"
+        elif reduction == "weight_mean" or reduction == "only_gt":
             reduction = "none"
         # Create the mean absolute error loss function
         self.mae = torch.nn.L1Loss(reduction=reduction)
@@ -35,7 +39,11 @@ class BalancedMAELoss(torch.nn.Module):
         mae = self.mae(pred, target)
 
         # Calculate the mean absolute error of the masked pixels
-        if self.reduction == "weight_mean":
+        if self.pos_weight is not None:
+            weighted_mask = mask * self.pos_weight
+            mae = mae * weighted_mask
+            mae = torch.mean(mae)
+        elif self.reduction == "weight_mean":
             obj_mae = mae * mask
             mean_obj_mae = torch.sum(obj_mae) / torch.sum(mask)
             bg_mae = mae * (1 - mask)
