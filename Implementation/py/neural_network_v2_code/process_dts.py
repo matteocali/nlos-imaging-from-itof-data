@@ -3,6 +3,7 @@ import getopt
 import time
 import glob
 import torch
+import numpy as np
 from pathlib import Path
 from utils.dts_splitter import dts_splitter
 from utils.NlosTransientDataset import NlosTransientDataset
@@ -20,21 +21,23 @@ def arg_parser(argv):
             - list containing the input and output path
     """
 
-    arg_name = "dts"       # Argument containing the name of the dataset
-    arg_data_path = ""     # Argument containing the path where the raw data are located
-    arg_shuffle = True     # Argument containing the flag for shuffling the dataset
-    arg_bg_value = 0       # Argument containing the background value
-    arg_add_layer = False  # Argument defining if the iToF data will contains an additional 20MHz layer
-    arg_slurm = False      # Argument defining if the code will be run on slurm
-    arg_augment_size = 0   # Argument defining if the dataset will be augmented
+    arg_name = "dts"        # Argument containing the name of the dataset
+    arg_data_path = ""      # Argument containing the path where the raw data are located
+    arg_shuffle = True      # Argument containing the flag for shuffling the dataset
+    arg_bg_value = 0        # Argument containing the background value
+    arg_add_layer = False   # Argument defining if the iToF data will contains an additional 20MHz layer
+    arg_multi_freq = False  # Argument defining if the dts will use more than 3 frequencies
+    arg_augment_size = 0    # Argument defining if the dataset will be augmented
+    arg_slurm = False       # Argument defining if the code will be run on slurm
+
     # Help string
-    arg_help = "{0} -n <name> -i <input> -b <bg-value> -s <shuffle> -l <add-layer> -a <data-augment-size> -n <slurm>".format(
+    arg_help = "{0} -n <name> -i <input> -b <bg-value> -s <shuffle> -l <add-layer> -f <multi-freqs> -a <data-augment-size> -n <slurm>".format(
         argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:i:b:s:l:a:n:", [
-                                   "help", "name=", "input=", "bg-value=", "shuffle=", "add-layer=", "data-augment-size=", "slurm="])
+        opts, args = getopt.getopt(argv[1:], "hn:i:b:s:l:f:a:n:", [
+                                   "help", "name=", "input=", "bg-value=", "shuffle=", "add-layer=", "multi_freqs=", "data-augment-size=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -56,6 +59,11 @@ def arg_parser(argv):
                 arg_add_layer = True   
             else:
                 arg_add_layer = False
+        elif opt in ("-f", "--multi-freqs"):
+            if arg.lower() == "true":
+                arg_multi_freq = True
+            else:
+                arg_multi_freq = False
         elif opt in ("-a", "--data-augment-size"):
             arg_augment_size = int(arg)  # Set the data augmentation batch value
         elif opt in ("-s", "--slurm"):
@@ -69,11 +77,12 @@ def arg_parser(argv):
     print("Background value: ", arg_bg_value)
     print("Shuffle: ", arg_shuffle)
     print("Add layer: ", arg_add_layer)
+    print("Multi freqs: ", arg_multi_freq)
     print("Data augmentation batch size: ", arg_augment_size)
     print("Slurm: ", arg_slurm)
     print()
 
-    return [arg_name, arg_data_path, arg_bg_value, arg_shuffle, arg_add_layer, arg_augment_size, arg_slurm]
+    return [arg_name, arg_data_path, arg_bg_value, arg_shuffle, arg_add_layer, arg_multi_freq, arg_augment_size, arg_slurm]
 
 
 if __name__ == '__main__':
@@ -82,8 +91,9 @@ if __name__ == '__main__':
     args = arg_parser(sys.argv)  # Parse the input arguments
     bg_value = args[2]           # Get the background value
     add_layer = args[4]          # Get the add_layer flag
-    data_augment = args[5]       # Get the data augmentation flag
-    slurm = args[6]              # Get the slurm flag
+    multi_freqs = args[5]        # Get the multi_freqs flag
+    data_augment = args[6]       # Get the data augmentation flag
+    slurm = args[7]              # Get the slurm flag
 
     # Check if the dataset has alreay been splitted
     if not slurm:
@@ -115,6 +125,14 @@ if __name__ == '__main__':
     # Get the test csv file  # type: ignore
     test_csv = Path(out_path / csv_files[csv_types.index("test")])
 
+    # Define the frequencies vector
+    if not multi_freqs:
+        freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
+        n_freqs = freqs.shape[0]
+    else:
+        freqs = np.array([i*1e06 for i in range (10, 201, 10)], dtype=np.float32)
+        n_freqs = freqs.shape[0]
+
     # Create the processed datset if not already created
     # Set the path to the processed datasets  # type: ignore
     processed_dts_path = Path(out_path.parent / "processed_data")
@@ -130,9 +148,9 @@ if __name__ == '__main__':
         # Define the transforms to apply to the dataset
         transforms_elm = []
         if not add_layer:
-            transforms_elm.append(ItofNormalize(n_freq=3))
+            transforms_elm.append(ItofNormalize(n_freq=n_freqs))
         else:
-            transforms_elm.append(ItofNormalizeWithAddLayer(n_freq=3))
+            transforms_elm.append(ItofNormalizeWithAddLayer(n_freq=n_freqs))
         if bg_value != 0:
             transforms_elm.append(ChangeBgValue(0, bg_value))
         transforms = Compose(transforms_elm)
@@ -140,18 +158,18 @@ if __name__ == '__main__':
         # Create and save the datasets
         print("Creating the training dataset...")
         train_dts = NlosTransientDataset(
-            Path(args[1]), train_csv, transform=transforms)  # Create the train dataset
+            Path(args[1]), train_csv, frequencies=freqs, transform=transforms)  # Create the train dataset
         # Save the train dataset
         torch.save(train_dts, processed_dts_path / "processed_train_dts.pt")
         print("Creating the validation dataset...")
         # Create the validation dataset
         val_dts = NlosTransientDataset(
-            Path(args[1]), val_csv, transform=transforms)
+            Path(args[1]), val_csv, frequencies=freqs, transform=transforms)
         # Save the validation dataset
         torch.save(val_dts, processed_dts_path / "processed_validation_dts.pt")
         print("Creating the test dataset...")
         test_dts = NlosTransientDataset(
-            Path(args[1]), test_csv, transform=transforms)    # Create the test dataset
+            Path(args[1]), test_csv, frequencies=freqs, transform=transforms)    # Create the test dataset
         # Save the test dataset
         torch.save(test_dts, processed_dts_path / "processed_test_dts.pt")
 

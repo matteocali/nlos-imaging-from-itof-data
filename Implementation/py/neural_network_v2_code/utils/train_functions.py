@@ -53,7 +53,7 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         # Detach the mask from the graph in order to avoid the (of depth * mask) gradient to be propagated over the mask branch
         mask_d = mask.detach()
         # Force the mask to assume only value 0 or 1 only after the 10th epoch
-        mask_d = torch.sigmoid(mask) if epoch < 100 else torch.where(torch.sigmoid(mask) > 0.5, 1, 0)
+        mask_d = torch.sigmoid(mask) if epoch <= 200 else torch.where(torch.sigmoid(mask) > 0.5, 1, 0)
         # Compute the masked depth (create correlation bertween the depth and the mask)
         masked_depth = depth * mask_d
 
@@ -126,7 +126,7 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, depth_loss_fn: torch.n
             depth, mask = net(itof_data)
 
             # Force the mask to assume only value 0 or 1
-            mask_d = torch.sigmoid(mask) if epoch < 100 else torch.where(torch.sigmoid(mask) > 0.5, 1, 0)
+            mask_d = torch.sigmoid(mask) if epoch <= 200 else torch.where(torch.sigmoid(mask) > 0.5, 1, 0)
             # Compute the masked depth (create correlation bertween the depth and the mask)
             masked_depth = depth * mask_d
 

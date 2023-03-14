@@ -15,7 +15,7 @@ class NlosTransientDataset(Dataset):
     NLOS Transient Dataset class
     """
 
-    def __init__(self, dts_folder: Path, csv_file: Path, transform=None):
+    def __init__(self, dts_folder: Path, csv_file: Path, frequencies: np.ndarray = np.array((20e06, 50e06, 60e06), dtype=np.float32), transform = None):
         """
         Args:
             dts_folder (Path): path to the dataset folder
@@ -26,7 +26,6 @@ class NlosTransientDataset(Dataset):
         # Set the transform attribute
         self.transform = transform
 
-        frequencies = np.array((20e06, 50e06, 60e06), dtype=np.float32)  # Define the frequencies used by the considered iToF sensor
         phi = phi_func(frequencies)                                      # Compute the phi matrix (iToF data)
         nf = phi.shape[0]                                                # Extract the number of frequencies
 
@@ -165,6 +164,9 @@ class NlosTransientDataset(Dataset):
                 gt_depth = self.gt_depth[index, ...].unsqueeze(0)
                 gt_mask = self.gt_mask[index, ...].unsqueeze(0)
 
+                # Check the number of frequencies used
+                n_freqs = itof_data.shape[1]
+
                 # Concatenate all the data before applying the transform in order to apply the exact same traasformation to all the data
                 data = torch.cat((itof_data, gt_depth_cartesian.unsqueeze(0), gt_depth.unsqueeze(0), gt_mask.unsqueeze(0)), dim=1)
 
@@ -172,11 +174,11 @@ class NlosTransientDataset(Dataset):
                 data = transform(data)
 
                 # Extract the data from the transformed tensor
-                itof_data = data[0, 0:6, ...].unsqueeze(0)
+                itof_data = data[0, 0:n_freqs, ...].unsqueeze(0)
                 if key != "random noise":  # The noise transform does not change the ground truth
-                    gt_depth_cartesian = data[0, 6, ...].unsqueeze(0)
-                    gt_depth = data[0, 7, ...].unsqueeze(0)
-                    gt_mask = data[0, 8, ...].unsqueeze(0)
+                    gt_depth_cartesian = data[0, n_freqs, ...].unsqueeze(0)
+                    gt_depth = data[0, n_freqs + 1, ...].unsqueeze(0)
+                    gt_mask = data[0, n_freqs + 2, ...].unsqueeze(0)
 
                 # Update the dataset
                 self.itof_data = torch.cat((self.itof_data, itof_data), dim=0)
