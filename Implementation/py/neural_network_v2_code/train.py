@@ -5,8 +5,8 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from utils.CustomLosses import BalancedMAELoss, BalancedBCELoss
-from utils.NlosNet import NlosNet
+from utils.CustomLosses import BalancedMAELoss
+from utils.NlosNetItof import NlosNetItof
 from utils.train_functions import train
 from utils.utils import format_time, send_email
 from pathlib import Path
@@ -28,8 +28,6 @@ def arg_parser(argv):
     arg_model_name = ""
     # Argument defining the learning rate
     arg_lr = 1e-4
-    # Argument defining the lambda parameter
-    arg_l = 0.2
     # Argument defining the encoder channels
     arg_encoder_channels = (16, 32, 64, 128, 256)
     # Argument defining the number of the u-net output channels
@@ -43,13 +41,13 @@ def arg_parser(argv):
     # Argument defining if the code will be run on slurm
     arg_slurm = False
     # Help string
-    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -i <encoder-channels>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -a <data-augment-size>, -s <slurm>".format(
+    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -i <encoder-channels>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -a <data-augment-size>, -s <slurm>".format(
         argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(
-            argv[1:], "hd:n:r:l:i:c:p:e:a:s:", ["help", "dataset=", "name=", "lr=", "lambda=", "encoder-channels=", "n-out-channels=", "additional-layers=", "n-epochs=", "data-augment-size=", "slurm="])
+            argv[1:], "hd:n:r:i:c:p:e:a:s:", ["help", "dataset=", "name=", "lr=", "encoder-channels=", "n-out-channels=", "additional-layers=", "n-epochs=", "data-augment-size=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -61,8 +59,6 @@ def arg_parser(argv):
             arg_model_name = arg              # Set the name of the model
         elif opt in ("-r", "--lr"):
             arg_lr = float(arg)               # Set the learning rate
-        elif opt in ("-l", "--lambda"):
-            arg_l = float(arg)                # Set the lambda parameter
         elif opt in ("-i", "--encoder-channels"):
             arg_encoder_channels = tuple(
                 int(x) for x in arg.split(", ")
@@ -94,7 +90,6 @@ def arg_parser(argv):
     print("Dataset name: ", dts_name)
     print("Model name: ", arg_model_name)
     print("Learning rate: ", arg_lr)
-    print("Lambda: ", arg_l)
     print("Encoder channels: ", arg_encoder_channels)
     print("Number of output channels: ", arg_n_out_channels)
     print("Number of additional layers: ", arg_additional_layers)
@@ -103,7 +98,7 @@ def arg_parser(argv):
     print("Slurm: ", arg_slurm)
     print()
 
-    return [dts_name, arg_model_name, arg_lr, arg_l, arg_encoder_channels, arg_n_out_channels, arg_additional_layers, arg_n_epochs, arg_augment_size, arg_slurm]
+    return [dts_name, arg_model_name, arg_lr, arg_encoder_channels, arg_n_out_channels, arg_additional_layers, arg_n_epochs, arg_augment_size, arg_slurm]
 
 
 if __name__ == '__main__':
@@ -114,13 +109,12 @@ if __name__ == '__main__':
     dts_name = args[0]           # Set the path to the csv folder
     batch_size = 32              # Set the batch size
     lr = args[2]                 # Set the learning rate
-    l = args[3]                  # Set the lambda parameter
-    encoder_channels = args[4]   # Set the encoder channels
-    n_out_channels = args[5]     # Set the number of the u-net output channels
-    additional_layers = args[6]  # Set the number of additional CNN layers
-    n_epochs = args[7]           # Set the number of epochs
-    augment = args[8]            # Set the data augmentation flag
-    slurm = args[9]              # Set the slurm flag
+    encoder_channels = args[3]   # Set the encoder channels
+    n_out_channels = args[4]     # Set the number of the u-net output channels
+    additional_layers = args[5]  # Set the number of additional CNN layers
+    n_epochs = args[6]           # Set the number of epochs
+    augment = args[7]            # Set the data augmentation flag
+    slurm = args[8]              # Set the slurm flag
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -173,10 +167,10 @@ if __name__ == '__main__':
     encoder_channels = (dims[0], *encoder_channels)
 
     # Create the model
-    model = NlosNet(enc_channels=encoder_channels,
-                    dec_channels=decoder_channels,
-                    num_class=n_out_channels,
-                    additional_cnn_layers=additional_layers).to(device)  # Create the model and move it to the device
+    model = NlosNetItof(enc_channels=encoder_channels,
+                        dec_channels=decoder_channels,
+                        num_class=n_out_channels,
+                        additional_cnn_layers=additional_layers).to(device)  # Create the model and move it to the device
 
     # Print the model summary
     net_summary = summary(model,
@@ -196,7 +190,6 @@ if __name__ == '__main__':
         f.write("Dataset: " + dts_name + "\n")
         f.write("Model name: " + args[1] + "\n")
         f.write("Learning rate: " + str(lr) + "\n")
-        f.write("Lambda: " + str(l) + "\n")
         f.write("Encoder channels: " + str(encoder_channels) + "\n")
         f.write("Decoder channels: " + str(decoder_channels) + "\n")
         f.write("Number of output channels: " + str(n_out_channels) + "\n")
@@ -218,10 +211,7 @@ if __name__ == '__main__':
     optimizer = Adam(model.parameters(), lr=lr)
 
     # Create the loss function
-    depth_loss_fn = BalancedMAELoss(reduction="mean", pos_weight=torch.Tensor(
-        [bg_obj_ratio]).to(device))
-    mask_loss_fn = torch.nn.BCEWithLogitsLoss(
-        reduction="mean", pos_weight=torch.Tensor([bg_obj_ratio]).to(device))
+    loss_fn = BalancedMAELoss(reduction="mean", pos_weight=torch.Tensor([bg_obj_ratio]).to(device))
 
     # Train the model
     s_train_time = time.time()  # Start the timer for the training
@@ -230,12 +220,10 @@ if __name__ == '__main__':
           train_loader=train_loader,
           val_loader=val_loader,
           optimizer=optimizer,
-          depth_loss_fn=depth_loss_fn,
-          mask_loss_fn=mask_loss_fn,
-          l=l,
+          loss_fn=loss_fn,
           device=device,
           n_epochs=n_epochs,
-          save_path=(net_state_path / f"{args[1]}_model_lr_{lr}_l_{l}_ochannel_{n_out_channels}_addlayers_{additional_layers}_aug_{str(augment)}.pt"))
+          save_path=(net_state_path / f"{args[1]}_model_lr_{lr}_ochannel_{n_out_channels}_addlayers_{additional_layers}_aug_{str(augment)}.pt"))
     f_train_time = time.time()  # Stop the timer for the training
     print(
         f"The total computation time for training the model was {format_time(s_train_time, f_train_time)}\n")

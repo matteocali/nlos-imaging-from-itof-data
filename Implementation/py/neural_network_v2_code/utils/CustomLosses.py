@@ -40,6 +40,8 @@ class BalancedMAELoss(torch.nn.Module):
 
         # Calculate the mean absolute error of the masked pixels
         if self.pos_weight is not None:
+            if mask is None:
+                mask = torch.where(target != 0, 1, 0)
             weighted_mask = mask * self.pos_weight
             mae = mae * weighted_mask
             mae = torch.mean(mae)

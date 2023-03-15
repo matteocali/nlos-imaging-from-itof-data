@@ -6,7 +6,7 @@ import torch
 import numpy as np
 from pathlib import Path
 from utils.dts_splitter import dts_splitter
-from utils.NlosTransientDataset import NlosTransientDataset
+from utils.NlosTransientDatasetItofGt import NlosTransientDatasetItofGt
 from utils.CustomTransforms import ItofNormalize, ItofNormalizeWithAddLayer, ChangeBgValue
 from utils.utils import format_time, send_email
 from torchvision.transforms import Compose
@@ -157,18 +157,18 @@ if __name__ == '__main__':
 
         # Create and save the datasets
         print("Creating the training dataset...")
-        train_dts = NlosTransientDataset(
+        train_dts = NlosTransientDatasetItofGt(
             Path(args[1]), train_csv, frequencies=freqs, transform=transforms)  # Create the train dataset
         # Save the train dataset
         torch.save(train_dts, processed_dts_path / "processed_train_dts.pt")
         print("Creating the validation dataset...")
         # Create the validation dataset
-        val_dts = NlosTransientDataset(
+        val_dts = NlosTransientDatasetItofGt(
             Path(args[1]), val_csv, frequencies=freqs, transform=transforms)
         # Save the validation dataset
         torch.save(val_dts, processed_dts_path / "processed_validation_dts.pt")
         print("Creating the test dataset...")
-        test_dts = NlosTransientDataset(
+        test_dts = NlosTransientDatasetItofGt(
             Path(args[1]), test_csv, frequencies=freqs, transform=transforms)    # Create the test dataset
         # Save the test dataset
         torch.save(test_dts, processed_dts_path / "processed_test_dts.pt")

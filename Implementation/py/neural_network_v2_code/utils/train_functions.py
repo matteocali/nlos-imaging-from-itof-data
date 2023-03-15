@@ -11,23 +11,20 @@ from pathlib import Path
 from torch.utils.tensorboard.writer import SummaryWriter
 from utils.utils import format_time, generate_fig
 from utils.EarlyStopping import EarlyStopping
-from utils.utils import depth_radial2cartesian, hfov2focal, update_lr
+from utils.utils import itof2depth, update_lr
 
 
-def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, depth_loss_fn: torch.nn.Module, mask_loss_fn: torch.nn.Module, l: float, epoch: int, device: torch.device) -> tuple[float, float, float]:
+def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, device: torch.device) -> float:
     """
     Function to train the network on the training set
         param:
             - net: network to train
             - data_loader: data loader containing the training set
             - optimizer: optimizer used to update the weights
-            - depth_loss_fn: loss function used to compute the loss over the depth
-            - mask_loss_fn: loss function used to compute the loss over the mask
-            - l: lambda parameter used to balance the two losses (l * depth_loss + (1 - l) * mask_loss)
-            - epoch: current epoch number
+            - loss_fn: loss function to use
             - device: device used to train the network
         return:
-            - tuple containing the average loss, the average depth loss and the average mask loss
+            - average loss
     """
 
     epoch_loss = []  # Initialize the list that will contain the loss for each batch
@@ -39,36 +36,25 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         # Get the input and the targetcc
         # Extract the input itof data
         itof_data = batch["itof_data"].to(device)  
+        # Extract the ground truth itof data
+        gt_itof = batch["gt_itof"].to(device)
         # Extract the ground truth depth
         gt_depth = batch["gt_depth"].to(device)
-        # Extract the ground truth mask
-        gt_mask = batch["gt_mask"].to(device)
 
         # Reset the gradients
         optimizer.zero_grad()
 
         # Forward pass
-        depth, mask = net(itof_data)
+        itof = net(itof_data)
 
-        # Detach the mask from the graph in order to avoid the (of depth * mask) gradient to be propagated over the mask branch
-        mask_d = mask.detach()
-        # Force the mask to assume only value 0 or 1 only after the 10th epoch
-        mask_d = torch.sigmoid(mask) if epoch <= 200 else torch.where(torch.sigmoid(mask) > 0.5, 1, 0)
-        # Compute the masked depth (create correlation bertween the depth and the mask)
-        masked_depth = depth * mask_d
+        # Split the iToF data into its real and imaginary part
+        itof_real = itof[:, 0, ...]
+        itof_imag = itof[:, 1, ...]
 
-        # Compute the losses
-        # Compute the loss over the depth
-        depth_loss = depth_loss_fn(masked_depth, gt_depth, gt_mask)
-        # Compute the loss over the mask
-        mask_loss = mask_loss_fn(mask, gt_mask)
-
-        if l == 0.5:
-            # Compute the total loss
-            loss = depth_loss + mask_loss
-        else:
-            # Compute the total loss
-            loss = l * depth_loss + (1 - l) * mask_loss
+        # Compute the loss
+        loss_real = loss_fn(itof_real, gt_itof[:, 0, ...])
+        loss_imag = loss_fn(itof_imag, gt_itof[:, 1, ...])
+        loss = loss_real + loss_imag
 
         # Backward pass
         loss.backward()
@@ -77,28 +63,25 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         optimizer.step()
 
         # Append the loss
-        epoch_loss.append([loss.item(), depth_loss.item(), mask_loss.item()])
+        epoch_loss.append(loss.item())
 
     # Disable the training mode
     net.train(False)
 
     # Return the average loss over al the batches
-    return tuple([float(np.mean(loss)) for loss in zip(*epoch_loss)])
+    return float(np.mean(epoch_loss))
 
 
-def val_fn(net: torch.nn.Module, data_loader: DataLoader, depth_loss_fn: torch.nn.Module, mask_loss_fn: torch.nn.Module, l: float, epoch: int, device: torch.device) -> tuple[tuple[float, float, float], tuple[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]:
+def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, device: torch.device) -> tuple[float, tuple[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]:
     """
     Function to validate the network on the validation set
         param:
             - net: network to validate
             - data_loader: data loader containing the validation set
-            - depth_loss_fn: loss function used to compute the loss over the depth
-            - mask_loss_fn: loss function used to compute the loss over the mask
-            - l: lambda parameter used to balance the two losses (l * depth_loss + (1 - l) * mask_loss)
-            - epoch: current epoch number
+            - loss_fn: loss function to use
             - device: device used to validate the network
         return:
-            - tuple containing the average loss, the average depth loss, the average mask loss, the last gt_depth and the last predicted depth
+            - tuple containing the average loss, the last gt_itof and gt_depth and the last predicted itof
         """
 
     epoch_loss = []
@@ -114,50 +97,36 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, depth_loss_fn: torch.n
         for batch in data_loader:
             # Get the input and the target
             # Extract the input itof data
-            itof_data = batch["itof_data"].to(device)
-            # Extract the ground truth depth
-            gt_depth_cartesian = batch["gt_depth_cartesian"].to(device)  
+            itof_data = batch["itof_data"].to(device)  
+            # Extract the ground truth itof data
+            gt_itof = batch["gt_itof"].to(device)
             # Extract the ground truth depth
             gt_depth = batch["gt_depth"].to(device)
-            # Extract the ground truth mask
-            gt_mask = batch["gt_mask"].to(device)
 
             # Forward pass
-            depth, mask = net(itof_data)
+            itof = net(itof_data)
 
-            # Force the mask to assume only value 0 or 1
-            mask_d = torch.sigmoid(mask) if epoch <= 200 else torch.where(torch.sigmoid(mask) > 0.5, 1, 0)
-            # Compute the masked depth (create correlation bertween the depth and the mask)
-            masked_depth = depth * mask_d
+            # Split the iToF data into its real and imaginary part
+            itof_real = itof[:, 0, ...]
+            itof_imag = itof[:, 1, ...]
 
             # Compute the loss
-            # Compute the loss over the depth
-            depth_loss = depth_loss_fn(masked_depth, gt_depth, gt_mask)
-            # Compute the loss over the mask
-            mask_loss = mask_loss_fn(mask, gt_mask)
-
-            if l == 0.5:
-                # Compute the total loss
-                loss = depth_loss + mask_loss
-            else:
-                # Compute the total loss
-                loss = l * depth_loss + (1 - l) * mask_loss
+            loss_real = loss_fn(itof_real, gt_itof[:, 0, ...])
+            loss_imag = loss_fn(itof_imag, gt_itof[:, 1, ...])
+            loss = loss_real + loss_imag
 
             # Append the loss
-            epoch_loss.append(
-                [loss.item(), depth_loss.item(), mask_loss.item()])
+            epoch_loss.append(loss.item())
 
             # Update the last gt_depth and the last predicted depth
-            last_gt = (gt_depth_cartesian.to("cpu").numpy()
-                       [-1, ...], gt_mask.to("cpu").numpy()[-1, ...])
-            last_pred = (depth_radial2cartesian(masked_depth.to("cpu").numpy()[-1, ...], hfov2focal(
-                hdim=gt_depth.shape[1], hfov=60)), torch.where(torch.sigmoid(mask) > 0.5, 1, 0).to("cpu").numpy()[-1, ...])
-
+            last_gt = (gt_itof.to("cpu").numpy()[-1, ...], gt_depth.to("cpu").numpy()[-1, ...])
+            last_pred = (itof.to("cpu").numpy()[-1, ...], itof2depth(itof.to("cpu").numpy()[-1, ...], 20e06))  # type: ignore
+    
     # Return the average loss over al the batches
-    return tuple([float(np.mean(loss)) for loss in zip(*epoch_loss)]), last_gt, last_pred # type: ignore
+    return float(np.mean(epoch_loss)), last_gt, last_pred # type: ignore
 
 
-def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, depth_loss_fn: torch.nn.Module, mask_loss_fn: torch.nn.Module, l: float, device: torch.device, n_epochs: int, save_path: Path) -> None:
+def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer,loss_fn: torch.nn.Module, device: torch.device, n_epochs: int, save_path: Path) -> None:
     """
     Function to train the network
         param:
@@ -166,9 +135,7 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
             - train_loader: data loader containing the training set
             - val_loader: data loader containing the validation set
             - optimizer: optimizer used to update the weights
-            - depth_loss_fn: loss function used to compute the loss over the depth
-            - mask_loss_fn: loss function used to compute the loss over the mask
-            - l: lambda parameter used to balance the two losses (l * depth_loss + (1 - l) * mask_loss)
+            - loss_fn: loss function to use
             - device: device used to train the network
             - n_epochs: number of epochs to train the network
             - save_path: path where to save the model
@@ -179,7 +146,7 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
     current_date = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     hostname = socket.gethostname()
     writer = SummaryWriter(
-        log_dir=f"{current_dir}/../tensorboard_logs/{current_date}_{hostname}_{attempt_name}_{net.__class__.__name__}_LR_{optimizer.param_groups[0]['lr']}_L_{l}")
+        log_dir=f"{current_dir}/../tensorboard_logs/{current_date}_{hostname}_{attempt_name}_{net.__class__.__name__}_LR_{optimizer.param_groups[0]['lr']}")
 
     # Initialize the early stopping
     early_stopping = EarlyStopping(
@@ -193,19 +160,15 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
         start_time = time.time()
 
         # Train the network
-        train_loss, train_loss_depth, train_loss_mask = train_fn(
-            net, train_loader, optimizer, depth_loss_fn, mask_loss_fn, l, epoch, device)  # Execute the training function
+        train_loss = train_fn(net, train_loader, optimizer, loss_fn, device)
 
         # Validate the network
         # Execute the validation function
-        val_loss, gt, pred = val_fn(
-            net, val_loader, depth_loss_fn, mask_loss_fn, l, epoch, device)
-        # Unpack the losses
-        val_loss, val_loss_depth, val_loss_mask = val_loss
+        val_loss, gt, pred = val_fn(net, val_loader, loss_fn, device)
         # Unpack the ground truth
-        gt_depth, gt_mask = gt
+        _, gt_depth = gt
         # Unpack the predictions
-        pred_depth, pred_mask = pred
+        _, pred_depth = pred
 
         # End the timer
         end_time = time.time()
@@ -230,17 +193,11 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
 
         # Write the results to tensorboard
         writer.add_scalar("Loss/train", train_loss, epoch)
-        writer.add_scalar("Depth loss/train", train_loss_depth, epoch)
-        writer.add_scalar("Mask loss/train", train_loss_mask, epoch)
         writer.add_scalar("Loss/val", val_loss, epoch)
-        writer.add_scalar("Depth loss/val", val_loss_depth, epoch)
-        writer.add_scalar("Mask loss/val", val_loss_mask, epoch)
 
         # Add the images to tensorboard
         writer.add_figure("Depth/val", generate_fig((gt_depth.T,
                           pred_depth.T), (np.min(gt_depth), np.max(gt_depth))), epoch)
-        writer.add_figure(
-            "Mask/val", generate_fig((gt_mask.T, pred_mask.T), (0, 1)), epoch)
 
         # Stop the training if the early stopping is triggered
         if stop:
