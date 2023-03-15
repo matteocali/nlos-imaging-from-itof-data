@@ -110,6 +110,30 @@ class ChangeBgValue(object):
         return {"itof_data": itof_data, "gt_depth": gt_depth, "gt_depth_cartesian": gt_depth_cartesian, "gt_mask": gt_mask}
 
 
+class Depth2Itof(object):
+    """
+    Transformation class to convert the gt depth map to iToF data at a specific frequency
+    """
+
+    def __init__(self, freq: int):
+        """
+        Args:
+            freq (int): frequency at which the iToF data is computed
+        """
+
+        self.freq = freq
+    
+    def __call__(self, sample: dict):
+        """
+        Args:
+            sample (dict): dictionary containing the iToF data, the ground truth depth and the ground truth alpha
+        Returns:
+            dict: dictionary containing the iToF data, the ground truth depth in itof format
+        """
+
+        itof_data, gt_depth, _, _ = sample["itof_data"], sample["gt_depth"], sample["gt_depth_cartesian"], sample["gt_mask"]
+
+
 class RandomRotation(T.RandomRotation):
     """
     Transformation class to rotate the iToF data.

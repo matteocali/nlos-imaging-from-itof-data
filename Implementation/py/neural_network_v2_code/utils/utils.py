@@ -272,47 +272,75 @@ def normalize(data: np.ndarray or torch.Tensor, bounds: dict[str, dict[str, floa
     return bounds['desired']['lower'] + (data - bounds['actual']['lower']) * (bounds['desired']['upper'] - bounds['desired']['lower']) / (bounds['actual']['upper'] - bounds['actual']['lower'])
 
 
-# def depth_cartesian2radial(depth: torch.Tensor, focal: float, center: tuple[float, float]) -> torch.Tensor:
-#     """
-#     Function used to convert the depth map from cartesian to radial coordinates
-#         param:
-#             - depth: depth map in cartesian coordinates
-#             - focal: focal length of the camera
-#             - center: center of the image
-#         return:
-#             - depth map in radial coordinates
-#     """
+def itof2depth(itof: torch.Tensor or np.ndarray, freqs: tuple or float or int) -> torch.Tensor or np.ndarray:
+    """
+    Function used to convert the itof depth map to the correspondent radial depth map
+        param:
+            - itof: itof depth map
+            - freqs: frequencies of the itof sensor (Hz)
+        return:
+            - radial depth map
+    """
 
-#     # Create the meshgrid
-#     x, y = torch.meshgrid(torch.arange(depth.shape[1]), torch.arange(depth.shape[0]))
-#     # Convert the meshgrid to radial coordinates
-#     x = (x - center[0]) / focal
-#     y = (y - center[1]) / focal
-#     # Compute the radius
-#     r = torch.sqrt(x ** 2 + y ** 2)
-#     # Compute the depth in radial coordinates
-#     depth_radial = depth * r
-#     return depth_radial
+    # Select the correct data type
+    if isinstance(itof, np.ndarray):
+        env = np
+        arr = np.array
+    else:
+        env = torch
+        arr = torch.tensor
+
+    # Check if there is the batch dimension
+    if len(itof.shape) == 4:
+        itof = itof.squeeze(0)
+
+    n_freqs = 1 if isinstance(freqs, float) or isinstance(freqs, int) else len(freqs)  # Number of frequencies used by the iToF sensor
+
+    if n_freqs != itof.shape[0] // 2:
+        raise ValueError("The number of frequencies is not equal to the number of channels in the itof map")
+
+    # Compute the phase shift value (for each frequency)
+    phi = env.arctan2(itof[n_freqs:, ...], itof[:n_freqs, ...]).squeeze(0)  # type: ignore
+
+    # Compute the conversion value (for each frequency)
+    conv_value =  const.c / (4 * const.pi * arr(freqs))
+
+    # Compute the radialdepth map
+    depth = phi * conv_value
+
+    # Set nan values to 0
+    depth = env.nan_to_num(depth, nan=0, posinf=1e10, neginf=-1e10)  # type: ignore
+    
+    return depth  # type: ignore
 
 
-# def depth_radial2cartesian(depth: torch.Tensor, focal: float, center: tuple[float, float]) -> torch.Tensor:
-#     """
-#     Function used to convert the depth map from radial to cartesian coordinates
-#         param:
-#             - depth: depth map in radial coordinates
-#             - focal: focal length of the camera
-#             - center: center of the image
-#         return:
-#             - depth map in cartesian coordinates
-#     """
+def depth2itof(depth: torch.Tensor or np.ndarray, freq: float, ampl: float = 1.) -> torch.Tensor or np.ndarray:
+    """
+    Function used to convert the depth map to the correspondent itof depth map
+        param:
+            - depth: radial depth map
+            - freq: frequency of the itof sensor (Hz)
+            - ampl: amplitude of the data
+        return:
+            - itof data at the given frequence (Hz) as the real and immaginary part of the correspondent phasor
+    """
 
-#     # Create the meshgrid
-#     x, y = torch.meshgrid(torch.arange(depth.shape[1]), torch.arange(depth.shape[0]))
-#     # Convert the meshgrid to radial coordinates
-#     x = (x - center[0]) / focal
-#     y = (y - center[1]) / focal
-#     # Compute the radius
-#     r = torch.sqrt(x ** 2 + y ** 2)
-#     # Compute the depth in cartesian coordinates
-#     depth_cartesian = depth / r
-#     return depth_cartesian
+    # Select the correct data type
+    if isinstance(depth, np.ndarray):
+        env = np
+    else:
+        env = torch
+
+    # Compute the conversion value
+    conv_value = (4 * const.pi * freq) / const.c
+    # Computhe the shift value
+    phi = depth * conv_value
+
+    # Compute the real and imaginary part of the phasor
+    real_phi = ampl * env.cos(phi)
+    im_phi = ampl * env.sin(phi)
+
+    # Compute the iToF data
+    itof = env.stack((real_phi, im_phi), 0)  # type: ignore
+
+    return itof  # type: ignore
