@@ -47,14 +47,16 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         # Forward pass
         itof = net(itof_data)
 
-        # Split the iToF data into its real and imaginary part
-        itof_real = itof[:, 0, ...]
-        itof_imag = itof[:, 1, ...]
+        # # Split the iToF data into its real and imaginary part
+        # itof_real = itof[:, 0, ...]
+        # itof_imag = itof[:, 1, ...]
 
-        # Compute the loss
-        loss_real = loss_fn(itof_real, gt_itof[:, 0, ...])
-        loss_imag = loss_fn(itof_imag, gt_itof[:, 1, ...])
-        loss = loss_real + loss_imag
+        # # Compute the loss
+        # loss_real = loss_fn(itof_real, gt_itof[:, 0, ...])
+        # loss_imag = loss_fn(itof_imag, gt_itof[:, 1, ...])
+        # loss = loss_real + loss_imag
+
+        loss = loss_fn(itof, gt_itof)
 
         # Backward pass
         loss.backward()
