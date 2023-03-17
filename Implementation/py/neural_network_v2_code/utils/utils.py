@@ -48,7 +48,7 @@ def phi_func(freqs, dim_t=2000, exp_time=0.01):
     return phi
 
 
-def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float], index: int, path: Path):
+def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], itof_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float], index: int, path: Path):
     """
     Function used to save the test plots
         param:
@@ -72,21 +72,21 @@ def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[
         fig.colorbar(mappable=img, cax=cax)
         if i ==1:
             box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)
-            ax[0, i].text(20, 20, f"MAE: {round(losses[0], 3)}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)  # type: ignore
+            ax[0, i].text(20, 20, f"MSE: {round(losses[0], 3)}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)  # type: ignore
         ax[0, i].set_title(titles[i])        # type: ignore
         ax[0, i].set_xlabel("Column pixel")  # type: ignore
         ax[0, i].set_ylabel("Row pixel")     # type: ignore
     # Generate the plts for the mask
-    titles = ["Grount truth mask", "Predicted mask"]
+    titles = ["Grount truth real iToF", "Predicted real iToF"]
     for i in range(2):
-        img = ax[1, i].matshow(mask_data[i].T, cmap="jet")  # type: ignore
-        img.set_clim(np.min(mask_data[0]), np.max(mask_data[0]))
+        img = ax[1, i].matshow(itof_data[i].T, cmap="jet")  # type: ignore
+        img.set_clim(np.min(itof_data[0]), np.max(itof_data[0]))
         divider = make_axes_locatable(ax[1, i])  # type: ignore
         cax = divider.append_axes("right", size="5%", pad=0.05)
         fig.colorbar(mappable=img, cax=cax)
         if i ==1:
             box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)
-            ax[1, i].text(20, 20, f"MAE: {round(losses[1], 3)}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)  # type: ignore
+            ax[1, i].text(20, 20, f"MSE: {round(losses[1], 3)}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)  # type: ignore
         ax[1, i].set_title(titles[i])        # type: ignore
         ax[1, i].set_xlabel("Column pixel")  # type: ignore
         ax[1, i].set_ylabel("Row pixel")     # type: ignore

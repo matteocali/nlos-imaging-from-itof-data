@@ -4,7 +4,7 @@ import time
 import torch
 from pathlib import Path
 from torch.utils.data import DataLoader
-from utils.NlosNet import NlosNet
+from utils.NlosNetItof import NlosNetItof
 from utils.test_function import test
 from utils.utils import format_time
 
@@ -121,10 +121,10 @@ if __name__ == '__main__':
     # Get the path to the model state dict
     state_dict_path = Path(__file__).parent.absolute() / \
         f"net_state/{args[1]}.pt"
-    model = NlosNet(enc_channels=enc_channels,
-                    dec_channels=dec_channels,
-                    num_class=n_out_channels,
-                    additional_cnn_layers=additional_layers).to(device)  # Create the model and move it to the device
+    model = NlosNetItof(enc_channels=enc_channels,
+                        dec_channels=dec_channels,
+                        num_class=n_out_channels,
+                        additional_cnn_layers=additional_layers).to(device)  # Create the model and move it to the device
     # Load the model
     model.load_state_dict(torch.load(state_dict_path))
 
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     bg_obj_ratio = test_dts.get_bg_obj_ratio()
 
     # Create the loss function
-    loss_fn = torch.nn.L1Loss(reduction="mean")
+    loss_fn = torch.nn.MSELoss(reduction="mean")
 
     # Define the output path
     out_folder = Path(__file__).parent.absolute() / "results"
