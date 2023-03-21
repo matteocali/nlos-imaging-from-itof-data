@@ -24,7 +24,7 @@
                 "--bg-value", "0",
                 "--add-layer", "False",
                 "--multi_freqs", "False",
-                "--data-augment-size", "100",
+                "--data-augment-size", "202",
                 "--slurm", "False"
             ],
             "console": "integratedTerminal",

@@ -196,7 +196,7 @@ if __name__ == '__main__':
                 train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")
             
             # Augment the training dataset
-            train_dts.augment_dts(batch_size=80)  # type: ignore
+            train_dts.augment_dts(batch_size=data_augment)  # type: ignore
             # Save the augmented training dataset
             torch.save(train_dts, augment_data_name)  # type: ignore
             # End the timer for the dataset augmentation

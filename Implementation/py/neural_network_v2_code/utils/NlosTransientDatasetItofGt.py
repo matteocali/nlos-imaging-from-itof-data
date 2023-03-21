@@ -60,6 +60,7 @@ class NlosTransientDatasetItofGt(Dataset):
             with h5.File(image, "r") as h:
                 temp_data = h["data"][:]                       # Load the transient data  # type: ignore
                 temp_gt_depth = h["depth_map"][:]              # Load the ground truth depth data  # type: ignore
+                temp_gt_mask = h["alpha_map"][:]                    # Load the ground truth mask data  # type: ignore
 
             temp_lin = np.reshape(temp_data, (dim_x * dim_y, dim_t))  # Reshape the transient data  # type: ignore
 
@@ -69,7 +70,7 @@ class NlosTransientDatasetItofGt(Dataset):
             itof_data[count, ...] = v
 
             # Add the gt depth and alpha map
-            gt_itof[count, ...] = depth2itof(temp_gt_depth, 20e06)  # type: ignore
+            gt_itof[count, ...] = depth2itof(temp_gt_depth, 20e06, ampl=temp_gt_mask)  # type: ignore
             gt_depth[count, ...] = depth_cartesian2radial(temp_gt_depth, focal)  # type: ignore
 
             # Increment the counter
@@ -147,8 +148,10 @@ class NlosTransientDatasetItofGt(Dataset):
         transforms = {
             "random rotate": CT.RandomRotation(degrees=180, interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),
             "random translate": CT.RandomAffine(degrees=0, translate=(0.2, 0.2), interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),
+            "random translate rotate": CT.RandomAffine(degrees=180, translate=(0.2, 0.2), interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),  # "random translate and rotate
             "random hflip": T.RandomHorizontalFlip(p=1.0),
             "random vflip": T.RandomVerticalFlip(p=1.0),
+            "random hflip vflip": T.Compose([T.RandomHorizontalFlip(p=1.0), T.RandomVerticalFlip(p=1.0)]),  # "random hflip and vflip
             "random noise": CT.AddGaussianNoise(mean=0.0, std=1.0)
         }
         

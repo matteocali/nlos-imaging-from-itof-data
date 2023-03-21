@@ -48,7 +48,35 @@ def phi_func(freqs, dim_t=2000, exp_time=0.01):
     return phi
 
 
-def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], itof_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float], index: int, path: Path):
+def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], loss: float, titles: tuple[str, str]) -> None:
+    """
+    Function used to generate the row subplot
+        param:
+            - fig: figure
+            - ax: axis
+            - data: tuple containing the ground truth and the predicted data
+            - loss: loss value
+            - title: tuple containing the title of the subplot
+    """
+
+    # Generate the plts for the depth
+    for i in range(2):
+        img = ax[i].matshow(data[i].T, cmap="jet")                             # Plot the sx plot # type: ignore
+        img.set_clim(np.min(data[0]), np.max(data[0]))                         # Set the colorbar limits based on the ground truth data
+        divider = make_axes_locatable(ax[i])                                   # Defien the colorbar axis
+        cax = divider.append_axes("right", size="5%", pad=0.05)                # Set the colorbar location
+        fig.colorbar(img, cax=cax)                                             # Plot the colorbar
+        if i ==1:                                                              # If the plot is the predicted one
+            box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)  # Define the box style
+            ax[i].text(20, 20, f"MSE: {round(loss, 3)}", 
+                          ha='left', va='top', fontsize=11, 
+                          color='black', bbox=box_style)                       # Add the box to the plot # type: ignore
+        ax[i].set_title(titles[i])                                              # Set the title of the subplot
+        ax[i].set_xlabel("x")                                                  # Set the x label of the subplot
+        ax[i].set_ylabel("y")                                                  # Set the y label of the subplot
+
+
+def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float], index: int, path: Path):
     """
     Function used to save the test plots
         param:
@@ -63,37 +91,46 @@ def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], itof_data: tuple[
     fig, ax = plt.subplots(2, 2, figsize=(16, 11))
 
     # Generate the plts for the depth
-    titles = ["Grount truth depth", "Predicted depth"]
-    for i in range(2):
-        img = ax[0, i].matshow(depth_data[i].T, cmap="jet")  # type: ignore
-        img.set_clim(np.min(depth_data[0]), np.max(depth_data[0]))
-        divider = make_axes_locatable(ax[0, i])  # type: ignore
-        cax = divider.append_axes("right", size="5%", pad=0.05)
-        fig.colorbar(mappable=img, cax=cax)
-        if i ==1:
-            box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)
-            ax[0, i].text(20, 20, f"MSE: {round(losses[0], 3)}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)  # type: ignore
-        ax[0, i].set_title(titles[i])        # type: ignore
-        ax[0, i].set_xlabel("Column pixel")  # type: ignore
-        ax[0, i].set_ylabel("Row pixel")     # type: ignore
+    titles = ("Grount truth depth", "Predicted depth")
+    row_subplot(fig, ax[0], (depth_data[0], depth_data[1]), losses[0], titles)
     # Generate the plts for the mask
-    titles = ["Grount truth real iToF", "Predicted real iToF"]
-    for i in range(2):
-        img = ax[1, i].matshow(itof_data[i].T, cmap="jet")  # type: ignore
-        img.set_clim(np.min(itof_data[0]), np.max(itof_data[0]))
-        divider = make_axes_locatable(ax[1, i])  # type: ignore
-        cax = divider.append_axes("right", size="5%", pad=0.05)
-        fig.colorbar(mappable=img, cax=cax)
-        if i ==1:
-            box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)
-            ax[1, i].text(20, 20, f"MSE: {round(losses[1], 3)}", ha='left', va='top', fontsize=11, color='black', bbox=box_style)  # type: ignore
-        ax[1, i].set_title(titles[i])        # type: ignore
-        ax[1, i].set_xlabel("Column pixel")  # type: ignore
-        ax[1, i].set_ylabel("Row pixel")     # type: ignore
+    titles = ("Grount truth mask", "Predicted mask")
+    row_subplot(fig, ax[1], (mask_data[0], mask_data[1]), losses[1], titles)
     
     plt.tight_layout()
     plt.savefig(str(path / f"{index + 1}.svg"))
     plt.close()
+
+
+def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float, float], index: int, path: Path):
+    """
+    Function used to save the test plots
+        param:
+            - depth_data: (gt_depth, predicted depth)
+            - itof_data: (gt_itof, predicted itof)
+            - losses: tuple containing the loss and the accuracy
+            - index: index of the test sample
+            - path: path where to save the plots
+    """
+
+    # Generate the plot
+    fig, ax = plt.subplots(3, 2, figsize=(16, 16))
+
+    # Generate the plts for the depth
+    titles = ("Grount truth depth", "Predicted depth")
+    row_subplot(fig, ax[0], (depth_data[0], depth_data[1]), losses[0], titles)
+    # Generate the plts for the itof
+    # Real iToF
+    titles = ("Grount truth real iToF", "Predicted real iToF")
+    row_subplot(fig, ax[1], (itof_data[0][0, ...], itof_data[1][0, ...]), losses[1], titles)
+    # Imaginary iToF
+    titles = ("Grount truth imaginary iToF", "Predicted imaginary iToF")
+    row_subplot(fig, ax[2], (itof_data[0][1, ...], itof_data[1][1, ...]), losses[2], titles)
+    
+    plt.tight_layout()
+    plt.savefig(str(path / f"{index + 1}.svg"))
+    plt.close()
+        
 
 
 def generate_fig(data: tuple[np.ndarray, np.ndarray], c_range: tuple[float, float] = None):  # type: ignore

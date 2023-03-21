@@ -4,7 +4,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from pathlib import Path
-from utils.utils import save_test_plots, depth_radial2cartesian, hfov2focal, itof2depth
+from utils.utils import save_test_plots_itof, depth_radial2cartesian, hfov2focal, itof2depth
 
 
 def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, device: torch.device, out_path: Path, bg: int = 0) -> None:
@@ -44,7 +44,8 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
             depth = itof2depth(itof, 20e06).unsqueeze(0)  # type: ignore
             
             # Compute the losses
-            itof_loss = loss_fn(itof, gt_itof)     # Compute the loss over the depth
+            itof_loss_real = loss_fn(itof.squeeze(0)[0, ...], gt_itof.squeeze(0)[0, ...])  # Compute the loss over the itof data (real)
+            itof_loss_imag = loss_fn(itof.squeeze(0)[1, ...], gt_itof.squeeze(0)[1, ...])  # Compute the loss over the itof data (imaginary)
             depth_loss = loss_fn(depth, gt_depth)  # Compute the loss over the depth
 
             # Remove the batch dimension and convert the data to numpy
@@ -62,10 +63,10 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
             Path.mkdir(plots_dir, exist_ok=True)
 
             # Save the plots
-            save_test_plots(
+            save_test_plots_itof(
                 (n_gt_depth, n_depth),  # type: ignore
-                (n_gt_itof[0, ...], n_itof[0, ...]), 
-                (depth_loss.item(), itof_loss.item()), 
+                (n_gt_itof, n_itof), 
+                (depth_loss.item(), itof_loss_real.item(), itof_loss_imag.item()), 
                 i,
                 plots_dir)
 

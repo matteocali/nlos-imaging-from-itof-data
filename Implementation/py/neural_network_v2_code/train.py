@@ -212,7 +212,7 @@ if __name__ == '__main__':
 
     # Create the loss function
     # loss_fn = BalancedMAELoss(reduction="mean", pos_weight=torch.Tensor([bg_obj_ratio]).to(device))
-    loss_fn = torch.nn.MSELoss(reduction="mean")
+    loss_fn = torch.nn.L1Loss(reduction="mean")
 
     # Train the model
     s_train_time = time.time()  # Start the timer for the training

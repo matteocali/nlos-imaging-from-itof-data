@@ -47,16 +47,22 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         # Forward pass
         itof = net(itof_data)
 
-        # # Split the iToF data into its real and imaginary part
-        # itof_real = itof[:, 0, ...]
-        # itof_imag = itof[:, 1, ...]
+        # Split the iToF data into its real and imaginary part
+        itof_real = itof[:, 0, ...]
+        itof_imag = itof[:, 1, ...]
 
-        # # Compute the loss
-        # loss_real = loss_fn(itof_real, gt_itof[:, 0, ...])
-        # loss_imag = loss_fn(itof_imag, gt_itof[:, 1, ...])
-        # loss = loss_real + loss_imag
+        # Compute the amplitude and the phase (prediction)
+        ampl = torch.sqrt(itof_real**2 + itof_imag**2)
+        phase = torch.atan2(itof_imag, itof_real)
 
-        loss = loss_fn(itof, gt_itof)
+        # Compute the amplitude and the phase (ground truth)
+        gt_ampl = torch.sqrt(gt_itof[:, 0, ...]**2 + gt_itof[:, 1, ...]**2)
+        gt_phase = torch.atan2(gt_itof[:, 1, ...], gt_itof[:, 0, ...])
+
+        # Compute the losses
+        loss_ampl = loss_fn(ampl, gt_ampl)
+        loss_phase = loss_fn(phase, gt_phase)
+        loss = loss_ampl + loss_phase
 
         # Backward pass
         loss.backward()
@@ -112,10 +118,18 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
             itof_real = itof[:, 0, ...]
             itof_imag = itof[:, 1, ...]
 
-            # Compute the loss
-            loss_real = loss_fn(itof_real, gt_itof[:, 0, ...])
-            loss_imag = loss_fn(itof_imag, gt_itof[:, 1, ...])
-            loss = loss_real + loss_imag
+            # Compute the amplitude and the phase (prediction)
+            ampl = torch.sqrt(itof_real**2 + itof_imag**2)
+            phase = torch.atan2(itof_imag, itof_real)
+
+            # Compute the amplitude and the phase (ground truth)
+            gt_ampl = torch.sqrt(gt_itof[:, 0, ...]**2 + gt_itof[:, 1, ...]**2)
+            gt_phase = torch.atan2(gt_itof[:, 1, ...], gt_itof[:, 0, ...])
+
+            # Compute the losses
+            loss_ampl = loss_fn(ampl, gt_ampl)
+            loss_phase = loss_fn(phase, gt_phase)
+            loss = loss_ampl + loss_phase
 
             # Append the loss
             epoch_loss.append(loss.item())
