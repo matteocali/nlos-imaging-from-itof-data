@@ -14,6 +14,38 @@ from utils.EarlyStopping import EarlyStopping
 from utils.utils import itof2depth, update_lr
 
 
+def compute_loss(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Module) -> torch.Tensor:
+    """
+    Function to compute the loss
+        param:
+            - itof: predicted itof
+            - gt: ground truth itof
+            - loss_fn: loss function to use
+        return:
+            - tuple containing the loss, the amplitude loss and the phase loss
+    """
+
+    # Compute the amplitude and the phase (prediction)
+    # ampl = torch.sqrt(itof[:, 0, ...]**2 + itof[:, 1, ...]**2)
+    phase = torch.atan2(itof[:, 1, ...], itof[:, 0, ...])
+
+    # Compute the amplitude and the phase (ground truth)
+    gt_ampl = torch.sqrt(gt[:, 0, ...]**2 + gt[:, 1, ...]**2)
+    gt_phase = torch.atan2(gt[:, 1, ...], gt[:, 0, ...])
+
+    # Create a mask based on the gt
+    mask = torch.where(gt_ampl > 0, 1, 0)
+
+    # Apply the mask to the predicted phase
+    phase = phase * mask
+
+    # Compute the losses
+    loss_itof = loss_fn(itof, gt)
+    loss_phase = loss_fn(phase, gt_phase)
+
+    return loss_itof + loss_phase
+
+
 def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, device: torch.device) -> float:
     """
     Function to train the network on the training set
@@ -38,8 +70,6 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         itof_data = batch["itof_data"].to(device)  
         # Extract the ground truth itof data
         gt_itof = batch["gt_itof"].to(device)
-        # Extract the ground truth depth
-        gt_depth = batch["gt_depth"].to(device)
 
         # Reset the gradients
         optimizer.zero_grad()
@@ -47,22 +77,8 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         # Forward pass
         itof = net(itof_data)
 
-        # Split the iToF data into its real and imaginary part
-        itof_real = itof[:, 0, ...]
-        itof_imag = itof[:, 1, ...]
-
-        # Compute the amplitude and the phase (prediction)
-        ampl = torch.sqrt(itof_real**2 + itof_imag**2)
-        phase = torch.atan2(itof_imag, itof_real)
-
-        # Compute the amplitude and the phase (ground truth)
-        gt_ampl = torch.sqrt(gt_itof[:, 0, ...]**2 + gt_itof[:, 1, ...]**2)
-        gt_phase = torch.atan2(gt_itof[:, 1, ...], gt_itof[:, 0, ...])
-
-        # Compute the losses
-        loss_ampl = loss_fn(ampl, gt_ampl)
-        loss_phase = loss_fn(phase, gt_phase)
-        loss = loss_ampl + loss_phase
+        # Compute the loss
+        loss = compute_loss(itof, gt_itof, loss_fn)
 
         # Backward pass
         loss.backward()
@@ -114,22 +130,7 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
             # Forward pass
             itof = net(itof_data)
 
-            # Split the iToF data into its real and imaginary part
-            itof_real = itof[:, 0, ...]
-            itof_imag = itof[:, 1, ...]
-
-            # Compute the amplitude and the phase (prediction)
-            ampl = torch.sqrt(itof_real**2 + itof_imag**2)
-            phase = torch.atan2(itof_imag, itof_real)
-
-            # Compute the amplitude and the phase (ground truth)
-            gt_ampl = torch.sqrt(gt_itof[:, 0, ...]**2 + gt_itof[:, 1, ...]**2)
-            gt_phase = torch.atan2(gt_itof[:, 1, ...], gt_itof[:, 0, ...])
-
-            # Compute the losses
-            loss_ampl = loss_fn(ampl, gt_ampl)
-            loss_phase = loss_fn(phase, gt_phase)
-            loss = loss_ampl + loss_phase
+            loss = compute_loss(itof, gt_itof, loss_fn)
 
             # Append the loss
             epoch_loss.append(loss.item())
