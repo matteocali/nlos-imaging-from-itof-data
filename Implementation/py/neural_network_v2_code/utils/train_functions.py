@@ -33,12 +33,6 @@ def compute_loss(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Module)
     gt_ampl = torch.sqrt(gt[:, 0, ...]**2 + gt[:, 1, ...]**2)
     gt_phase = torch.atan2(gt[:, 1, ...], gt[:, 0, ...])
 
-    # Create a mask based on the gt
-    mask = torch.where(gt_ampl > 0, 1, 0)
-
-    # Apply the mask to the predicted phase
-    phase = phase * mask
-
     # Compute the losses
     loss_itof = loss_fn(itof, gt)
     loss_phase = loss_fn(phase, gt_phase)
