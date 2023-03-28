@@ -42,7 +42,7 @@ class BalancedMAELoss(torch.nn.Module):
         if self.pos_weight is not None:
             if mask is None:
                 mask = torch.where(target != 0, 1, 0)
-            weighted_mask = mask * self.pos_weight
+            weighted_mask = torch.where(mask == 1, self.pos_weight, 1)
             mae = mae * weighted_mask
             mae = torch.mean(mae)
         elif self.reduction == "weight_mean":

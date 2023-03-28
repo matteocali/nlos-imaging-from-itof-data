@@ -47,7 +47,7 @@ class NlosTransientDatasetItofGt(Dataset):
         focal = hfov2focal(hdim=dim_x, hfov=60)  # Compute the focal length
 
         itof_data = np.zeros((num_images, dim_x, dim_y, nf), dtype=np.float32)  # Create the iToF data tensor
-        gt_itof = np.zeros((num_images, 2, dim_x, dim_y), dtype=np.float32)        # Create the ground truth iToF data tensor
+        gt_itof = np.zeros((num_images, 2, dim_x, dim_y), dtype=np.float32)     # Create the ground truth iToF data tensor
         gt_depth = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)       # Create the ground truth depth map tensor in radial coordinates
 
         names = []
@@ -58,9 +58,9 @@ class NlosTransientDatasetItofGt(Dataset):
 
             # Load the transient data
             with h5.File(image, "r") as h:
-                temp_data = h["data"][:]                       # Load the transient data  # type: ignore
-                temp_gt_depth = h["depth_map"][:]              # Load the ground truth depth data  # type: ignore
-                temp_gt_mask = h["alpha_map"][:]                    # Load the ground truth mask data  # type: ignore
+                temp_data = h["data"][:]           # Load the transient data  # type: ignore
+                temp_gt_depth = h["depth_map"][:]  # Load the ground truth depth data  # type: ignore
+                temp_gt_mask = h["alpha_map"][:]   # Load the ground truth mask data  # type: ignore
 
             temp_lin = np.reshape(temp_data, (dim_x * dim_y, dim_t))  # Reshape the transient data  # type: ignore
 
@@ -148,7 +148,7 @@ class NlosTransientDatasetItofGt(Dataset):
         transforms = {
             "random rotate": CT.RandomRotation(degrees=180, interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),
             "random translate": CT.RandomAffine(degrees=0, translate=(0.2, 0.2), interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),
-            "random translate rotate": CT.RandomAffine(degrees=180, translate=(0.2, 0.2), interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),  # "random translate and rotate
+            "random translate rotate": CT.RandomAffine(degrees=180, translate=(0.1, 0.1), interpolation=T.InterpolationMode.NEAREST, fill=float("inf")),  # "random translate and rotate
             "random hflip": T.RandomHorizontalFlip(p=1.0),
             "random vflip": T.RandomVerticalFlip(p=1.0),
             "random hflip vflip": T.Compose([T.RandomHorizontalFlip(p=1.0), T.RandomVerticalFlip(p=1.0)]),  # "random hflip and vflip
@@ -166,6 +166,9 @@ class NlosTransientDatasetItofGt(Dataset):
                 gt_itof = self.gt_itof[index, ...].unsqueeze(0)
                 gt_depth = self.gt_depth[index, ...].unsqueeze(0)
 
+                # Compute the total number of pixels composing the object
+                gt_obj_pixels = torch.sum(gt_depth != 0)
+
                 # Check the number of frequencies used
                 n_freqs = itof_data.shape[1]
 
@@ -176,12 +179,15 @@ class NlosTransientDatasetItofGt(Dataset):
                 data = transform(data)
 
                 # Extract the data from the transformed tensor
-                itof_data = data[0, 0:n_freqs, ...].unsqueeze(0)
+                itof_data = data[0, :n_freqs, ...].unsqueeze(0)
                 if key != "random noise":  # The noise transform does not change the ground truth
                     gt_itof = data[0, n_freqs : n_freqs + 2, ...].unsqueeze(0)
                     gt_depth = data[0, n_freqs + 2, ...].unsqueeze(0)
-
-                # Update the dataset
-                self.itof_data = torch.cat((self.itof_data, itof_data), dim=0)
-                self.gt_itof = torch.cat((self.gt_itof, gt_itof), dim=0)
-                self.gt_depth = torch.cat((self.gt_depth, gt_depth), dim=0)
+                
+                # Check if after the transformation the object is still fully in frame and update the dataset
+                obj_pixels = torch.sum(gt_depth != 0)  # Compute the number of pixels composing the object
+                if abs(gt_obj_pixels - obj_pixels) < 2:  # If the object is fully in frame, save the sample
+                    # Update the dataset
+                    self.itof_data = torch.cat((self.itof_data, itof_data), dim=0)
+                    self.gt_itof = torch.cat((self.gt_itof, gt_itof), dim=0)
+                    self.gt_depth = torch.cat((self.gt_depth, gt_depth), dim=0)

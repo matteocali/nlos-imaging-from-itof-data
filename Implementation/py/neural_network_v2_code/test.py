@@ -132,7 +132,7 @@ if __name__ == '__main__':
     bg_obj_ratio = test_dts.get_bg_obj_ratio()
 
     # Create the loss function
-    loss_fn = torch.nn.MSELoss(reduction="mean")
+    loss_fn = torch.nn.L1Loss(reduction="mean")
 
     # Define the output path
     out_folder = Path(__file__).parent.absolute() / "results"

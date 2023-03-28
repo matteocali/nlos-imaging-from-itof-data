@@ -48,15 +48,15 @@ def phi_func(freqs, dim_t=2000, exp_time=0.01):
     return phi
 
 
-def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], loss: float, titles: tuple[str, str]) -> None:
+def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str, str], loss: float or None = None) -> None:  # type: ignore
     """
     Function used to generate the row subplot
         param:
             - fig: figure
             - ax: axis
             - data: tuple containing the ground truth and the predicted data
-            - loss: loss value
             - title: tuple containing the title of the subplot
+            - loss: loss value
     """
 
     # Generate the plts for the depth
@@ -66,12 +66,12 @@ def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], loss: float, title
         divider = make_axes_locatable(ax[i])                                   # Defien the colorbar axis
         cax = divider.append_axes("right", size="5%", pad=0.05)                # Set the colorbar location
         fig.colorbar(img, cax=cax)                                             # Plot the colorbar
-        if i ==1:                                                              # If the plot is the predicted one
+        if i ==1 and loss is not None:                                         # If the plot is the predicted one and the loss is not None
             box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)  # Define the box style
-            ax[i].text(20, 20, f"MSE: {round(loss, 3)}", 
+            ax[i].text(20, 20, f"MAE: {round(loss, 3)}", 
                           ha='left', va='top', fontsize=11, 
                           color='black', bbox=box_style)                       # Add the box to the plot # type: ignore
-        ax[i].set_title(titles[i])                                              # Set the title of the subplot
+        ax[i].set_title(titles[i])                                             # Set the title of the subplot
         ax[i].set_xlabel("x")                                                  # Set the x label of the subplot
         ax[i].set_ylabel("y")                                                  # Set the y label of the subplot
 
@@ -92,10 +92,10 @@ def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[
 
     # Generate the plts for the depth
     titles = ("Grount truth depth", "Predicted depth")
-    row_subplot(fig, ax[0], (depth_data[0], depth_data[1]), losses[0], titles)
+    row_subplot(fig, ax[0], (depth_data[0], depth_data[1]), titles, losses[0])
     # Generate the plts for the mask
     titles = ("Grount truth mask", "Predicted mask")
-    row_subplot(fig, ax[1], (mask_data[0], mask_data[1]), losses[1], titles)
+    row_subplot(fig, ax[1], (mask_data[0], mask_data[1]), titles, losses[1])
     
     plt.tight_layout()
     plt.savefig(str(path / f"{index + 1}.svg"))
@@ -118,20 +118,19 @@ def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: t
 
     # Generate the plts for the depth
     titles = ("Grount truth depth", "Predicted depth")
-    row_subplot(fig, ax[0], (depth_data[0], depth_data[1]), losses[0], titles)
+    row_subplot(fig, ax[0], (depth_data[0], depth_data[1]), titles, losses[0])
     # Generate the plts for the itof
     # Real iToF
     titles = ("Grount truth real iToF", "Predicted real iToF")
-    row_subplot(fig, ax[1], (itof_data[0][0, ...], itof_data[1][0, ...]), losses[1], titles)
+    row_subplot(fig, ax[1], (itof_data[0][0, ...], itof_data[1][0, ...]), titles, losses[1])
     # Imaginary iToF
     titles = ("Grount truth imaginary iToF", "Predicted imaginary iToF")
-    row_subplot(fig, ax[2], (itof_data[0][1, ...], itof_data[1][1, ...]), losses[2], titles)
+    row_subplot(fig, ax[2], (itof_data[0][1, ...], itof_data[1][1, ...]), titles, losses[2])
     
     plt.tight_layout()
     plt.savefig(str(path / f"{index + 1}.svg"))
     plt.close()
         
-
 
 def generate_fig(data: tuple[np.ndarray, np.ndarray], c_range: tuple[float, float] = None):  # type: ignore
     """
@@ -157,6 +156,31 @@ def generate_fig(data: tuple[np.ndarray, np.ndarray], c_range: tuple[float, floa
         ax[i].set_ylabel("Row pixel")
     plt.tight_layout()
     return fig
+
+
+def plt_itof(itof: np.ndarray, path: Path) -> None:
+    """
+    Function used to plot the iToF
+        param:
+            - itof: iToF to plot
+    """
+
+    # Generate the plot
+    fig, ax = plt.subplots(3, 2, figsize=(16, 16))
+
+    # Generate the plts for the itof at 20MHz
+    titles = ("20MHz real", "20MHz imaginary")
+    row_subplot(fig, ax[0], (itof[0, ...], itof[1, ...]), titles)
+    # Generate the plts for the itof at 50MHz
+    titles = ("50MHz real", "50MHz imaginary")
+    row_subplot(fig, ax[1], (itof[2, ...], itof[3, ...]), titles)
+    # Generate the plts for the itof at 60MHz
+    titles = ("60MHz real", "60MHz imaginary")
+    row_subplot(fig, ax[2], (itof[4, ...], itof[5, ...]), titles)
+    
+    plt.tight_layout()
+    plt.savefig(str(path))
+    plt.close()    
 
 
 def send_email(receiver_email: str, subject: str, body: str):
@@ -199,25 +223,6 @@ def update_lr(optimizer: Optimizer, epoch: int) -> None:
     if epoch == 10:
         for param_group in optimizer.param_groups:
             param_group["lr"] = param_group["lr"] * 0.1
-
-
-def hard_thresholding(x: torch.Tensor, threshold_type: str = "round") -> torch.Tensor:
-    """
-    Function used to perform the hard thresholding
-        param:
-            - x: input tensor
-            - threshold_type: thresholding type
-        return:
-            - output tensor
-    """
-
-    if threshold_type == "round":
-        return torch.round(x)
-    elif threshold_type == "mid_value":
-        mid = ((x.max() + x.min()) / 2).item()
-        return torch.where(x <= mid, 0., 1.)
-    else:
-        raise ValueError("Thresholding type not recognized")
 
 
 def hfov2focal(hdim: int, hfov: float) -> float:
@@ -325,28 +330,40 @@ def itof2depth(itof: torch.Tensor or np.ndarray, freqs: tuple or float or int) -
         arr = np.array
     else:
         env = torch
-        arr = torch.tensor
+        arr = torch.Tensor
+
+    # Perform a check on freqs tu ensure that it is a tuple
+    freqs = tuple([freqs]) if (isinstance(freqs, float) or isinstance(freqs, int)) else freqs
 
     # Check if there is the batch dimension
-    if len(itof.shape) == 4:
-        itof = itof.squeeze(0)
+    if len(itof.shape) == 3 and isinstance(itof, torch.Tensor):
+        itof = itof.unsqueeze(0)
+    elif len(itof.shape) == 3 and isinstance(itof, np.ndarray):
+        itof = itof[np.newaxis, ...]
 
     n_freqs = 1 if isinstance(freqs, float) or isinstance(freqs, int) else len(freqs)  # Number of frequencies used by the iToF sensor
 
-    if n_freqs != itof.shape[0] // 2:
+    if n_freqs != itof.shape[1] // 2:
         raise ValueError("The number of frequencies is not equal to the number of channels in the itof map")
 
     # Compute the phase shift value (for each frequency)
-    phi = env.arctan2(itof[n_freqs:, ...], itof[:n_freqs, ...]).squeeze(0)  # type: ignore
+    phi = env.arctan2(itof[:, n_freqs:, ...], itof[:, :n_freqs, ...]).squeeze(0)  # type: ignore
 
     # Compute the conversion value (for each frequency)
     conv_value =  const.c / (4 * const.pi * arr(freqs))
+    # If necessary change the device of the conversion value
+    if isinstance(itof, torch.Tensor):
+        conv_value = conv_value.to(itof.device)  # type: ignore
 
     # Compute the radialdepth map
     depth = phi * conv_value
 
     # Set nan values to 0
     depth = env.nan_to_num(depth, nan=0, posinf=1e10, neginf=-1e10)  # type: ignore
+
+    # Remove unnecessary dimensions
+    if isinstance(depth, torch.Tensor) and len(depth.shape) == 4:
+        depth = depth.squeeze(1)
     
     return depth  # type: ignore
 

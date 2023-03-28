@@ -14,30 +14,47 @@ from utils.EarlyStopping import EarlyStopping
 from utils.utils import itof2depth, update_lr
 
 
-def compute_loss(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Module) -> torch.Tensor:
+def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Module) -> torch.Tensor:
     """
-    Function to compute the loss
+    Function to compute the loss using itof data
         param:
             - itof: predicted itof
             - gt: ground truth itof
             - loss_fn: loss function to use
         return:
-            - tuple containing the loss, the amplitude loss and the phase loss
+            - final loss
     """
 
     # Compute the amplitude and the phase (prediction)
     # ampl = torch.sqrt(itof[:, 0, ...]**2 + itof[:, 1, ...]**2)
-    phase = torch.atan2(itof[:, 1, ...], itof[:, 0, ...])
+    # phase = torch.atan2(itof[:, 1, ...], itof[:, 0, ...])
 
     # Compute the amplitude and the phase (ground truth)
-    gt_ampl = torch.sqrt(gt[:, 0, ...]**2 + gt[:, 1, ...]**2)
-    gt_phase = torch.atan2(gt[:, 1, ...], gt[:, 0, ...])
+    # gt_ampl = torch.sqrt(gt[:, 0, ...]**2 + gt[:, 1, ...]**2)
+    # gt_phase = torch.atan2(gt[:, 1, ...], gt[:, 0, ...])
 
     # Compute the losses
     loss_itof = loss_fn(itof, gt)
-    loss_phase = loss_fn(phase, gt_phase)
+    # loss_phase = loss_fn(phase, gt_phase)
 
-    return loss_itof + loss_phase
+    # return loss_itof + loss_phase
+    return loss_itof
+
+
+def compute_loss_depth(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Module) -> torch.Tensor:
+    """
+    Function to compute the loss using itof data
+        param:
+            - itof: predicted itof
+            - gt: ground truth depth
+            - loss_fn: loss function to use
+        return:
+            - final loss
+    """
+
+    depth = itof2depth(itof, 20e06)  # type: ignore
+
+    return loss_fn(depth, gt)
 
 
 def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, device: torch.device) -> float:
@@ -64,6 +81,8 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         itof_data = batch["itof_data"].to(device)  
         # Extract the ground truth itof data
         gt_itof = batch["gt_itof"].to(device)
+        # Extract the ground truth depth
+        gt_depth = batch["gt_depth"].to(device)
 
         # Reset the gradients
         optimizer.zero_grad()
@@ -72,7 +91,8 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         itof = net(itof_data)
 
         # Compute the loss
-        loss = compute_loss(itof, gt_itof, loss_fn)
+        loss = compute_loss_itof(itof, gt_itof, loss_fn)
+        # loss = compute_loss_depth(itof, gt_depth, loss_fn)
 
         # Backward pass
         loss.backward()
@@ -124,7 +144,8 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
             # Forward pass
             itof = net(itof_data)
 
-            loss = compute_loss(itof, gt_itof, loss_fn)
+            loss = compute_loss_itof(itof, gt_itof, loss_fn)
+            # loss = compute_loss_depth(itof, gt_depth, loss_fn)
 
             # Append the loss
             epoch_loss.append(loss.item())

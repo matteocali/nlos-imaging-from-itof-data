@@ -19,10 +19,10 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/process_dts.py",
             "args": [
-                "--name", "fixed_camera_diffuse_wall",
+                "--name", "fixed_camera_diffuse_wall_add_layer",
                 "--input", "/media/matteocali/shared_ssd/NLoS imaging using iToF/mirror_dts/fixed_camera_diffuse_wall",
                 "--bg-value", "0",
-                "--add-layer", "False",
+                "--add-layer", "True",
                 "--multi_freqs", "False",
                 "--data-augment-size", "202",
                 "--slurm", "False"
@@ -37,7 +37,7 @@
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/train.py",
             "args": [
                 "--dataset", "fixed_camera_diffuse_wall_add_layer",
-                "--name", "test_radial_depth_add_layer",
+                "--name", "test_itof_out_loss_depth_based",
                 "--lr", "0.0001",
                 "--encoder-channels", "32, 64, 128, 256, 512",
                 "--n-out-channels", "16",
@@ -56,7 +56,7 @@
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/test.py",
             "args": [
                 "--dts-name", "fixed_camera_diffuse_wall_add_layer",
-                "--model", "nlos_nn_v2_itof_out_add_layer_new_loss_model_lr_0.0001_ochannel_16_addlayers_0_aug_202",
+                "--model", "nlos_nn_v2_itof_out_add_layer_new_loss_v3_bal_model_lr_0.0001_ochannel_16_addlayers_0_aug_202",
                 "--lr", "0.0001",
                 "--encoder-channels", "32, 64, 128, 256, 512",
                 "--n-out-channels", "16",
