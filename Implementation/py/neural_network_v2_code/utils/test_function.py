@@ -40,8 +40,11 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
                 itof = torch.where(itof == bg, 0, itof)
                 gt_itof = torch.where(gt_itof == bg, 0, gt_itof)
 
+            # Cleen iToF data
+            itof = torch.where(abs(itof) < 0.05, 0, itof)
+
             # Compute the predicted radial depth
-            depth = itof2depth(itof, 20e06).unsqueeze(0)  # type: ignore
+            depth = itof2depth(itof, 20e06)  # type: ignore
             
             # Compute the losses
             itof_loss_real = loss_fn(itof.squeeze(0)[0, ...], gt_itof.squeeze(0)[0, ...])  # Compute the loss over the itof data (real)

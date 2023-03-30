@@ -2,6 +2,7 @@ import numpy as np
 import scipy.constants as const
 import smtplib
 import torch
+import seaborn as sns
 from pathlib import Path
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -87,6 +88,9 @@ def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[
             - path: path where to save the plots
     """
 
+    # Set seaborn style
+    sns.set_style()
+
     # Generate the plot
     fig, ax = plt.subplots(2, 2, figsize=(16, 11))
 
@@ -112,6 +116,9 @@ def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: t
             - index: index of the test sample
             - path: path where to save the plots
     """
+
+    # Set seaborn style
+    sns.set_style()
 
     # Generate the plot
     fig, ax = plt.subplots(3, 2, figsize=(16, 16))
@@ -141,6 +148,9 @@ def generate_fig(data: tuple[np.ndarray, np.ndarray], c_range: tuple[float, floa
         return:
             - figure
     """
+    
+    # Set seaborn style
+    sns.set_style()
 
     titles = ["Target", "Prediction"]
     fig, ax = plt.subplots(1, 2)
@@ -164,6 +174,9 @@ def plt_itof(itof: np.ndarray, path: Path) -> None:
         param:
             - itof: iToF to plot
     """
+
+    # Set seaborn style
+    sns.set_style()
 
     # Generate the plot
     fig, ax = plt.subplots(3, 2, figsize=(16, 16))
