@@ -12,15 +12,18 @@ from torch.utils.tensorboard.writer import SummaryWriter
 from utils.utils import format_time, generate_fig
 from utils.EarlyStopping import EarlyStopping
 from utils.utils import itof2depth, update_lr
+from torchmetrics import StructuralSimilarityIndexMeasure as SSIM
 
 
-def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Module) -> torch.Tensor:
+def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Module, ssim_fn: SSIM, l: float = 0.5) -> torch.Tensor:
     """
     Function to compute the loss using itof data
         param:
             - itof: predicted itof
             - gt: ground truth itof
             - loss_fn: loss function to use
+            - ssim_loss: ssim loss function
+            - l: lambda value
         return:
             - final loss
     """
@@ -35,10 +38,18 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Mo
 
     # Compute the losses
     loss_itof = loss_fn(itof, gt)
+    loss_ssim = 1 - ssim_fn(itof, gt)
     # loss_phase = loss_fn(phase, gt_phase)
 
     # return loss_itof + loss_phase
-    return loss_itof
+
+    # Compute the final loss
+    if l == 0.5:
+        loss = loss_itof + loss_ssim
+    else:
+        loss = l * loss_itof + (1 - l) * loss_ssim
+
+    return loss
 
 
 def compute_loss_depth(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Module) -> torch.Tensor:
@@ -57,7 +68,7 @@ def compute_loss_depth(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.M
     return loss_fn(depth, gt)
 
 
-def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, device: torch.device) -> float:
+def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, ssim_fn: SSIM, device: torch.device, l: float) -> float:
     """
     Function to train the network on the training set
         param:
@@ -65,7 +76,9 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
             - data_loader: data loader containing the training set
             - optimizer: optimizer used to update the weights
             - loss_fn: loss function to use
+            - ssim_loss: ssim loss function
             - device: device used to train the network
+            - l: lambda value
         return:
             - average loss
     """
@@ -91,7 +104,7 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         itof = net(itof_data)
 
         # Compute the loss
-        loss = compute_loss_itof(itof, gt_itof, loss_fn)
+        loss = compute_loss_itof(itof, gt_itof, loss_fn, ssim_fn, l)
         # loss = compute_loss_depth(itof, gt_depth, loss_fn)
 
         # Backward pass
@@ -110,14 +123,16 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
     return float(np.mean(epoch_loss))
 
 
-def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, device: torch.device) -> tuple[float, tuple[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]:
+def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, ssim_fn: SSIM, device: torch.device, l: float) -> tuple[float, tuple[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]:
     """
     Function to validate the network on the validation set
         param:
             - net: network to validate
             - data_loader: data loader containing the validation set
             - loss_fn: loss function to use
+            - ssim_loss: ssim loss function
             - device: device used to validate the network
+            - l: lambda value
         return:
             - tuple containing the average loss, the last gt_itof and gt_depth and the last predicted itof
         """
@@ -144,7 +159,7 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
             # Forward pass
             itof = net(itof_data)
 
-            loss = compute_loss_itof(itof, gt_itof, loss_fn)
+            loss = compute_loss_itof(itof, gt_itof, loss_fn, ssim_fn, l)
             # loss = compute_loss_depth(itof, gt_depth, loss_fn)
 
             # Append the loss
@@ -158,7 +173,7 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
     return float(np.mean(epoch_loss)), last_gt, last_pred # type: ignore
 
 
-def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer,loss_fn: torch.nn.Module, device: torch.device, n_epochs: int, save_path: Path) -> None:
+def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, l: float, device: torch.device, n_epochs: int, save_path: Path) -> None:
     """
     Function to train the network
         param:
@@ -168,6 +183,7 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
             - val_loader: data loader containing the validation set
             - optimizer: optimizer used to update the weights
             - loss_fn: loss function to use
+            - l: lambda value to balance the mae loss and the ssim loss
             - device: device used to train the network
             - n_epochs: number of epochs to train the network
             - save_path: path where to save the model
@@ -183,6 +199,9 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
     # Initialize the early stopping
     early_stopping = EarlyStopping(
         tollerance=100, min_delta=0.05, save_path=save_path, net=net)
+    
+    # Initialize the SSIM loss
+    ssim_loss = SSIM()
 
     # Initialize the variable that contains the overall time
     overall_time = 0
@@ -192,11 +211,11 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
         start_time = time.time()
 
         # Train the network
-        train_loss = train_fn(net, train_loader, optimizer, loss_fn, device)
+        train_loss = train_fn(net, train_loader, optimizer, loss_fn, ssim_loss, device, l)
 
         # Validate the network
         # Execute the validation function
-        val_loss, gt, pred = val_fn(net, val_loader, loss_fn, device)
+        val_loss, gt, pred = val_fn(net, val_loader, loss_fn, ssim_loss, device, l)
         # Unpack the ground truth
         _, gt_depth = gt
         # Unpack the predictions
