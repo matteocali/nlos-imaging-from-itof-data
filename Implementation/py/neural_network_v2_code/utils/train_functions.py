@@ -201,7 +201,7 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
         tollerance=100, min_delta=0.05, save_path=save_path, net=net)
     
     # Initialize the SSIM loss
-    ssim_loss = SSIM()
+    ssim_loss = SSIM().to(device)
 
     # Initialize the variable that contains the overall time
     overall_time = 0
