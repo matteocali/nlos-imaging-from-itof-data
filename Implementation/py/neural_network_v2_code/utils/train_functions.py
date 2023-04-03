@@ -165,6 +165,9 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
             # Append the loss
             epoch_loss.append(loss.item())
 
+            # Cleen iToF data to avoid noise in the depth reconstruction
+            itof = torch.where(abs(itof) < 0.05, 0, itof)
+
             # Update the last gt_depth and the last predicted depth
             last_gt = (gt_itof.to("cpu").numpy()[-1, ...], gt_depth.to("cpu").numpy()[-1, ...])
             last_pred = (itof.to("cpu").numpy()[-1, ...], itof2depth(itof.to("cpu").numpy()[-1, ...], 20e06))  # type: ignore
