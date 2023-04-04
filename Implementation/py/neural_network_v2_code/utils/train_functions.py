@@ -44,10 +44,7 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Mo
     # return loss_itof + loss_phase
 
     # Compute the final loss
-    if l == 0.5:
-        loss = loss_itof + loss_ssim
-    else:
-        loss = l * loss_itof + (1 - l) * loss_ssim
+    loss = loss_itof + l * loss_ssim
 
     return loss
 
