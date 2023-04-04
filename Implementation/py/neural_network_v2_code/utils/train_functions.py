@@ -197,7 +197,7 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
     current_date = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     hostname = socket.gethostname()
     writer = SummaryWriter(
-        log_dir=f"{current_dir}/../tensorboard_logs/{current_date}_{hostname}_{attempt_name}_{net.__class__.__name__}_LR_{optimizer.param_groups[0]['lr']}")
+        log_dir=f"{current_dir}/../tensorboard_logs/{current_date}_{hostname}_{attempt_name}_{net.__class__.__name__}_LR_{optimizer.param_groups[0]['lr']}_l_{l}")
 
     # Initialize the early stopping
     early_stopping = EarlyStopping(
@@ -259,7 +259,7 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
             with open(save_path.parent.absolute() / f"{attempt_name}_log.txt", "a") as f:
                 f.write("Early stopping triggered\n")
 
-            torch.save(net.state_dict(), str(save_path) + "_final")
+            torch.save(net.state_dict(), str(save_path)[:-3] + "_FINAL.pt")
 
             break
 

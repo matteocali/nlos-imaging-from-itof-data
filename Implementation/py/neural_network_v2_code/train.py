@@ -231,7 +231,7 @@ if __name__ == '__main__':
           l=l_val,
           device=device,
           n_epochs=n_epochs,
-          save_path=(net_state_path / f"{args[1]}_model_lr_{lr}_ochannel_{n_out_channels}_addlayers_{additional_layers}_aug_{str(augment)}.pt"))
+          save_path=(net_state_path / f"{args[1]}_model_lr_{lr}_ochannel_{n_out_channels}_l_{l_val}_addlayers_{additional_layers}_aug_{str(augment)}.pt"))
     f_train_time = time.time()  # Stop the timer for the training
     print(
         f"The total computation time for training the model was {format_time(s_train_time, f_train_time)}\n")
