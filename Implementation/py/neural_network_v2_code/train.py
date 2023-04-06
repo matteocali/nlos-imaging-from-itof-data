@@ -217,7 +217,7 @@ if __name__ == '__main__':
     optimizer = Adam(model.parameters(), lr=lr)
 
     # Create the loss function
-    loss_fn = BalancedMAELoss(reduction="mean", pos_weight=torch.Tensor([bg_obj_ratio]).to(device))
+    loss_fn = BalancedMAELoss(reduction="mean", pos_weight=torch.Tensor([bg_obj_ratio]).to(device)).to(device)
     # loss_fn = BalancedMAELoss(reduction="mean")
 
     # Train the model
