@@ -40,6 +40,7 @@
                 "--name", "test_itof_out_loss_depth_based",
                 "--lr", "0.0001",
                 "--lambda", "0.8",
+                "--additional-loss", "ssim",
                 "--encoder-channels", "32, 64, 128, 256, 512",
                 "--n-out-channels", "16",
                 "--additional-layers", "0",
