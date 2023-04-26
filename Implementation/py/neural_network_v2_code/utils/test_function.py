@@ -51,10 +51,13 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
             itof_loss_imag = loss_fn(itof.squeeze(0)[1, ...], gt_itof.squeeze(0)[1, ...])  # Compute the loss over the itof data (imaginary)
             depth_loss = loss_fn(depth, gt_depth)  # Compute the loss over the depth
 
+            # Update the loss list
+            epoch_loss.append(depth_loss.to("cpu").item())
+
             # Remove the batch dimension and convert the data to numpy
             n_itof = itof.to("cpu").squeeze(0).numpy()
             n_gt_itof = gt_itof.to("cpu").squeeze(0).numpy()
-            n_depth = depth.to("cpu").squeeze(0).numpy()
+            n_depth = depth.to("cpu").squeeze(0).numpy()  # type: ignore
             n_gt_depth = gt_depth.to("cpu").squeeze(0).numpy()
 
             # Convert the depth from radial to cartesian
@@ -73,12 +76,22 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
                 i,
                 plots_dir)
 
-            tmp_out = torch.cat((depth.unsqueeze(0), itof), dim=1)  # Concatenate the depth and the mask
+            tmp_out = torch.cat((depth.unsqueeze(0), itof), dim=1)  # Concatenate the depth and the mask  # type: ignore
 
             # Append the output
             out = np.concatenate((out, tmp_out.to("cpu").numpy()), axis=0)
     
     out = np.delete(out, 0, axis=0)  # Delete the first empty array
+
+    # Save the overall depth loss
+    mean_loss = np.round(np.mean(epoch_loss), 4)
+    min_loss = np.round(np.min(epoch_loss), 4)
+    max_loss = np.round(np.max(epoch_loss), 4)
+
+    with open(out_path / "loss.txt", "w") as f:
+        f.write(f"Overall depth loss: {mean_loss}\n")
+        f.write(f"Min depth loss: {min_loss}\n")
+        f.write(f"Max depth loss: {max_loss}")
 
     # Save the output npy
     np.save(out_path / "results.npy", out)

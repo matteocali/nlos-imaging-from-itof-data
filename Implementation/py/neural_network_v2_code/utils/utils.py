@@ -327,7 +327,7 @@ def normalize(data: np.ndarray or torch.Tensor, bounds: dict[str, dict[str, floa
     return bounds['desired']['lower'] + (data - bounds['actual']['lower']) * (bounds['desired']['upper'] - bounds['desired']['lower']) / (bounds['actual']['upper'] - bounds['actual']['lower'])
 
 
-def itof2depth(itof: torch.Tensor or np.ndarray, freqs: tuple or float or int) -> torch.Tensor or np.ndarray:
+def itof2depth(itof: torch.Tensor | np.ndarray, freqs: tuple | float | int) -> torch.Tensor | np.ndarray:
     """
     Function used to convert the itof depth map to the correspondent radial depth map
         param:

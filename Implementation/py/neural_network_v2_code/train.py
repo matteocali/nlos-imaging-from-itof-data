@@ -28,8 +28,10 @@ def arg_parser(argv):
     arg_model_name = ""
     # Argument defining the learning rate
     arg_lr = 1e-4
-    # Argument defining the lambda value
-    arg_lambda = 0.8
+    # Argument defining the lambda value for the additional loss
+    arg_lambda = 0.3
+    # Argument defining the lambda value for the depth loss
+    arg_lambda2 = 0.2
     # Argument defining the additional loss to be used
     arg_additional_loss = "grad-mse"
     # Argument defining the encoder channels
@@ -45,13 +47,13 @@ def arg_parser(argv):
     # Argument defining if the code will be run on slurm
     arg_slurm = False
     # Help string
-    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -A <additional-loss> (ssim, grad-mse, grad-mae), -i <encoder-channels>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -a <data-augment-size>, -s <slurm>".format(
+    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -k <lambda-depth>, -A <additional-loss> (ssim, grad-mse, grad-mae), -i <encoder-channels>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -a <data-augment-size>, -s <slurm>".format(
         argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(
-            argv[1:], "hd:n:r:l:A:i:c:p:e:a:s:", ["help", "dataset=", "name=", "lr=", "lambda=", "additional-loss=", "encoder-channels=", "n-out-channels=", "additional-layers=", "n-epochs=", "data-augment-size=", "slurm="])
+            argv[1:], "hd:n:r:l:k:A:i:c:p:e:a:s:", ["help", "dataset=", "name=", "lr=", "lambda=", "lambda-depth=", "additional-loss=", "encoder-channels=", "n-out-channels=", "additional-layers=", "n-epochs=", "data-augment-size=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -65,6 +67,8 @@ def arg_parser(argv):
             arg_lr = float(arg)               # Set the learning rate
         elif opt in ("-l", "--lambda"):
             arg_lambda = float(arg)           # Set the lambda value
+        elif opt in ("-k", "--lambda-depth"):
+            arg_lambda2 = float(arg)          # Set the lambda value for the depth loss
         elif opt in ("-A", "--additional-loss"):
             arg_additional_loss = arg         # Set the additional loss
         elif opt in ("-i", "--encoder-channels"):
@@ -99,6 +103,7 @@ def arg_parser(argv):
     print("Model name: ", arg_model_name)
     print("Learning rate: ", arg_lr)
     print("Lambda: ", arg_lambda)
+    print("Lambda depth: ", arg_lambda2)
     print("Additional loss: ", arg_additional_loss)
     print("Encoder channels: ", arg_encoder_channels)
     print("Number of output channels: ", arg_n_out_channels)
@@ -108,7 +113,7 @@ def arg_parser(argv):
     print("Slurm: ", arg_slurm)
     print()
 
-    return [dts_name, arg_model_name, arg_lr, arg_lambda, arg_additional_loss, arg_encoder_channels, arg_n_out_channels, arg_additional_layers, arg_n_epochs, arg_augment_size, arg_slurm]
+    return [dts_name, arg_model_name, arg_lr, arg_lambda, arg_lambda2, arg_additional_loss, arg_encoder_channels, arg_n_out_channels, arg_additional_layers, arg_n_epochs, arg_augment_size, arg_slurm]
 
 
 if __name__ == '__main__':
@@ -120,13 +125,14 @@ if __name__ == '__main__':
     batch_size = 32              # Set the batch size
     lr = args[2]                 # Set the learning rate
     l_val = args[3]              # Set the lambda value
-    additional_loss = args[4]    # Set the additional loss
-    encoder_channels = args[5]   # Set the encoder channels
-    n_out_channels = args[6]     # Set the number of the u-net output channels
-    additional_layers = args[7]  # Set the number of additional CNN layers
-    n_epochs = args[8]           # Set the number of epochs
-    augment = args[9]            # Set the data augmentation flag
-    slurm = args[10]             # Set the slurm flag
+    l2_val = args[4]             # Set the lambda value for the depth loss
+    additional_loss = args[5]    # Set the additional loss
+    encoder_channels = args[6]   # Set the encoder channels
+    n_out_channels = args[7]     # Set the number of the u-net output channels
+    additional_layers = args[8]  # Set the number of additional CNN layers
+    n_epochs = args[9]           # Set the number of epochs
+    augment = args[10]            # Set the data augmentation flag
+    slurm = args[11]             # Set the slurm flag
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -152,6 +158,7 @@ if __name__ == '__main__':
     val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")
 
     # Create the dataloaders
+    t = train_dts[4]
     train_loader = DataLoader(train_dts, batch_size=batch_size,
                               shuffle=True, num_workers=4)  # Create the train dataloader
     # Create the validation dataloader
@@ -235,6 +242,7 @@ if __name__ == '__main__':
           optimizer=optimizer,
           loss_fn=loss_fn,
           l=l_val,
+          l2=l2_val,
           add_loss=additional_loss,
           device=device,
           n_epochs=n_epochs,

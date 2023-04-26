@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd results/itof_ssim_grad_batch_results
+cd results/itof_ssim_grad_batch_results_full_dts
 
 for d in */ ; do
     cd "$d"/plots

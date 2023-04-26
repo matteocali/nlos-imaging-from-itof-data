@@ -1,0 +1,3 @@
+Overall depth loss: 0.1321
+Min depth loss: 0.0502
+Max depth loss: 0.303

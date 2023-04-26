@@ -155,6 +155,19 @@ if __name__ == '__main__':
             transforms_elm.append(ChangeBgValue(0, bg_value))
         transforms = Compose(transforms_elm)
 
+        # Printing the dimension of the dataset
+        print("Dataset dimension:")
+        with open(train_csv, "r") as f:
+            length = len(f.readlines())
+        print("  - Train: ", length)
+        with open(val_csv, "r") as f:
+            length = len(f.readlines())
+        print("  - Validation: ", length)
+        with open(test_csv, "r") as f:
+            length = len(f.readlines())
+        print("  - Test: ", length, "\n")
+        del length
+
         # Create and save the datasets
         print("Creating the training dataset...")
         train_dts = NlosTransientDatasetItofGt(

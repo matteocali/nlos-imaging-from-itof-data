@@ -15,15 +15,17 @@ from utils.utils import itof2depth, update_lr
 from torchmetrics import StructuralSimilarityIndexMeasure as SSIM
 
 
-def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None = None, l: float = 0.5) -> torch.Tensor:
+def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tensor, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None = None, l: float = 0.5, l2: float = 0.3) -> torch.Tensor:
     """
     Function to compute the loss using itof data
         param:
             - itof: predicted itof
             - gt: ground truth itof
+            - gt_depth: ground truth depth
             - loss_fn: loss function to use
             - add_loss: additional loss function to use
-            - l: lambda value
+            - l: lambda value for the additional loss
+            - l2: lambda value for the depth loss
         return:
             - final loss
     """
@@ -58,13 +60,24 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Mo
             torch.gradient(gt[:, 1, ...], dim=2)[0]), 
             dim=1)
         # Compute the gradient loss (MSE or MAE)
-        second_loss = add_loss(itof, gt)
+        second_loss = add_loss(grad_itof, grad_gt)
     else:
         # If no additional loss is used, set the second loss to 0
         second_loss = 0
+
+    # Check if there is also the depth_loss
+    if gt_depth is not None:
+        # Compute the depth
+        clean_itof = torch.where(abs(itof.detach()) < 0.05, 0, itof.detach())  # Clean the itof data 
+        depth = itof2depth(clean_itof, 20e06)
+
+
+        depth_loss = loss_fn(depth, gt_depth)
+    else:
+        depth_loss = 0
     
     # Compose the losses based on the lambda value
-    return loss_itof + l * second_loss
+    return loss_itof + (l * second_loss) + (l2 * depth_loss)
 
 
 def compute_loss_depth(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Module) -> torch.Tensor:
@@ -83,7 +96,7 @@ def compute_loss_depth(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.M
     return loss_fn(depth, gt)
 
 
-def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None, device: torch.device, l: float) -> float:
+def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None, device: torch.device, l: float, l2: float) -> float:
     """
     Function to train the network on the training set
         param:
@@ -93,7 +106,8 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
             - loss_fn: loss function to use
             - add_loss: additional loss function to use
             - device: device used to train the network
-            - l: lambda value
+            - l: lambda value for the additional loss
+            - l2: lambda value for the depth loss
         return:
             - average loss
     """
@@ -119,7 +133,7 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         itof = net(itof_data)
 
         # Compute the loss
-        loss = compute_loss_itof(itof, gt_itof, loss_fn, add_loss, l)
+        loss = compute_loss_itof(itof, gt_itof, gt_depth, loss_fn, add_loss, l, l2)
         # loss = compute_loss_depth(itof, gt_depth, loss_fn)
 
         # Backward pass
@@ -138,7 +152,7 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
     return float(np.mean(epoch_loss))
 
 
-def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None, device: torch.device, l: float) -> tuple[float, tuple[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]:
+def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None, device: torch.device, l: float, l2: float) -> tuple[float, tuple[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]:
     """
     Function to validate the network on the validation set
         param:
@@ -147,7 +161,8 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
             - loss_fn: loss function to use
             - add_loss: additional loss function to use
             - device: device used to validate the network
-            - l: lambda value
+            - l: lambda value for the additional loss
+            - l2: lambda value for the depth loss
         return:
             - tuple containing the average loss, the last gt_itof and gt_depth and the last predicted itof
         """
@@ -168,13 +183,13 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
             itof_data = batch["itof_data"].to(device)  
             # Extract the ground truth itof data
             gt_itof = batch["gt_itof"].to(device)
-            # Extract the ground truth depth
+            # Extract the ground truth depthS
             gt_depth = batch["gt_depth"].to(device)
 
             # Forward pass
             itof = net(itof_data)
 
-            loss = compute_loss_itof(itof, gt_itof, loss_fn, add_loss, l)
+            loss = compute_loss_itof(itof, gt_itof, gt_depth, loss_fn, add_loss, l, l2)
             # loss = compute_loss_depth(itof, gt_depth, loss_fn)
 
             # Append the loss
@@ -191,7 +206,7 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
     return float(np.mean(epoch_loss)), last_gt, last_pred # type: ignore
 
 
-def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, l: float, add_loss: str, device: torch.device, n_epochs: int, save_path: Path) -> None:
+def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, l: float, l2:float, add_loss: str, device: torch.device, n_epochs: int, save_path: Path) -> None:
     """
     Function to train the network
         param:
@@ -202,6 +217,7 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
             - optimizer: optimizer used to update the weights
             - loss_fn: loss function to use
             - l: lambda value to balance the mae loss and the ssim loss
+            - l2: lambda value to balance the depth loss
             - add_loss: additional loss to use
             - device: device used to train the network
             - n_epochs: number of epochs to train the network
@@ -241,11 +257,11 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
         start_time = time.time()
 
         # Train the network
-        train_loss = train_fn(net, train_loader, optimizer, loss_fn, add_loss_fn, device, l)
+        train_loss = train_fn(net, train_loader, optimizer, loss_fn, add_loss_fn, device, l, l2)
 
         # Validate the network
         # Execute the validation function
-        val_loss, gt, pred = val_fn(net, val_loader, loss_fn, add_loss_fn, device, l)
+        val_loss, gt, pred = val_fn(net, val_loader, loss_fn, add_loss_fn, device, l, l2)
         # Unpack the ground truth
         _, gt_depth = gt
         # Unpack the predictions

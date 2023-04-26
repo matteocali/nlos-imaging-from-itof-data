@@ -158,6 +158,11 @@ class NlosTransientDatasetItofGt(Dataset):
         # Sample a random batch of elements for each transform
         indices = [np.random.choice(self.itof_data.shape[0], batch_size, replace=False) for _ in range(len(transforms.keys()))]
 
+        # Define the tmp tensors that will contains the transformed data
+        tmp_itof_data = torch.zeros((batch_size * len(transforms.keys()), self.itof_data.shape[1], self.itof_data.shape[2], self.itof_data.shape[3]), dtype=torch.float32)
+        tmp_gt_itof = torch.zeros((batch_size * len(transforms.keys()), self.gt_itof.shape[1], self.gt_itof.shape[2], self.gt_itof.shape[3]), dtype=torch.float32)
+        tmp_gt_depth = torch.zeros((batch_size * len(transforms.keys()), self.gt_depth.shape[1], self.gt_depth.shape[2]), dtype=torch.float32)
+
         # Apply the transforms to the dataset
         for i, (key, transform) in tqdm(enumerate(transforms.items()), desc="Applying transforms", total=len(transforms.keys())):
             for index in tqdm(indices[i], desc=f"Applying {key}", total=batch_size, leave=False):
@@ -187,7 +192,13 @@ class NlosTransientDatasetItofGt(Dataset):
                 # Check if after the transformation the object is still fully in frame and update the dataset
                 obj_pixels = torch.sum(gt_depth != 0)  # Compute the number of pixels composing the object
                 if abs(gt_obj_pixels - obj_pixels) < 2:  # If the object is fully in frame, save the sample
-                    # Update the dataset
-                    self.itof_data = torch.cat((self.itof_data, itof_data), dim=0)
-                    self.gt_itof = torch.cat((self.gt_itof, gt_itof), dim=0)
-                    self.gt_depth = torch.cat((self.gt_depth, gt_depth), dim=0)
+                    # Update the tmp dataset
+                    pos = i * batch_size + index
+                    tmp_itof_data[pos, ...] = itof_data
+                    tmp_gt_itof[pos, ...] = gt_itof
+                    tmp_gt_depth[pos, ...] = gt_depth
+        
+        # Update the dataset
+        self.itof_data = torch.cat((self.itof_data, tmp_itof_data), dim=0)
+        self.gt_itof = torch.cat((self.gt_itof, tmp_gt_itof), dim=0)
+        self.gt_depth = torch.cat((self.gt_depth, tmp_gt_depth), dim=0)
