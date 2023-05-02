@@ -41,23 +41,27 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
     # Compute the main loss (Balanced MAE)
     loss_itof = loss_fn(itof, gt)
 
+    # Compute the depth
+    clean_itof = torch.where(abs(itof.detach()) < 0.05, 0, itof.detach())  # Clean the itof data 
+    depth = itof2depth(clean_itof, 20e06)
+
     # Compute the additional loss if any (SSIM or Gradient)
     if isinstance(add_loss, SSIM):
         # Compute the ssim loss
-        second_loss = 1 - add_loss(itof, gt)
+        second_loss = 1 - add_loss(depth, gt_depth)
     elif isinstance(add_loss, torch.nn.Module):
         # Compute the gradient of the prediction and gt
         grad_itof = torch.stack(
-            (torch.gradient(itof[:, 0, ...], dim=1)[0], 
-            torch.gradient(itof[:, 0, ...], dim=2)[0],
-            torch.gradient(itof[:, 1, ...], dim=1)[0], 
-            torch.gradient(itof[:, 1, ...], dim=2)[0]), 
+            (torch.gradient(clean_itof[:, 0, ...], dim=1, edge_order= 2)[0], 
+            torch.gradient(clean_itof[:, 0, ...], dim=2, edge_order= 2)[0],
+            torch.gradient(clean_itof[:, 1, ...], dim=1, edge_order= 2)[0], 
+            torch.gradient(clean_itof[:, 1, ...], dim=2, edge_order= 2)[0]), 
             dim=1)
         grad_gt = torch.stack(
-            (torch.gradient(gt[:, 0, ...], dim=1)[0], 
-            torch.gradient(gt[:, 0, ...], dim=2)[0],
-            torch.gradient(gt[:, 1, ...], dim=1)[0], 
-            torch.gradient(gt[:, 1, ...], dim=2)[0]), 
+            (torch.gradient(gt[:, 0, ...], dim=1, edge_order= 2)[0], 
+            torch.gradient(gt[:, 0, ...], dim=2, edge_order= 2)[0],
+            torch.gradient(gt[:, 1, ...], dim=1, edge_order= 2)[0], 
+            torch.gradient(gt[:, 1, ...], dim=2, edge_order= 2)[0]), 
             dim=1)
         # Compute the gradient loss (MSE or MAE)
         second_loss = add_loss(grad_itof, grad_gt)
@@ -67,11 +71,6 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
 
     # Check if there is also the depth_loss
     if gt_depth is not None:
-        # Compute the depth
-        clean_itof = torch.where(abs(itof.detach()) < 0.05, 0, itof.detach())  # Clean the itof data 
-        depth = itof2depth(clean_itof, 20e06)
-
-
         depth_loss = loss_fn(depth, gt_depth)
     else:
         depth_loss = 0
@@ -233,7 +232,7 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
 
     # Initialize the early stopping
     early_stopping = EarlyStopping(
-        tollerance=1500, min_delta=0.05, save_path=save_path, net=net)
+        tollerance=10, min_delta=0.05, save_path=save_path, net=net)
     
     # Initialize the chosed additional loss
     if add_loss == "ssim":
@@ -302,7 +301,8 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
             with open(save_path.parent.absolute() / f"{attempt_name}_log.txt", "a") as f:
                 f.write("Early stopping triggered\n")
 
-            torch.save(net.state_dict(), str(save_path)[:-3] + "_FINAL.pt")
+            # Save the final model
+            # torch.save(net.state_dict(), str(save_path)[:-3] + "_FINAL.pt")
 
             break
 
