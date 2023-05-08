@@ -256,7 +256,7 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
 
     # Initialize the early stopping
     early_stopping = EarlyStopping(
-        tollerance=10, min_delta=0.02, save_path=save_path, net=net)
+        tollerance=10, min_delta=0.015, save_path=save_path, net=net)
     
     # Initialize the chosed additional loss
     if add_loss == "ssim":
