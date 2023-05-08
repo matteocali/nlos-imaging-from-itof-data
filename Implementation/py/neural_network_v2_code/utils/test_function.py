@@ -4,9 +4,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from pathlib import Path
-from torchmetrics.functional.classification import binary_jaccard_index
-from ignite.engine import Engine
-from ignite.metrics.confusion_matrix import mIoU, ConfusionMatrix
+from torchmetrics.functional.classification.jaccard import binary_jaccard_index
 from utils.utils import save_test_plots_itof, depth_radial2cartesian, hfov2focal, itof2depth
 
 

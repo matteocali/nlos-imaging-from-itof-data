@@ -12,10 +12,11 @@ from torch.utils.data import DataLoader
 from torch.optim import Optimizer
 from pathlib import Path
 from torch.utils.tensorboard.writer import SummaryWriter
+from torchmetrics import StructuralSimilarityIndexMeasure as SSIM
 from utils.utils import format_time, generate_fig
 from utils.EarlyStopping import EarlyStopping
 from utils.utils import itof2depth, update_lr
-from torchmetrics import StructuralSimilarityIndexMeasure as SSIM
+from utils.SobelGradient import SobelGrad
 
 
 def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tensor, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None = None, l: float = 0.5, l2: float = 0.3) -> torch.Tensor:
@@ -54,18 +55,29 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
         second_loss = 1 - add_loss(depth.unsqueeze(0), gt_depth.unsqueeze(0))  # type: ignore
     elif isinstance(add_loss, torch.nn.Module):
         # Compute the gradient of the prediction and gt
-        grad_itof = torch.stack(
-            (torch.gradient(clean_itof[:, 0, ...], dim=1, edge_order= 2)[0], 
-            torch.gradient(clean_itof[:, 0, ...], dim=2, edge_order= 2)[0],
-            torch.gradient(clean_itof[:, 1, ...], dim=1, edge_order= 2)[0], 
-            torch.gradient(clean_itof[:, 1, ...], dim=2, edge_order= 2)[0]), 
-            dim=1)
-        grad_gt = torch.stack(
-            (torch.gradient(gt[:, 0, ...], dim=1, edge_order= 2)[0], 
-            torch.gradient(gt[:, 0, ...], dim=2, edge_order= 2)[0],
-            torch.gradient(gt[:, 1, ...], dim=1, edge_order= 2)[0], 
-            torch.gradient(gt[:, 1, ...], dim=2, edge_order= 2)[0]), 
-            dim=1)
+        # grad_itof = torch.stack(
+        #     (torch.gradient(clean_itof[:, 0, ...], dim=1, edge_order= 2)[0], 
+        #     torch.gradient(clean_itof[:, 0, ...], dim=2, edge_order= 2)[0],
+        #     torch.gradient(clean_itof[:, 1, ...], dim=1, edge_order= 2)[0], 
+        #     torch.gradient(clean_itof[:, 1, ...], dim=2, edge_order= 2)[0]), 
+        #     dim=1)
+        # grad_gt = torch.stack(
+        #     (torch.gradient(gt[:, 0, ...], dim=1, edge_order= 2)[0], 
+        #     torch.gradient(gt[:, 0, ...], dim=2, edge_order= 2)[0],
+        #     torch.gradient(gt[:, 1, ...], dim=1, edge_order= 2)[0], 
+        #     torch.gradient(gt[:, 1, ...], dim=2, edge_order= 2)[0]), 
+        #     dim=1)
+        
+        # Initialize the Sobel gradient operator with window size 7
+        grad = SobelGrad(window_size=7)
+
+        # Initilaize the gradient tensors
+        grad_itof = torch.empty((1, 2, itof.shape[2], itof.shape[3])).to(itof.device)
+        grad_gt = torch.empty((1, 2, gt.shape[2], gt.shape[3])).to(itof.device)
+
+        grad_itof[:, 0, ...], grad_itof[:, 1, ...] = grad(clean_itof)
+        grad_gt[:, 0, ...], grad_gt[:, 1, ...] = grad(gt)
+
         # Compute the gradient loss (MSE or MAE)
         second_loss = add_loss(grad_itof, grad_gt)
     else:
