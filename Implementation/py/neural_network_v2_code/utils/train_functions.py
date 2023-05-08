@@ -1,6 +1,9 @@
 import os
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 import torch
+from torch.backends.cudnn import benchmark
+from torch.cuda import amp
+benchmark = True
 import numpy as np
 import time
 import socket
@@ -95,7 +98,7 @@ def compute_loss_depth(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.M
     return loss_fn(depth, gt)
 
 
-def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None, device: torch.device, l: float, l2: float) -> float:
+def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None, device: torch.device, l: float, l2: float, scaler: amp.GradScaler) -> float:  # type: ignore
     """
     Function to train the network on the training set
         param:
@@ -107,6 +110,7 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
             - device: device used to train the network
             - l: lambda value for the additional loss
             - l2: lambda value for the depth loss
+            - scaler: scaler used for the mixed precision training
         return:
             - average loss
     """
@@ -132,14 +136,18 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         itof = net(itof_data)
 
         # Compute the loss
-        loss = compute_loss_itof(itof, gt_itof, gt_depth, loss_fn, add_loss, l, l2)
-        # loss = compute_loss_depth(itof, gt_depth, loss_fn)
+        with amp.autocast():  # type: ignore
+            loss = compute_loss_itof(itof, gt_itof, gt_depth, loss_fn, add_loss, l, l2)
+            # loss = compute_loss_depth(itof, gt_depth, loss_fn)
 
         # Backward pass
-        loss.backward()
+        scaler.scale(loss).backward()  # type: ignore
+        # loss.backward()
 
         # Update the weights
-        optimizer.step()
+        scaler.step(optimizer)  # type: ignore
+        scaler.update()  # type: ignore
+        # optimizer.step()
 
         # Append the loss
         epoch_loss.append(loss.item())
@@ -151,7 +159,7 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
     return float(np.mean(epoch_loss))
 
 
-def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None, device: torch.device, l: float, l2: float) -> tuple[float, tuple[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]:
+def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None, device: torch.device, l: float, l2: float, scaler: amp.GradScaler) -> tuple[float, tuple[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]:  # type: ignore
     """
     Function to validate the network on the validation set
         param:
@@ -162,6 +170,7 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
             - device: device used to validate the network
             - l: lambda value for the additional loss
             - l2: lambda value for the depth loss
+            - scaler: scaler used for the mixed precision training
         return:
             - tuple containing the average loss, the last gt_itof and gt_depth and the last predicted itof
         """
@@ -188,8 +197,10 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
             # Forward pass
             itof = net(itof_data)
 
-            loss = compute_loss_itof(itof, gt_itof, gt_depth, loss_fn, add_loss, l, l2)
-            # loss = compute_loss_depth(itof, gt_depth, loss_fn)
+            # Compute the loss
+            with amp.autocast():  # type: ignore
+                loss = compute_loss_itof(itof, gt_itof, gt_depth, loss_fn, add_loss, l, l2)
+                # loss = compute_loss_depth(itof, gt_depth, loss_fn)
 
             # Append the loss
             epoch_loss.append(loss.item())
@@ -251,16 +262,19 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
     # Initialize the variable that contains the overall time
     overall_time = 0
 
+    # Define the scaler for the mixed precision training
+    scaler = amp.GradScaler()  # type: ignore
+
     for epoch in range(n_epochs):
         # Start the timer
         start_time = time.time()
 
         # Train the network
-        train_loss = train_fn(net, train_loader, optimizer, loss_fn, add_loss_fn, device, l, l2)
+        train_loss = train_fn(net, train_loader, optimizer, loss_fn, add_loss_fn, device, l, l2, scaler)
 
         # Validate the network
         # Execute the validation function
-        val_loss, gt, pred = val_fn(net, val_loader, loss_fn, add_loss_fn, device, l, l2)
+        val_loss, gt, pred = val_fn(net, val_loader, loss_fn, add_loss_fn, device, l, l2, scaler )
         # Unpack the ground truth
         _, gt_depth = gt
         # Unpack the predictions
