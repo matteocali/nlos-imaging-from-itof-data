@@ -13,13 +13,14 @@ from torch.optim import Optimizer
 from pathlib import Path
 from torch.utils.tensorboard.writer import SummaryWriter
 from torchmetrics import StructuralSimilarityIndexMeasure as SSIM
+from torchmetrics.functional.classification.jaccard import binary_jaccard_index
 from utils.utils import format_time, generate_fig
 from utils.EarlyStopping import EarlyStopping
 from utils.utils import itof2depth, update_lr
 from utils.SobelGradient import SobelGrad
 
 
-def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tensor, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None = None, l: float = 0.5, l2: float = 0.3) -> torch.Tensor:
+def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tensor, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None = None, l: float = 0.5, l2: float = 0.0) -> torch.Tensor:
     """
     Function to compute the loss using itof data
         param:
@@ -29,7 +30,7 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
             - loss_fn: loss function to use
             - add_loss: additional loss function to use
             - l: lambda value for the additional loss
-            - l2: lambda value for the depth loss
+            - l2: lambda value for the IoU loss
         return:
             - final loss
     """
@@ -67,7 +68,7 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
         #     torch.gradient(gt[:, 1, ...], dim=1, edge_order= 2)[0], 
         #     torch.gradient(gt[:, 1, ...], dim=2, edge_order= 2)[0]), 
         #     dim=1)
-        
+
         # Initialize the Sobel gradient operator with window size 7
         grad = SobelGrad(window_size=7)
 
@@ -84,14 +85,14 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
         # If no additional loss is used, set the second loss to 0
         second_loss = 0
 
-    # Check if there is also the depth_loss
-    if gt_depth is not None:
-        depth_loss = loss_fn(depth, gt_depth)
+    # Compute the Intersection over Union loss (only if l2 is not 0)
+    if l2 != 0:
+        iou_loss = 1 - binary_jaccard_index(torch.where(depth > 0, 1, 0), torch.where(gt_depth > 0, 1, 0)).item()  # type: ignore
     else:
-        depth_loss = 0
-    
+        iou_loss = 0
+
     # Compose the losses based on the lambda value
-    return loss_itof + (l * second_loss) + (l2 * depth_loss)
+    return loss_itof + (l * second_loss) + (l2 * iou_loss)
 
 
 def compute_loss_depth(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Module) -> torch.Tensor:

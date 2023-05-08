@@ -30,12 +30,12 @@ def arg_parser(argv):
     arg_lr = 1e-4
     # Argument defining the lambda value for the additional loss
     arg_lambda = 0.3
-    # Argument defining the lambda value for the depth loss
+    # Argument defining the lambda value for the iou loss
     arg_lambda2 = 0.2
     # Argument defining the scaling factor for the obj weight
     arg_scaling_factor = 1/5
     # Argument defining the additional loss to be used
-    arg_additional_loss = "grad-mse"
+    arg_additional_loss = "grad-mae"
     # Argument defining the encoder channels
     arg_encoder_channels = (16, 32, 64, 128, 256)
     # Argument defining the number of the u-net output channels
@@ -49,13 +49,13 @@ def arg_parser(argv):
     # Argument defining if the code will be run on slurm
     arg_slurm = False
     # Help string
-    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -k <lambda-depth>, -f <scaling-factor>, -A <additional-loss> (ssim, grad-mse, grad-mae), -i <encoder-channels>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -a <data-augment-size>, -s <slurm>".format(
+    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -k <lambda-iouh>, -f <scaling-factor>, -A <additional-loss> (ssim, grad-mse, grad-mae), -i <encoder-channels>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -a <data-augment-size>, -s <slurm>".format(
         argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(
-            argv[1:], "hd:n:r:l:k:f:A:i:c:p:e:a:s:", ["help", "dataset=", "name=", "lr=", "lambda=", "lambda-depth=", "scaling-factor=", "additional-loss=", "encoder-channels=", "n-out-channels=", "additional-layers=", "n-epochs=", "data-augment-size=", "slurm="])
+            argv[1:], "hd:n:r:l:k:f:A:i:c:p:e:a:s:", ["help", "dataset=", "name=", "lr=", "lambda=", "lambda-iou=", "scaling-factor=", "additional-loss=", "encoder-channels=", "n-out-channels=", "additional-layers=", "n-epochs=", "data-augment-size=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -69,8 +69,8 @@ def arg_parser(argv):
             arg_lr = float(arg)               # Set the learning rate
         elif opt in ("-l", "--lambda"):
             arg_lambda = float(arg)           # Set the lambda value
-        elif opt in ("-k", "--lambda-depth"):
-            arg_lambda2 = float(arg)          # Set the lambda value for the depth loss
+        elif opt in ("-k", "--lambda-iou"):
+            arg_lambda2 = float(arg)          # Set the lambda value for the iou loss
         elif opt in ("-f", "--scaling-factor"):
             arg_scaling_factor = float(arg)   # Set the scaling factor
         elif opt in ("-A", "--additional-loss"):
@@ -107,7 +107,7 @@ def arg_parser(argv):
     print("Model name: ", arg_model_name)
     print("Learning rate: ", arg_lr)
     print("Lambda: ", arg_lambda)
-    print("Lambda depth: ", arg_lambda2)
+    print("Lambda iou: ", arg_lambda2)
     print("Scaling factor: ", arg_scaling_factor)
     print("Additional loss: ", arg_additional_loss)
     print("Encoder channels: ", arg_encoder_channels)
