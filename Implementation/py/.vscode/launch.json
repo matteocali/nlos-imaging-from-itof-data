@@ -46,7 +46,7 @@
                 "--encoder-channels", "32, 64, 128, 256, 512",
                 "--n-out-channels", "16",
                 "--additional-layers", "0",
-                "--n-epochs", "2000",
+                "--n-epochs", "1500",
                 "--data-augment", "403",
                 "--slurm", "False"
             ],
