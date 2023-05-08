@@ -4,6 +4,9 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from pathlib import Path
+from torchmetrics import JaccardIndex
+from ignite.engine import Engine
+from ignite.metrics.confusion_matrix import mIoU, ConfusionMatrix
 from utils.utils import save_test_plots_itof, depth_radial2cartesian, hfov2focal, itof2depth
 
 
@@ -20,6 +23,7 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
     """
 
     epoch_loss = []                                        # Initialize the loss
+    iou_loss = []                                          # Initialize the IoU loss
     out = np.empty((1, 3, 320, 240), dtype=np.float32)     # Initialize the output depth maps
 
     # Set the network in evaluation mode
@@ -51,8 +55,13 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
             itof_loss_imag = loss_fn(itof.squeeze(0)[1, ...], gt_itof.squeeze(0)[1, ...])  # Compute the loss over the itof data (imaginary)
             depth_loss = loss_fn(depth, gt_depth)  # Compute the loss over the depth
 
+            # Compute the mean intersection over union on the depth
+            iou = JaccardIndex(task="multiclass", num_classes=2)
+            iou_val = iou(torch.where(depth > 0, 1, 0).to("cpu"), torch.where(gt_depth > 0, 1, 0).to("cpu")).item()  # type: ignore
+
             # Update the loss list
             epoch_loss.append(depth_loss.to("cpu").item())
+            iou_loss.append(iou_val)
 
             # Remove the batch dimension and convert the data to numpy
             n_itof = itof.to("cpu").squeeze(0).numpy()
@@ -74,7 +83,8 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
                 (n_gt_itof, n_itof), 
                 (depth_loss.item(), itof_loss_real.item(), itof_loss_imag.item()), 
                 i,
-                plots_dir)
+                plots_dir,
+                iou_val)
 
             tmp_out = torch.cat((depth.unsqueeze(0), itof), dim=1)  # Concatenate the depth and the mask  # type: ignore
 
@@ -84,14 +94,22 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
     out = np.delete(out, 0, axis=0)  # Delete the first empty array
 
     # Save the overall depth loss
-    mean_loss = np.round(np.mean(epoch_loss), 4)
-    min_loss = np.round(np.min(epoch_loss), 4)
-    max_loss = np.round(np.max(epoch_loss), 4)
+    mae_mean_loss = np.round(np.mean(epoch_loss), 4)
+    mae_min_loss = np.round(np.min(epoch_loss), 4)
+    mae_max_loss = np.round(np.max(epoch_loss), 4)
+    iou_mean_loss = np.round(np.mean(iou_loss), 4)
+    iou_min_loss = np.round(np.min(iou_loss), 4)
+    iou_max_loss = np.round(np.max(iou_loss), 4)
 
     with open(out_path / "loss.txt", "w") as f:
-        f.write(f"Overall depth loss: {mean_loss}\n")
-        f.write(f"Min depth loss: {min_loss}\n")
-        f.write(f"Max depth loss: {max_loss}")
+        f.write(f"Mean Absolute Error summary:\n")
+        f.write(f"   - Overall depth loss (MAE): {mae_mean_loss}\n")
+        f.write(f"   - Min depth loss: {mae_min_loss}\n")
+        f.write(f"   - Max depth loss: {mae_max_loss}\n\n")
+        f.write(f"Intersection over Union summary:\n")
+        f.write(f"   - Overall IoU: {iou_mean_loss}\n")
+        f.write(f"   - Min IoU: {iou_min_loss}\n")
+        f.write(f"   - Max IoU: {iou_max_loss}")
 
     # Save the output npy
     np.save(out_path / "results.npy", out)

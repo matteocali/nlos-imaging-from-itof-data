@@ -49,7 +49,7 @@ def phi_func(freqs, dim_t=2000, exp_time=0.01):
     return phi
 
 
-def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str, str], loss: float or None = None) -> None:  # type: ignore
+def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str, str], loss: float or None = None, iou: float | None = None) -> None:  # type: ignore
     """
     Function used to generate the row subplot
         param:
@@ -58,6 +58,7 @@ def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str,
             - data: tuple containing the ground truth and the predicted data
             - title: tuple containing the title of the subplot
             - loss: loss value
+            - iou: intersection over union
     """
 
     # Generate the plts for the depth
@@ -67,11 +68,17 @@ def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str,
         divider = make_axes_locatable(ax[i])                                   # Defien the colorbar axis
         cax = divider.append_axes("right", size="5%", pad=0.05)                # Set the colorbar location
         fig.colorbar(img, cax=cax)                                             # Plot the colorbar
-        if i ==1 and loss is not None:                                         # If the plot is the predicted one and the loss is not None
+        if i == 1 and loss is not None:                                        # If the plot is the predicted one and the loss is not None
             box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)  # Define the box style
             ax[i].text(20, 20, f"MAE: {round(loss, 3)}", 
                           ha='left', va='top', fontsize=11, 
+                          fontfamily='monospace',
                           color='black', bbox=box_style)                       # Add the box to the plot # type: ignore
+            if iou is not None:                                                # If the miou is not None
+                ax[i].text(20, 40, f"IoU: {round(iou, 3)}",
+                            ha='left', va='top', fontsize=11,
+                            fontfamily='monospace',
+                            color='black', bbox=box_style)                     # Add the box for the miou to the plot # type: ignore
         ax[i].set_title(titles[i])                                             # Set the title of the subplot
         ax[i].set_xlabel("x")                                                  # Set the x label of the subplot
         ax[i].set_ylabel("y")                                                  # Set the y label of the subplot
@@ -106,7 +113,7 @@ def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[
     plt.close()
 
 
-def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float, float], index: int, path: Path):
+def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float, float], index: int, path: Path, iou:float | None = None):
     """
     Function used to save the test plots
         param:
@@ -115,6 +122,7 @@ def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: t
             - losses: tuple containing the loss and the accuracy
             - index: index of the test sample
             - path: path where to save the plots
+            - iou: mean intersection over union
     """
 
     # Set seaborn style
@@ -125,7 +133,7 @@ def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: t
 
     # Generate the plts for the depth
     titles = ("Grount truth depth", "Predicted depth")
-    row_subplot(fig, ax[0], (depth_data[0], depth_data[1]), titles, losses[0])
+    row_subplot(fig, ax[0], (depth_data[0], depth_data[1]), titles, losses[0], iou)
     # Generate the plts for the itof
     # Real iToF
     titles = ("Grount truth real iToF", "Predicted real iToF")

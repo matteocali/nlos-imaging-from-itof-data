@@ -48,7 +48,7 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
     # Compute the additional loss if any (SSIM or Gradient)
     if isinstance(add_loss, SSIM):
         # Compute the ssim loss
-        second_loss = 1 - add_loss(depth, gt_depth)
+        second_loss = 1 - add_loss(depth.unsqueeze(0), gt_depth.unsqueeze(0))  # type: ignore
     elif isinstance(add_loss, torch.nn.Module):
         # Compute the gradient of the prediction and gt
         grad_itof = torch.stack(
@@ -232,7 +232,7 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
 
     # Initialize the early stopping
     early_stopping = EarlyStopping(
-        tollerance=10, min_delta=0.05, save_path=save_path, net=net)
+        tollerance=10, min_delta=0.02, save_path=save_path, net=net)
     
     # Initialize the chosed additional loss
     if add_loss == "ssim":
