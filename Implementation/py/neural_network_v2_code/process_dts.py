@@ -181,7 +181,10 @@ if __name__ == '__main__':
         train_dts = NlosTransientDatasetItofGt(
             Path(args[1]), train_csv, frequencies=freqs, transform=transforms)  # Create the train dataset
         # Save the train dataset
-        torch.save(train_dts, processed_dts_path / "processed_train_dts.pt")
+        if skip_val or skip_test:
+            torch.save(train_dts, processed_dts_path / "processed_test_dts.pt")
+        else:
+            torch.save(train_dts, processed_dts_path / "processed_train_dts.pt")
         # Create the validation dataset
         if not skip_val:
             print("Creating the validation dataset...")

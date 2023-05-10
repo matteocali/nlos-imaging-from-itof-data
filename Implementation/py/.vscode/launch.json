@@ -19,12 +19,12 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/process_dts.py",
             "args": [
-                "--name", "empty_scene",
-                "--input", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/final_out/",
+                "--name", "full_dts_add_layer",
+                "--input", "/media/matteocali/shared_ssd/NLoS imaging using iToF/mirror_dts/full_dts",
                 "--bg-value", "0",
                 "--add-layer", "True",
                 "--multi_freqs", "False",
-                "--data-augment-size", "0",
+                "--data-augment-size", "806",
                 "--slurm", "False"
             ],
             "console": "integratedTerminal",
@@ -59,9 +59,8 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/test.py",
             "args": [
-                "--dts-name", "fixed_camera_full_add_layer",
-                "--model", "nlos_nn_v2_itof_out_add_layer_aug_test_weight_loss_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403",
-                "--lr", "0.0001",
+                "--dts-name", "empty_scene",
+                "--model", "nlos_nn_v2_itof_out_add_layer_aug_scale_0.14_iou_1.0_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403",
                 "--encoder-channels", "32, 64, 128, 256, 512",
                 "--n-out-channels", "16",
                 "--additional-layers", "0",

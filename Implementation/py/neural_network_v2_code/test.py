@@ -22,8 +22,6 @@ def arg_parser(argv):
     arg_dts_name = ""
     # Argument containing the name of the network to load
     arg_net_name = ""
-    # Argument defining the learning rate
-    arg_lr = 1e-4
     # Argument defining the encoder channels
     arg_encoder_channels = (16, 32, 64, 128, 256)
     # Argument defining the number of the u-net output channels
@@ -33,13 +31,13 @@ def arg_parser(argv):
     # Argument containing the bg value
     arg_bg = 0
     # Help string
-    arg_help = "{0} -d <dts-name> -m <model> -r <lr> -i <encoder-channels> -c <n-out-channels> -p <additional-layers> -b <bg-value>".format(
+    arg_help = "{0} -d <dts-name> -m <model> -i <encoder-channels> -c <n-out-channels> -p <additional-layers> -b <bg-value>".format(
         argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(
-            argv[1:], "hd:m:r:i:c:p:b:", ["help", "dts-name=", "model=", "lr=", "encoder-channels=", "n-out-channels=", "additional-layers=", "bg-value="])
+            argv[1:], "hd:m:i:c:p:b:", ["help", "dts-name=", "model=", "encoder-channels=", "n-out-channels=", "additional-layers=", "bg-value="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -49,8 +47,6 @@ def arg_parser(argv):
             arg_dts_name = arg           # Set thename of the dataset toi use
         elif opt in ("-m", "--model"):
             arg_net_name = arg           # Set the name of the model to load
-        elif opt in ("-r", "--lr"):
-            arg_lr = float(arg)               # Set the learning rate
         elif opt in ("-i", "--encoder-channels"):
             arg_encoder_channels = tuple(
                 int(x) for x in arg.split(", ")
@@ -73,24 +69,22 @@ def arg_parser(argv):
 
     print("Dataset name: ", arg_dts_name)
     print("Model name: ", arg_net_name)
-    print("Learning rate: ", arg_lr)
     print("Encoder channels: ", arg_encoder_channels)
     print("Number of output channels: ", arg_n_out_channels)
     print("Number of additional layers: ", arg_additional_layers)
     print("Bg value: ", arg_bg)
     print()
 
-    return [arg_dts_name, arg_net_name, arg_lr, arg_encoder_channels, arg_n_out_channels, arg_additional_layers, arg_bg]
+    return [arg_dts_name, arg_net_name, arg_encoder_channels, arg_n_out_channels, arg_additional_layers, arg_bg]
 
 
 if __name__ == '__main__':
     torch.manual_seed(2097710)   # Set the random seed
     args = arg_parser(sys.argv)  # Parse the input arguments
-    lr = args[2]                 # Get the learning rate
-    enc_channels = args[3]       # Get the encoder channels
-    n_out_channels = args[4]     # Get the number of the u-net output channels
-    additional_layers = args[5]  # Get the number of additional CNN layers
-    bg = args[6]                 # Get the bg value
+    enc_channels = args[2]       # Get the encoder channels
+    n_out_channels = args[3]     # Get the number of the u-net output channels
+    additional_layers = args[4]  # Get the number of additional CNN layers
+    bg = args[5]                 # Get the bg value
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -126,7 +120,7 @@ if __name__ == '__main__':
                         num_class=n_out_channels,
                         additional_cnn_layers=additional_layers).to(device)  # Create the model and move it to the device
     # Load the model
-    model.load_state_dict(torch.load(state_dict_path))
+    model.load_state_dict(torch.load(state_dict_path, map_location=torch.device(device)))
 
      # Compute the ratio between the number of background and object pixels
     bg_obj_ratio = test_dts.get_bg_obj_ratio()
