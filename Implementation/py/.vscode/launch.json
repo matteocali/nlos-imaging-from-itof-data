@@ -19,12 +19,12 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/process_dts.py",
             "args": [
-                "--name", "full_dts_add_layer",
-                "--input", "/media/matteocali/shared_ssd/NLoS imaging using iToF/mirror_dts/full_dts",
+                "--name", "empty_scene",
+                "--input", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/final_out/",
                 "--bg-value", "0",
                 "--add-layer", "True",
                 "--multi_freqs", "False",
-                "--data-augment-size", "806",
+                "--data-augment-size", "0",
                 "--slurm", "False"
             ],
             "console": "integratedTerminal",
