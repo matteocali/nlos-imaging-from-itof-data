@@ -69,6 +69,22 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "Python: ground_truth_gen",
+            "type": "python",
+            "request": "launch",
+            "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/general_purposes_code/src/ground_truth_gen.py",
+            "args": [
+                "-g", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/gt",
+                "-i", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/dts",
+                "-o", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/gt_out",
+                "-d", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/dts_out",
+                "-f", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/final_out",
+                "-t", "mirror"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }

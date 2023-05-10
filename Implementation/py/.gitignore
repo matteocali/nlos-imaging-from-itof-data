@@ -7,7 +7,7 @@
 !*_best_weights.h5
 *.v2
 *.pyc
-__pycache__/
+**/__pycache__/**
 **/.VSCodeCounter/**
 **/net_state/**
 results

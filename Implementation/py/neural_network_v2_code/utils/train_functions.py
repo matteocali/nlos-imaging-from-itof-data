@@ -15,6 +15,7 @@ from torch.utils.tensorboard.writer import SummaryWriter
 from torchmetrics import StructuralSimilarityIndexMeasure as SSIM
 from torchmetrics.functional.classification.jaccard import binary_jaccard_index
 from utils.utils import format_time, generate_fig
+from utils.lovasz_losses import lovasz_hinge
 from utils.EarlyStopping import EarlyStopping
 from utils.utils import itof2depth, update_lr
 from utils.SobelGradient import SobelGrad
@@ -88,6 +89,8 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
     # Compute the Intersection over Union loss (only if l2 is not 0)
     if l2 != 0:
         iou_loss = 1 - binary_jaccard_index(torch.where(depth > 0, 1, 0), torch.where(gt_depth > 0, 1, 0)).item()  # type: ignore
+        # iou_loss = lovasz_hinge(depth, gt_depth).item()  # type: ignore
+        # iou_loss = lovasz_hinge(torch.where(depth > 0, 1, 0), torch.where(gt_depth > 0, 1, 0)).item() # type: ignore
     else:
         iou_loss = 0
 

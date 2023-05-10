@@ -4,7 +4,7 @@ pydir=~/miniconda3/envs/pytorch_nn/bin
 
 $pydir/python3 test.py\
     --dts-name="fixed_camera_full_add_layer"\
-    --model="nlos_nn_v2_itof_out_add_layer_aug_test_weight_loss_0.2_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403"\
+    --model="nlos_nn_v2_itof_out_add_layer_aug_scale_0.111_iou_1.0_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403"\
     --lr="0.0001"\
     --encoder-channels="32, 64, 128, 256, 512"\
     --n-out-channels="16"\
@@ -13,7 +13,7 @@ $pydir/python3 test.py\
 &\
 $pydir/python3 test.py\
     --dts-name="fixed_camera_full_add_layer"\
-    --model="nlos_nn_v2_itof_out_add_layer_aug_test_weight_loss_0.14_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403"\
+    --model="nlos_nn_v2_itof_out_add_layer_aug_scale_0.125_iou_0.0_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403"\
     --lr="0.0001"\
     --encoder-channels="32, 64, 128, 256, 512"\
     --n-out-channels="16"\
@@ -22,7 +22,7 @@ $pydir/python3 test.py\
 &\
 $pydir/python3 test.py\
     --dts-name="fixed_camera_full_add_layer"\
-    --model="nlos_nn_v2_itof_out_add_layer_aug_test_weight_loss_0.25_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403"\
+    --model="nlos_nn_v2_itof_out_add_layer_aug_scale_0.125_iou_1.0_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403"\
     --lr="0.0001"\
     --encoder-channels="32, 64, 128, 256, 512"\
     --n-out-channels="16"\
@@ -31,7 +31,7 @@ $pydir/python3 test.py\
 &\
 $pydir/python3 test.py\
     --dts-name="fixed_camera_full_add_layer"\
-    --model="nlos_nn_v2_itof_out_add_layer_aug_test_weight_loss_0.125_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403"\
+    --model="nlos_nn_v2_itof_out_add_layer_aug_scale_0.167_iou_0.0_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403"\
     --lr="0.0001"\
     --encoder-channels="32, 64, 128, 256, 512"\
     --n-out-channels="16"\
@@ -40,7 +40,7 @@ $pydir/python3 test.py\
 &\
 $pydir/python3 test.py\
     --dts-name="fixed_camera_full_add_layer"\
-    --model="nlos_nn_v2_itof_out_add_layer_aug_test_weight_loss_0.167_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403"\
+    --model="nlos_nn_v2_itof_out_add_layer_aug_scale_0.167_iou_1.0_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403"\
     --lr="0.0001"\
     --encoder-channels="32, 64, 128, 256, 512"\
     --n-out-channels="16"\
