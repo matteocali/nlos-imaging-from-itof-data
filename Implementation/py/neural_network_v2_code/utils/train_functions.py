@@ -88,9 +88,11 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
 
     # Compute the Intersection over Union loss (only if l2 is not 0)
     if l2 != 0:
-        # iou_loss = 1 - binary_jaccard_index(torch.where(depth > 0, 1, 0), torch.where(gt_depth > 0, 1, 0)).item()  # type: ignore
+        iou_loss = 1 - binary_jaccard_index(torch.where(depth > 0, 1, 0), torch.where(gt_depth > 0, 1, 0)).item()  # type: ignore
         sigmoid = torch.nn.Sigmoid()
-        iou_loss = lovasz_hinge(sigmoid(depth), sigmoid(gt_depth)).item()  # type: ignore
+        # iou_loss_real = lovasz_hinge(itof[:, 0, ...], gt[:, 0, ...]).item()  # type: ignore
+        # iou_loss_imag = lovasz_hinge(itof[:, 1, ...], gt[:, 1, ...]).item()  # type: ignore
+        # iou_loss = iou_loss_real + iou_loss_imag
         # iou_loss = lovasz_hinge(torch.where(depth > 0, 1, 0), torch.where(gt_depth > 0, 1, 0)).item() # type: ignore
     else:
         iou_loss = 0
