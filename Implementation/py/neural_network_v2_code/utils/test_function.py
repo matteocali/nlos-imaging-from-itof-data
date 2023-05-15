@@ -54,7 +54,9 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
             depth_loss = loss_fn(depth, gt_depth)  # Compute the loss over the depth
 
             # Compute the mean intersection over union on the depth
-            iou = binary_jaccard_index(torch.where(depth > 0, 1, 0).to("cpu"), torch.where(gt_depth > 0, 1, 0).to("cpu") ).item()  # type: ignore
+            iou_obj = binary_jaccard_index(torch.where(depth > 0, 1, 0).to("cpu"), torch.where(gt_depth > 0, 1, 0).to("cpu") ).item()  # type: ignore
+            iou_bg = binary_jaccard_index(torch.where(depth == 0, 1, 0).to("cpu"), torch.where(gt_depth == 0, 1, 0).to("cpu") ).item()  # type: ignore
+            iou = (iou_obj + iou_bg) / 2
 
             # Update the loss list
             epoch_loss.append(depth_loss.to("cpu").item())
