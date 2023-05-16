@@ -19,12 +19,12 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/process_dts.py",
             "args": [
-                "--name", "fixed_camera_diffuse_wall_add_layer",
-                "--input", "/media/matteocali/shared_ssd/NLoS imaging using iToF/mirror_dts/fixed_camera_diffuse_wall",
+                "--name", "full_dts_add_layer",
+                "--input", "/media/matteocali/shared_ssd/NLoS imaging using iToF/mirror_dts/full_dts",
                 "--bg-value", "0",
                 "--add-layer", "True",
                 "--multi_freqs", "False",
-                "--data-augment-size", "202",
+                "--data-augment-size", "806",
                 "--slurm", "False"
             ],
             "console": "integratedTerminal",
@@ -36,16 +36,18 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/train.py",
             "args": [
-                "--dataset", "fixed_camera_diffuse_wall_add_layer",
-                "--name", "test_itof_out_loss_depth_based",
+                "--dataset", "fixed_camera_full_add_layer",
+                "--name", "test",
                 "--lr", "0.0001",
-                "--lambda", "0.8",
-                "--additional-loss", "ssim",
+                "--lambda", "0.0",
+                "--lambda-iou", "1.0",
+                "--scaling-factor", "0.14",
+                "--additional-loss", "grad_mae",
                 "--encoder-channels", "32, 64, 128, 256, 512",
                 "--n-out-channels", "16",
                 "--additional-layers", "0",
-                "--n-epochs", "2000",
-                "--data-augment", "202",
+                "--n-epochs", "1500",
+                "--data-augment", "403",
                 "--slurm", "False"
             ],
             "console": "integratedTerminal",
@@ -57,13 +59,28 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/test.py",
             "args": [
-                "--dts-name", "fixed_camera_diffuse_wall_add_layer",
-                "--model", "nlos_nn_v2_itof_out_add_layer_aug_grad_l_03_long_model_lr_0.0001_ochannel_16_l_0.3_addlayers_0_aug_202_FINAL",
-                "--lr", "0.0001",
+                "--dts-name", "fixed_camera_full_add_layer",
+                "--model", "nlos_nn_v2_itof_out_add_layer_aug_scale_0.01_iou_0.0_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403",
                 "--encoder-channels", "32, 64, 128, 256, 512",
                 "--n-out-channels", "16",
                 "--additional-layers", "0",
                 "--bg-value", "0"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: ground_truth_gen",
+            "type": "python",
+            "request": "launch",
+            "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/general_purposes_code/src/ground_truth_gen.py",
+            "args": [
+                "-g", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/gt",
+                "-i", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/dts",
+                "-o", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/gt_out",
+                "-d", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/dts_out",
+                "-f", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/final_out",
+                "-t", "mirror"
             ],
             "console": "integratedTerminal",
             "justMyCode": true

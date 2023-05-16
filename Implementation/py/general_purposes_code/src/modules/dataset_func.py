@@ -639,61 +639,64 @@ def fuse_dt_gt_mirror(d_path: Path, gt_path: Path, out_path: Path, def_obj_pos: 
         raise ValueError("The number of files in the dataset and the ground truth folder are different")  # Raise an error if the number of files is different
 
     for d_name in tqdm(d_files_name, desc="Fusing dataset and ground truth"):  # For each file in d_path
-        d_name_shortened = d_name[:d_name.find("_wall_")]  # Remove the wall information from the name and also the xml extension
+        if len(d_files_name) != 1:
+            d_name_shortened = d_name[:d_name.find("_wall_")]  # Remove the wall information from the name and also the xml extension
 
-        cam_pos = d_name_shortened[(d_name_shortened.find("cam_pos") + 9):(d_name_shortened.find("cam_rot") - 2)]  # Get the camera position
-        cam_rot = d_name_shortened[(d_name_shortened.find("cam_rot") + 9):(d_name_shortened.find("obj_pos") - 2)]  # Get the camera rotation
-        cam_pos = [float(i) for i in cam_pos.split("_")]  # Convert the camera position to float
-        cam_rot = [int(float(i)) for i in cam_rot.split("_")]  # Convert the camera rotation to int
+            cam_pos = d_name_shortened[(d_name_shortened.find("cam_pos") + 9):(d_name_shortened.find("cam_rot") - 2)]  # Get the camera position
+            cam_rot = d_name_shortened[(d_name_shortened.find("cam_rot") + 9):(d_name_shortened.find("obj_pos") - 2)]  # Get the camera rotation
+            cam_pos = [float(i) for i in cam_pos.split("_")]  # Convert the camera position to float
+            cam_rot = [int(float(i)) for i in cam_rot.split("_")]  # Convert the camera rotation to int
 
-        obj_name = d_name_shortened[(d_name_shortened.find("nlos") + 5):(d_name_shortened.find("cam") - 1)]  # Get the object name
-        obj_pos = d_name_shortened[(d_name_shortened.find("obj_pos") + 9):(d_name_shortened.find("obj_rot") - 2)]  # Get the object position (as string)
-        obj_rot = d_name_shortened[(d_name_shortened.find("obj_rot") + 9):(-1)]  # Get the object rotation (as string)
-        if d_name_shortened.find("+") == -1:  # If the considered file is characterized by only one object
-            obj_pos = [float(i) for i in obj_pos.split("_")]  # Convert the object position to float
-            obj_pos = [round(obj_pos[i] - elm, 1) for i, elm in enumerate(def_obj_pos)]  # Remove the offset from the object position (get the object translation)
-            obj_rot = [int(float(i)) for i in obj_rot.split("_")]  # Convert the object rotation to int
-            gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name}_tr({obj_pos[0]}_{obj_pos[1]}_{obj_pos[2]})_rot({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})_GT.h5"  # Compose the name of the gt file starting from the one of the dataset
-        else:  # If the considered file is characterized by two objects
-            obj_name1 = obj_name.split("+")[0]  # Get the first object name
-            obj_name2 = obj_name.split("+")[1]  # Get the second object name
-            obj_pos1 = obj_pos.split(")_(")[0]  # Get the first object position
-            obj_pos2 = obj_pos.split(")_(")[1]  # Get the second object position
-            obj_pos1_raw = [float(i) for i in obj_pos1.split("_")]  # Convert the first object position to float
-            obj_pos2_raw = [float(i) for i in obj_pos2.split("_")]  # Convert the second object position to float
-            obj_pos1 = [round(obj_pos1_raw[i] - elm, 2) for i, elm in enumerate(def_obj_pos)]  # Remove the offset from the first object position (get the object translation)
-            obj_pos2 = [round(obj_pos2_raw[i] - elm, 2) for i, elm in enumerate(def_obj_pos)]  # Remove the offset from the second object position (get the object translation)
-            obj_rot1 = obj_rot.split(")_(")[0]  # Get the first object rotation
-            obj_rot2 = obj_rot.split(")_(")[1]  # Get the second object rotation
-            obj_rot1 = [int(float(i)) for i in obj_rot1.split("_")]  # Convert the first object rotation to int
-            obj_rot2 = [int(float(i)) for i in obj_rot2.split("_")]  # Convert the second object rotation to float
-            gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"  # Compose the name of the gt file starting from the one of the dataset
+            obj_name = d_name_shortened[(d_name_shortened.find("nlos") + 5):(d_name_shortened.find("cam") - 1)]  # Get the object name
+            obj_pos = d_name_shortened[(d_name_shortened.find("obj_pos") + 9):(d_name_shortened.find("obj_rot") - 2)]  # Get the object position (as string)
+            obj_rot = d_name_shortened[(d_name_shortened.find("obj_rot") + 9):(-1)]  # Get the object rotation (as string)
+            if d_name_shortened.find("+") == -1:  # If the considered file is characterized by only one object
+                obj_pos = [float(i) for i in obj_pos.split("_")]  # Convert the object position to float
+                obj_pos = [round(obj_pos[i] - elm, 1) for i, elm in enumerate(def_obj_pos)]  # Remove the offset from the object position (get the object translation)
+                obj_rot = [int(float(i)) for i in obj_rot.split("_")]  # Convert the object rotation to int
+                gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name}_tr({obj_pos[0]}_{obj_pos[1]}_{obj_pos[2]})_rot({obj_rot[0]}_{obj_rot[1]}_{obj_rot[2]})_GT.h5"  # Compose the name of the gt file starting from the one of the dataset
+            else:  # If the considered file is characterized by two objects
+                obj_name1 = obj_name.split("+")[0]  # Get the first object name
+                obj_name2 = obj_name.split("+")[1]  # Get the second object name
+                obj_pos1 = obj_pos.split(")_(")[0]  # Get the first object position
+                obj_pos2 = obj_pos.split(")_(")[1]  # Get the second object position
+                obj_pos1_raw = [float(i) for i in obj_pos1.split("_")]  # Convert the first object position to float
+                obj_pos2_raw = [float(i) for i in obj_pos2.split("_")]  # Convert the second object position to float
+                obj_pos1 = [round(obj_pos1_raw[i] - elm, 2) for i, elm in enumerate(def_obj_pos)]  # Remove the offset from the first object position (get the object translation)
+                obj_pos2 = [round(obj_pos2_raw[i] - elm, 2) for i, elm in enumerate(def_obj_pos)]  # Remove the offset from the second object position (get the object translation)
+                obj_rot1 = obj_rot.split(")_(")[0]  # Get the first object rotation
+                obj_rot2 = obj_rot.split(")_(")[1]  # Get the second object rotation
+                obj_rot1 = [int(float(i)) for i in obj_rot1.split("_")]  # Convert the first object rotation to int
+                obj_rot2 = [int(float(i)) for i in obj_rot2.split("_")]  # Convert the second object rotation to float
+                gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"  # Compose the name of the gt file starting from the one of the dataset
 
-        if gt_name not in gt_files_name:  # If the gt file doesn't exist
-            indexes = []
-            if 0.0 in obj_pos2:
-                indexes = [index for index, elm in enumerate(obj_pos2) if elm == 0.0]
-                for index in indexes:
-                    if index != 0:
-                        obj_pos2[index] = -0.0
-                # noinspection PyUnboundLocalVariable
-                gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
-            if gt_name not in gt_files_name:
-                if obj_pos2[0] == 0.0:
-                    obj_pos2[0] = -0.0
+            if gt_name not in gt_files_name:  # If the gt file doesn't exist
+                indexes = []
+                if 0.0 in obj_pos2:
+                    indexes = [index for index, elm in enumerate(obj_pos2) if elm == 0.0]
+                    for index in indexes:
+                        if index != 0:
+                            obj_pos2[index] = -0.0
+                    # noinspection PyUnboundLocalVariable
                     gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
-            if gt_name not in gt_files_name:
-                if len(indexes) > 1:
-                    obj_pos2[indexes[1]] = 0.0
-                    gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
-            if gt_name not in gt_files_name:
-                if len(indexes) > 1:
-                    obj_pos2[indexes[1]] = -0.0
-                    obj_pos2[indexes[2]] = 0.0
-                    gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
-            if gt_name not in gt_files_name:
-                raise ValueError(
-                    f"The ground truth file is missing ({gt_name})")  # If the gt file doesn't exist, raise an error
+                if gt_name not in gt_files_name:
+                    if obj_pos2[0] == 0.0:
+                        obj_pos2[0] = -0.0
+                        gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
+                if gt_name not in gt_files_name:
+                    if len(indexes) > 1:
+                        obj_pos2[indexes[1]] = 0.0
+                        gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
+                if gt_name not in gt_files_name:
+                    if len(indexes) > 1:
+                        obj_pos2[indexes[1]] = -0.0
+                        obj_pos2[indexes[2]] = 0.0
+                        gt_name = f"transient_nlos_cam_pos({cam_pos[0]}_{cam_pos[1]}_{cam_pos[2]})_cam_rot_({cam_rot[0]}_{cam_rot[1]}_{cam_rot[2]})_{obj_name1}_tr({obj_pos1[0]}_{obj_pos1[1]}_{obj_pos1[2]})_rot({obj_rot1[0]}_{obj_rot1[1]}_{obj_rot1[2]})_{obj_name2}_tr({obj_pos2[0]}_{obj_pos2[1]}_{obj_pos2[2]})_rot({obj_rot2[0]}_{obj_rot2[1]}_{obj_rot2[2]})_GT.h5"
+                if gt_name not in gt_files_name:
+                    raise ValueError(
+                        f"The ground truth file is missing ({gt_name})")  # If the gt file doesn't exist, raise an error
+        else:
+            gt_name = gt_files_name[0]
 
         d_file = d_path / d_name  # Compose the path of the dataset file
         gt_file = gt_path / gt_name  # Compose the path of the gt file

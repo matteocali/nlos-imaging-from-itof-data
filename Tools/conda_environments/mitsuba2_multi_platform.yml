@@ -1,7 +1,8 @@
 name: mitsuba2
 channels:
-  - conda-forge
   - defaults
+  - conda-forge
+  - open3d-admin
 dependencies:
   - python=3.9
   - numpy
@@ -18,4 +19,5 @@ dependencies:
   - scipy
   - lxml
   - scikit-learn
+  - open3d
 prefix: C:\Users\DECaligM\Miniconda3\envs\mitsuba2

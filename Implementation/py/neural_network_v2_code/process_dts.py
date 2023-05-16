@@ -155,23 +155,50 @@ if __name__ == '__main__':
             transforms_elm.append(ChangeBgValue(0, bg_value))
         transforms = Compose(transforms_elm)
 
+        # Define bool to define if skip val and test
+        skip_val = False
+        skip_test = False
+
+        # Printing the dimension of the dataset
+        print("Dataset dimension:")
+        with open(train_csv, "r") as f:
+            length = len(f.readlines())
+        print("  - Train: ", length)
+        with open(val_csv, "r") as f:
+            length = len(f.readlines())
+            if length == 0:
+                skip_val = True
+        print("  - Validation: ", length)
+        with open(test_csv, "r") as f:
+            length = len(f.readlines())
+            if length == 0:
+                skip_test = True
+        print("  - Test: ", length, "\n")
+        del length
+
         # Create and save the datasets
         print("Creating the training dataset...")
         train_dts = NlosTransientDatasetItofGt(
             Path(args[1]), train_csv, frequencies=freqs, transform=transforms)  # Create the train dataset
         # Save the train dataset
-        torch.save(train_dts, processed_dts_path / "processed_train_dts.pt")
-        print("Creating the validation dataset...")
+        if skip_val or skip_test:
+            torch.save(train_dts, processed_dts_path / "processed_test_dts.pt")
+        else:
+            torch.save(train_dts, processed_dts_path / "processed_train_dts.pt")
         # Create the validation dataset
-        val_dts = NlosTransientDatasetItofGt(
-            Path(args[1]), val_csv, frequencies=freqs, transform=transforms)
-        # Save the validation dataset
-        torch.save(val_dts, processed_dts_path / "processed_validation_dts.pt")
-        print("Creating the test dataset...")
-        test_dts = NlosTransientDatasetItofGt(
-            Path(args[1]), test_csv, frequencies=freqs, transform=transforms)    # Create the test dataset
-        # Save the test dataset
-        torch.save(test_dts, processed_dts_path / "processed_test_dts.pt")
+        if not skip_val:
+            print("Creating the validation dataset...")
+            val_dts = NlosTransientDatasetItofGt(
+                Path(args[1]), val_csv, frequencies=freqs, transform=transforms)
+            # Save the validation dataset
+            torch.save(val_dts, processed_dts_path / "processed_validation_dts.pt")
+        if not skip_test:
+            # Create the test dataset
+            print("Creating the test dataset...")
+            test_dts = NlosTransientDatasetItofGt(
+                Path(args[1]), test_csv, frequencies=freqs, transform=transforms)    # Create the test dataset
+            # Save the test dataset
+            torch.save(test_dts, processed_dts_path / "processed_test_dts.pt")
 
         f_dts_time = time.time()  # Stop the timer for the dataset creation
         print(

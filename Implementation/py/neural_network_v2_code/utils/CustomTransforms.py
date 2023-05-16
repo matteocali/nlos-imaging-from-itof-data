@@ -63,6 +63,11 @@ class ItofNormalizeWithAddLayer(object):
         # Compute the amplitude at 20MHz (normalization factor for the iToF data)
         ampl_20 = torch.sqrt(torch.square(itof_data[0, ...]) + torch.square(itof_data[self.n_frequencies, ...])).unsqueeze(0)
         
+        # Check if there is zero value in the ampl_20 tensor
+        if not torch.is_nonzero(ampl_20.all()):
+            # Change the zero values with 1e-10
+            ampl_20 = torch.where(ampl_20 == 0, 1e-10, ampl_20)
+
         # Scale the iToF raw data
         itof_data = itof_data / ampl_20
         
