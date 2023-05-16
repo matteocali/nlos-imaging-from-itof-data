@@ -5,6 +5,7 @@ All the scripts in here requires the conda environment `pytorch_nn.yml` provided
 
 The folder structure is the following:
 
+* `additional_script`: contains some bash scripts used to perform some operations on the cluster;
 * `datasets`: the processed datasets data;
 * `extras`: contains some *.pdf* files with the results of the tests performed on the network;
 * `utils`: contains all the auxiliary functions and classes used by the others script;
