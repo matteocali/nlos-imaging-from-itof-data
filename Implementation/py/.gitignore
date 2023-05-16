@@ -12,3 +12,4 @@
 .fuse*
 **/net_state/**
 **/results/**
+**/tensorboard_logs/**
