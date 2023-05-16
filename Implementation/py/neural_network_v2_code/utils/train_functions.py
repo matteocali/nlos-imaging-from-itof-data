@@ -13,11 +13,10 @@ from torch.optim import Optimizer
 from pathlib import Path
 from torch.utils.tensorboard.writer import SummaryWriter
 from torchmetrics import StructuralSimilarityIndexMeasure as SSIM
-from torchmetrics.functional.classification.jaccard import binary_jaccard_index
-from utils.utils import format_time, generate_fig
+from utils.utils import format_time, generate_fig, itof2depth
+from utils.CustomLosses import BinaryMeanIntersectionOverUnion as miou
 from utils.lovasz_losses import lovasz_hinge
 from utils.EarlyStopping import EarlyStopping
-from utils.utils import itof2depth, update_lr
 from utils.SobelGradient import SobelGrad
 
 
@@ -56,19 +55,22 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
         # Compute the ssim loss
         second_loss = 1 - add_loss(depth.unsqueeze(0), gt_depth.unsqueeze(0))  # type: ignore
     elif isinstance(add_loss, torch.nn.Module):
-        # Compute the gradient of the prediction and gt
-        # grad_itof = torch.stack(
-        #     (torch.gradient(clean_itof[:, 0, ...], dim=1, edge_order= 2)[0], 
-        #     torch.gradient(clean_itof[:, 0, ...], dim=2, edge_order= 2)[0],
-        #     torch.gradient(clean_itof[:, 1, ...], dim=1, edge_order= 2)[0], 
-        #     torch.gradient(clean_itof[:, 1, ...], dim=2, edge_order= 2)[0]), 
-        #     dim=1)
-        # grad_gt = torch.stack(
-        #     (torch.gradient(gt[:, 0, ...], dim=1, edge_order= 2)[0], 
-        #     torch.gradient(gt[:, 0, ...], dim=2, edge_order= 2)[0],
-        #     torch.gradient(gt[:, 1, ...], dim=1, edge_order= 2)[0], 
-        #     torch.gradient(gt[:, 1, ...], dim=2, edge_order= 2)[0]), 
-        #     dim=1)
+        # The followig commented grad computation should be remove since is not precise as the Sobel operator
+        """
+        Compute the gradient of the prediction and gt
+        grad_itof = torch.stack(
+            (torch.gradient(clean_itof[:, 0, ...], dim=1, edge_order= 2)[0], 
+            torch.gradient(clean_itof[:, 0, ...], dim=2, edge_order= 2)[0],
+            torch.gradient(clean_itof[:, 1, ...], dim=1, edge_order= 2)[0], 
+            torch.gradient(clean_itof[:, 1, ...], dim=2, edge_order= 2)[0]), 
+            dim=1)
+        grad_gt = torch.stack(
+            (torch.gradient(gt[:, 0, ...], dim=1, edge_order= 2)[0], 
+            torch.gradient(gt[:, 0, ...], dim=2, edge_order= 2)[0],
+            torch.gradient(gt[:, 1, ...], dim=1, edge_order= 2)[0], 
+            torch.gradient(gt[:, 1, ...], dim=2, edge_order= 2)[0]), 
+            dim=1)
+        """
 
         # Initialize the Sobel gradient operator with window size 7
         grad = SobelGrad(window_size=7)
@@ -88,7 +90,7 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
 
     # Compute the Intersection over Union loss (only if l2 is not 0)
     if l2 != 0:
-        iou_loss = 1 - binary_jaccard_index(torch.where(depth > 0, 1, 0), torch.where(gt_depth > 0, 1, 0)).item()  # type: ignore
+        iou_loss = miou()(depth, gt_depth, 0)  # type: ignore
         # iou_loss = lovasz_hinge(torch.where(depth > 0, 1, 0), torch.where(gt_depth > 0, 1, 0)).item() # type: ignore
     else:
         iou_loss = 0
@@ -258,7 +260,7 @@ def train(attempt_name: str, net: torch.nn.Module, train_loader: DataLoader, val
 
     # Initialize the early stopping
     early_stopping = EarlyStopping(
-        tollerance=10, min_delta=0.015, save_path=save_path, net=net)
+        tollerance=150, min_delta=0.015, save_path=save_path, net=net)
     
     # Initialize the chosed additional loss
     if add_loss == "ssim":

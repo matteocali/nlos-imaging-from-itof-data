@@ -1,4 +1,5 @@
 import torch
+from utils.utils import mean_intersection_over_union as miou
 
 
 class BalancedMAELoss(torch.nn.Module):
@@ -134,3 +135,25 @@ class BalancedBCELoss(torch.nn.Module):
                 bce = (mean_obj_bce + mean_bg_bce) / 2
         
         return bce
+
+
+class BinaryMeanIntersectionOverUnion(torch.nn.Module):
+    """
+    Custom loss function for the neural network.
+    This loss function is based on the mean binary Intersection over Union (mIoU) metrics also known as Jackard index.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def __call__(self, pred: torch.Tensor, target: torch.Tensor, bg_class_value: int) -> torch.Tensor:
+        """
+        Args:
+            pred (torch.Tensor): predicted value
+            target (torch.Tensor): ground truth value
+            bg_class_value (int): background class value
+        Returns:
+            iou (torch.Tensor): mean binary Intersection over Union
+        """
+
+        return 1 - miou(pred, target, bg_class_value)

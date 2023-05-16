@@ -4,7 +4,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from pathlib import Path
-from torchmetrics.functional.classification.jaccard import binary_jaccard_index
+from utils.utils import mean_intersection_over_union as miou
 from utils.utils import save_test_plots_itof, depth_radial2cartesian, hfov2focal, itof2depth
 
 
@@ -54,9 +54,7 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
             depth_loss = loss_fn(depth, gt_depth)  # Compute the loss over the depth
 
             # Compute the mean intersection over union on the depth
-            iou_obj = binary_jaccard_index(torch.where(depth > 0, 1, 0).to("cpu"), torch.where(gt_depth > 0, 1, 0).to("cpu") ).item()  # type: ignore
-            iou_bg = binary_jaccard_index(torch.where(depth == 0, 1, 0).to("cpu"), torch.where(gt_depth == 0, 1, 0).to("cpu") ).item()  # type: ignore
-            iou = (iou_obj + iou_bg) / 2
+            iou = miou(depth.to("cpu"), gt_depth.to("cpu"), 0).item()  # type: ignore
 
             # Update the loss list
             epoch_loss.append(depth_loss.to("cpu").item())

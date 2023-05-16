@@ -7,6 +7,7 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from torch.optim import Optimizer
+from torchmetrics.functional.classification.jaccard import binary_jaccard_index
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -419,3 +420,20 @@ def depth2itof(depth: torch.Tensor or np.ndarray, freq: float, ampl: float = 1.)
     itof = env.stack((real_phi, im_phi), 0)  # type: ignore
 
     return itof  # type: ignore
+
+
+def mean_intersection_over_union(pred: torch.Tensor, target: torch.Tensor, bg_class_value: int) -> torch.Tensor:
+    """
+    Function used to compute the binary mean Intersection over Union (mIoU)
+        param:
+            - pred: predicted data
+            - target: target data
+            - bg_class_value: background class value
+        return:
+            - mean intersection over union
+    """
+
+    iou_1 = binary_jaccard_index(torch.where(pred > bg_class_value, 1, 0), torch.where(target > bg_class_value, 1, 0))
+    iou_2 = binary_jaccard_index(torch.where(pred == bg_class_value, 1, 0), torch.where(target == bg_class_value, 1, 0))
+
+    return (iou_1 + iou_2) / 2
