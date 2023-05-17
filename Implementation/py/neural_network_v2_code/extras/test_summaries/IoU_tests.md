@@ -24,6 +24,16 @@ $$loss = loss_{MAE} + \lambda loss_{IoU}.$$
 
 </div>
 
+## Tests result on best case using the mIoU
+
+If the $loss_{IoU}$ is properly computed on both classes the overall performance of the network changes.
+
+| attempt \# | $\lambda$ | avarage MAE (depth) |  min MAE (depth) | max MAE (depth) |avarge IoU (depth) |min IoU (depth) |  max IoU (depth) |
+| :--------: | :-------: | :-----------------: | :--------------: | :-------------: | :---------------: | :------------: | :--------------: |
+| 1          | 3.0       | **0.0562**          | 0.0164           | 0.1781          | **0.7567**        | 0.4736         | 0.9243           |
+
+As it is possible to see from the above table using the mIoU instead of the IoU the network performance decreases.
+
 <!-- HTML styles -->
 <style>
     .result_table {
