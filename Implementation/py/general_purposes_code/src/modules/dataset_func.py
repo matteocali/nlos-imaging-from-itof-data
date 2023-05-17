@@ -447,7 +447,7 @@ def build_mirror_gt(gt_path: Path, out_path: Path, fov: int, exp_time: float) ->
         d_map = compute_distance_map(tr, fov, exp_time)  # Compute the distance map (depth radial map)
         a_map = np_zeros(d_map.shape)  # Create the alpha map
         a_map[where(np_sum(tr[:, :, :, -1], axis=0) != 0)] = 1  # Set the alpha map to 1 where there is data in d_map
-        save_h5(file_path=out_path / file_name, data={"depth_map": d_map, "alpha_map": a_map}, fermat=False)  # Save the data in the out_path folder as a h5 file
+        save_h5(file_path=out_path / file_name, data={"gt_tr": tr, "depth_map": d_map, "alpha_map": a_map}, fermat=False)  # Save the data in the out_path folder as a h5 file
 
 
 def gen_filter(exp_coeff: float, sigma: float) -> ndarray:
@@ -706,12 +706,12 @@ def fuse_dt_gt_mirror(d_path: Path, gt_path: Path, out_path: Path, def_obj_pos: 
         file_name = d_name[:d_name.find(".h5")].replace("-", "n").replace("(", "").replace(")", "").replace(".", "dot")  # Compose the name of the file
         try:
             save_h5(file_path=out_path / file_name,
-                    data={"data": d["data"], "tr_itof": d["tr_itof"], "amp_itof": d["amp_itof"],
+                    data={"data": d["data"], "gt_tr":gt["gt_tr"], "tr_itof": d["tr_itof"], "amp_itof": d["amp_itof"],
                           "phase_itof": d["phase_itof"], "depth_map": swapaxes(gt["depth_map"], 0, 1),
                           "alpha_map": swapaxes(gt["alpha_map"], 0, 1)}, fermat=False)  # Save the file
         except KeyError:
             save_h5(file_path=out_path / file_name,
-                    data={"data": d["data"], "depth_map": swapaxes(gt["depth_map"], 0, 1),
+                    data={"data": d["data"], "gt_tr":gt["gt_tr"], "depth_map": swapaxes(gt["depth_map"], 0, 1),
                           "alpha_map": swapaxes(gt["alpha_map"], 0, 1)}, fermat=False)  # Save the file
 
 

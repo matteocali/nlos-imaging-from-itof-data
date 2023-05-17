@@ -19,12 +19,12 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/process_dts.py",
             "args": [
-                "--name", "full_dts_add_layer",
-                "--input", "/media/matteocali/shared_ssd/NLoS imaging using iToF/mirror_dts/full_dts",
-                "--bg-value", "0",
+                "--name", "fixed_camera_full_add_layer_bg_30",
+                "--input", "/media/matteocali/shared_ssd/NLoS imaging using iToF/mirror_dts/fixed_camera_full",
+                "--bg-value", "30",
                 "--add-layer", "True",
                 "--multi_freqs", "False",
-                "--data-augment-size", "806",
+                "--data-augment-size", "403",
                 "--slurm", "False"
             ],
             "console": "integratedTerminal",
@@ -36,7 +36,7 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/train.py",
             "args": [
-                "--dataset", "fixed_camera_full_add_layer",
+                "--dataset", "fixed_camera_full_add_layer_bg_30",
                 "--name", "test",
                 "--lr", "0.0001",
                 "--lambda", "0.0",
@@ -75,11 +75,11 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/general_purposes_code/src/ground_truth_gen.py",
             "args": [
-                "-g", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/gt",
-                "-i", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/dts",
-                "-o", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/gt_out",
-                "-d", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/dts_out",
-                "-f", "/media/matteocali/shared_hdd/Mitsuba 2 empty scene/mitsuba renders/final_out",
+                "-g", "/media/matteocali/shared_hdd/mitsuba_renders/nlos_scenes/datasets/depth_map_ground_truth_close/renders",
+                "-i", "/media/matteocali/shared_hdd/mitsuba_renders/nlos_scenes/datasets/dataset_random_close/renders/",
+                "-o", "/media/matteocali/shared_hdd/mitsuba_renders/nlos_scenes/datasets/test/gt_out",
+                "-d", "/media/matteocali/shared_hdd/mitsuba_renders/nlos_scenes/datasets/test/dts_out",
+                "-f", "/media/matteocali/shared_hdd/mitsuba_renders/nlos_scenes/datasets/test/final_out",
                 "-t", "mirror"
             ],
             "console": "integratedTerminal",
