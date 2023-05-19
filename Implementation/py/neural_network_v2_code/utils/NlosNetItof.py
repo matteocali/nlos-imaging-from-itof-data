@@ -144,6 +144,42 @@ class FinalConv(nn.Module):
         return x
 
 
+class StraightThrough(nn.Module):
+    """Straight through estimator"""
+
+    def __init__(self) -> None:
+        """
+        Straight through estimator
+        """
+
+        super().__init__()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass
+        param:
+            - x: input tensor
+        return:
+            - output tensor
+        """
+
+        clean_itof = torch.where(abs(x) < 0.05, 0, x)  # Clean the itof data
+        from utils.utils import itof2depth
+        depth = itof2depth(clean_itof, 20e06)
+        return torch.where(depth == 0, 0, 1)
+    
+    def backward(self, grad_out) -> torch.Tensor:
+        """
+        Backward pass
+        param:
+            - x: input tensor
+        return:
+            - output tensor
+        """
+
+        return torch.nn.Sigmoid()(grad_out)
+
+
 class NlosNetItof(nn.Module):
 
     def __init__(self, enc_channels: tuple = (6, 64, 128, 256, 512, 1024), dec_channels: tuple = (1024, 512, 256, 128, 64), pad: int = 1, num_class: int = 1, additional_cnn_layers: int = 0) -> None:
@@ -187,4 +223,8 @@ class NlosNetItof(nn.Module):
         out = self.head(out)
         # Run the final two branches
         itof = self.itof_estiamtor(out)
+
+        # Compute the related depthmap and return a hard mask
+        
+
         return itof.squeeze(1)
