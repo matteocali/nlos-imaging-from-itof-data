@@ -36,7 +36,7 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/train.py",
             "args": [
-                "--dataset", "fixed_camera_full_add_layer_bg_30",
+                "--dataset", "fixed_camera_diffuse_wall",
                 "--name", "test",
                 "--lr", "0.0001",
                 "--lambda", "0.0",
@@ -47,7 +47,7 @@
                 "--n-out-channels", "16",
                 "--additional-layers", "0",
                 "--n-epochs", "1500",
-                "--data-augment", "403",
+                "--data-augment", "0",
                 "--slurm", "False"
             ],
             "console": "integratedTerminal",

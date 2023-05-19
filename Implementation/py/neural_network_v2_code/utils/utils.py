@@ -205,6 +205,82 @@ def plt_itof(itof: np.ndarray, path: Path) -> None:
     plt.close()    
 
 
+def row_subplot_diff(fig, ax, data: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray] | tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray], titles: tuple[str, str, str, str] | tuple[str, str, str, str, str]) -> None:  # type: ignore
+    """
+    Function used to generate the row subplot
+        param:
+            - fig: figure
+            - ax: axis
+            - data: tuple containing the ground truth and the predicted data
+            - titles: tuple containing the title of the subplot
+    """
+
+    # Generate the plts for the depth
+
+    row_length = len(data)
+
+    if row_length == 4:
+        ax[0].axis("off")
+        r = range(1, 5)
+        k = 1
+    else:
+        r = range(5)
+        k = 0
+
+    for i in r:
+        img = ax[i].matshow(data[i - k].T, cmap="jet")               # Plot the sx plot # type: ignore
+        img.set_clim(np.min(data[i - k]), np.max(data[i - k]))           # Set the colorbar limits based on the ground truth data
+        divider = make_axes_locatable(ax[i])                     # Defien the colorbar axis
+        cax = divider.append_axes("right", size="5%", pad=0.05)  # Set the colorbar location
+        fig.colorbar(img, cax=cax)                               # Plot the colorbar
+        ax[i].set_title(titles[i - k])                               # Set the title of the subplot
+        ax[i].set_xlabel("x")                                    # Set the x label of the subplot
+        ax[i].set_ylabel("y")                                    # Set the y label of the subplot
+
+
+def plot_difference(depth: torch.Tensor | np.ndarray, itof: torch.Tensor | np.ndarray, empty: torch.Tensor | np.ndarray, index: int, path: Path) -> None:
+    """
+    Function used to save the test plots
+        param:
+            - depth: depth map
+            - itof: itof data
+            - empty: itof data of the empty scene (only white wall)
+            - index: index of the test sample
+            - path: path where to save the plots
+    """
+
+    # If necessary convert the data to numpy
+    if isinstance(depth, torch.Tensor):
+        depth = depth.to("cpu").numpy()
+    if isinstance(itof, torch.Tensor):
+        itof = itof.to("cpu").numpy()
+    if isinstance(empty, torch.Tensor):
+        empty = empty.to("cpu").numpy()
+
+    # Compute the difference
+    diff = itof - empty
+
+    # Set seaborn style
+    sns.set_style()
+
+    # Generate the plot
+    fig, ax = plt.subplots(3, 5, figsize=(32, 16))
+
+    # Generate the plts for the 20MHz
+    titles = ("iToF data at 20MHz (real)", "iToF data at 20MHz (imaginary)", "Difference with the empty scene 20MHz (real)", "Difference with the empty scene 20MHz (imaginary)")
+    row_subplot_diff(fig, ax[0], (itof[0, ...], itof[1, ...], diff[0, ...], diff[1, ...]), titles)  # type: ignore
+    # Generate the plts for the 50MHz
+    titles = ("GT depth map", "iToF data at 50MHz (real)", "iToF data at 50MHz (imaginary)", "Difference with the empty scene 50MHz (real)", "Difference with the empty scene 50MHz (imaginary)")
+    row_subplot_diff(fig, ax[1], (depth, itof[2, ...], itof[3, ...], diff[2, ...], diff[3, ...]), titles)  # type: ignore
+    # Generate the plts for the 60MHz
+    titles = ("iToF data at 60MHz (real)", "iToF data at 60MHz (imaginary)", "Difference with the empty scene 60MHz (real)", "Difference with the empty scene 60MHz (imaginary)")
+    row_subplot_diff(fig, ax[2], (itof[4, ...], itof[5, ...], diff[4, ...], diff[5, ...]), titles)  # type: ignore
+    
+    plt.tight_layout()
+    plt.savefig(str(path / f"{index + 1}.png"))
+    plt.close()
+
+
 def send_email(receiver_email: str, subject: str, body: str):
     """
     Function used to send an email
