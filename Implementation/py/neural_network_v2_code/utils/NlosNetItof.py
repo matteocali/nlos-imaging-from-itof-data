@@ -2,6 +2,7 @@ import torch
 import torchvision
 from torch import nn
 from math import sqrt
+from torch.autograd import Function
 
 
 class Block(nn.Module):
@@ -144,18 +145,11 @@ class FinalConv(nn.Module):
         return x
 
 
-class StraightThroughClean(nn.Module):
+class StraightThroughClean(Function):
     """
     Straight through estimator
     Clean the iToF data, everything below 0.05 is set to 0
     """
-
-    def __init__(self) -> None:
-        """
-        Straight through estimator
-        """
-
-        super().__init__()
 
     @staticmethod
     def forward(ctx, x: torch.Tensor) -> torch.Tensor:
@@ -184,18 +178,11 @@ class StraightThroughClean(nn.Module):
         return grad_out
     
 
-class StraightThroughHardThreshold(nn.Module):
+class StraightThroughHardThreshold(Function):
     """
     Straight through estimator
     Compute the hard threshold of the depth data
     """
-
-    def __init__(self) -> None:
-        """
-        Straight through estimator
-        """
-
-        super().__init__()
 
     @staticmethod
     def forward(ctx, x: torch.Tensor) -> torch.Tensor:
@@ -278,4 +265,4 @@ class NlosNetItof(nn.Module):
         clean_itof = self.st_clean.apply(itof)
         depth = self.st_hard.apply(clean_itof)
 
-        return itof.squeeze(1), depth.squeeze(1)  # type: ignore
+        return itof.squeeze(1), depth.squeeze(1)

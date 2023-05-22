@@ -36,7 +36,7 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/train.py",
             "args": [
-                "--dataset", "fixed_camera_diffuse_wall",
+                "--dataset", "fixed_camera_full_add_layer",
                 "--name", "test",
                 "--lr", "0.0001",
                 "--lambda", "0.0",

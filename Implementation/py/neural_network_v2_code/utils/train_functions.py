@@ -47,11 +47,6 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, depth: torch.Tensor,
     # Compute the main loss (Balanced MAE)
     loss_itof = loss_fn(itof, gt) # nn.MAELoss(reduction="none")
 
-    # mae = loss_fn(itof, gt)
-    # prob = 1 - torch.tanh(mae.rflatten(0,1)) # (Bx2)xHxW  dense prediction, closer to one is better
-    # mcprob = torch.cat([prob.unsqueeze(1), prob.unsqueeze(1)], dim=1) # (Bx2)x2xHxW  dense prediction
-    # lovasz = lovasz_softmax(mae, gt)
-
     # Compute the additional loss if any (SSIM or Gradient)
     if isinstance(add_loss, SSIM):
         # Compute the ssim loss
@@ -104,22 +99,6 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, depth: torch.Tensor,
     return loss_itof + (l * second_loss) + (l2 * iou_loss)
 
 
-def compute_loss_depth(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Module) -> torch.Tensor:
-    """
-    Function to compute the loss using itof data
-        param:
-            - itof: predicted itof
-            - gt: ground truth depth
-            - loss_fn: loss function to use
-        return:
-            - final loss
-    """
-
-    depth = itof2depth(itof, 20e06)  # type: ignore
-
-    return loss_fn(depth, gt)
-
-
 def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None, device: torch.device, l: float, l2: float, scaler: amp.GradScaler) -> float:  # type: ignore
     """
     Function to train the network on the training set
@@ -160,7 +139,6 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         # Compute the loss
         with amp.autocast():  # type: ignore
             loss = compute_loss_itof(itof, gt_itof, depth, gt_depth, loss_fn, add_loss, l, l2)
-            # loss = compute_loss_depth(itof, gt_depth, loss_fn)
 
         # Backward pass
         scaler.scale(loss).backward()  # type: ignore
