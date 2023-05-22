@@ -46,11 +46,6 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
     # Compute the main loss (Balanced MAE)
     loss_itof = loss_fn(itof, gt) # nn.MAELoss(reduction="none")
 
-    # mae = loss_fn(itof, gt)
-    # prob = 1 - torch.tanh(mae.rflatten(0,1)) # (Bx2)xHxW  dense prediction, closer to one is better
-    # mcprob = torch.cat([prob.unsqueeze(1), prob.unsqueeze(1)], dim=1) # (Bx2)x2xHxW  dense prediction
-    # lovasz = lovasz_softmax(mae, gt)
-
     # Compute the depth
     clean_itof = torch.where(abs(itof.detach()) < 0.05, 0, itof.detach())  # Clean the itof data 
     depth = itof2depth(clean_itof, 20e06)
@@ -95,8 +90,8 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
 
     # Compute the Intersection over Union loss (only if l2 is not 0)
     if l2 != 0:
-        iou_loss = miou()(depth, gt_depth, 0)  # type: ignore
-        # iou_loss = lovasz_hinge(torch.where(depth > 0, 1, 0), torch.where(gt_depth > 0, 1, 0)).item() # type: ignore
+        # iou_loss = miou()(depth, gt_depth, 0)  # type: ignore
+        iou_loss = lovasz_hinge(torch.where(depth > 0, 1, 0), torch.where(gt_depth > 0, 1, 0)).item() # type: ignore
     else:
         iou_loss = 0
 
