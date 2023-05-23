@@ -73,14 +73,11 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, depth: torch.Tensor,
         # Initialize the Sobel gradient operator with window size 7
         grad = SobelGrad(window_size=7)
 
-        # Clean the itof data t oreduce noise
-        clean_itof = torch.where(abs(itof.detach()) < 0.05, 0, itof.detach())
-
         # Initilaize the gradient tensors
         grad_itof = torch.empty((1, 2, itof.shape[2], itof.shape[3])).to(itof.device)
         grad_gt = torch.empty((1, 2, gt.shape[2], gt.shape[3])).to(itof.device)
 
-        grad_itof[:, 0, ...], grad_itof[:, 1, ...] = grad(clean_itof)
+        grad_itof[:, 0, ...], grad_itof[:, 1, ...] = grad(itof)
         grad_gt[:, 0, ...], grad_gt[:, 1, ...] = grad(gt)
 
         # Compute the gradient loss (MSE or MAE)
