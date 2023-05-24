@@ -32,7 +32,7 @@ class STECleanFunc(torch.autograd.Function):
             - output tensor
         """
 
-        return torch.nn.Sigmoid()(grad_out)
+        return grad_out
     
 
 class STEThresholdFunc(torch.autograd.Function):
