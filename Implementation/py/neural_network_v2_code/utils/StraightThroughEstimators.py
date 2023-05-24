@@ -1,4 +1,5 @@
 import torch
+from utils.utils import itof2depth
 
 
 class STECleanFunc(torch.autograd.Function):
@@ -52,7 +53,6 @@ class STEThresholdFunc(torch.autograd.Function):
             - output tensor
         """
 
-        from utils.utils import itof2depth
         depth = itof2depth(x, 20e06)
         return torch.where(depth == 0, 0, 1)
     
@@ -99,3 +99,40 @@ class StraightThroughEstimator(torch.nn.Module):
             return STEThresholdFunc.apply(x)
         else:
             raise ValueError(f"Unknown task {self.task}")
+
+
+class StraightThroughEstimatorParam(torch.nn.Module):
+    """
+    Straight through estimator implementation
+    Implementation withoud the redefinition of the backward pass
+    """
+
+    def __init__(self, task: str) -> None:
+        """
+        Constructor
+        param:
+            - task: task to perform (clean or threshold)
+        """
+
+        super().__init__()
+        self.task = task
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass
+        param:
+            - x: input tensor
+        return:
+            - output tensor
+        """
+
+        if self.task == "clean":
+            hard_x = torch.where(abs(x) < 0.05, 0, x)  # Clean the itof data
+            return x + (hard_x - x).detach()  # Straight through estimator
+        elif self.task == "threshold":
+            depth = itof2depth(x, 20e06)
+            hard_x = torch.where(depth == 0, 0, 1)
+            return x + (hard_x - x).detach()  # Straight through estimator
+        else:
+            raise ValueError(f"Unknown task {self.task}")
+        
