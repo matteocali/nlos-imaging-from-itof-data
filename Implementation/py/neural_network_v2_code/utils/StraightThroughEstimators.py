@@ -130,8 +130,8 @@ class StraightThroughEstimatorParam(torch.nn.Module):
             hard_x = torch.where(abs(x) < 0.05, 0, x)  # Clean the itof data
             return x + (hard_x - x).detach()  # Straight through estimator
         elif self.task == "threshold":
-            depth = itof2depth(x, 20e06)
-            hard_x = torch.where(depth == 0, 0, 1)
+            x = torch.tensor(itof2depth(x, 20e06), dtype=torch.float32, device=x.device)
+            hard_x = torch.where(x == 0, 0, 1)
             return x + (hard_x - x).detach()  # Straight through estimator
         else:
             raise ValueError(f"Unknown task {self.task}")

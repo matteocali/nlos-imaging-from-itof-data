@@ -2,7 +2,7 @@ import torch
 import torchvision
 from torch import nn
 from math import sqrt
-from utils.StraightThroughEstimators import StraightThroughEstimator
+from utils.StraightThroughEstimators import StraightThroughEstimator, StraightThroughEstimatorParam
 
 
 class Block(nn.Module):
@@ -171,8 +171,13 @@ class NlosNetItof(nn.Module):
         self.itof_estiamtor = FinalConv(chs=tuple(chs), additional_layers=additional_cnn_layers)  # Initialize the itof data estimator
 
         # Initialize the straight through estimators
-        self.st_clean = StraightThroughEstimator(task="clean")
-        self.st_hard = StraightThroughEstimator(task="threshold")
+        STE_type = "std"
+        if STE_type == "std":
+            self.st_clean = StraightThroughEstimator(task="clean")
+            self.st_hard = StraightThroughEstimator(task="threshold")
+        elif STE_type == "param":
+            self.st_clean = StraightThroughEstimatorParam(task="clean")
+            self.st_hard = StraightThroughEstimatorParam(task="threshold")
 
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
