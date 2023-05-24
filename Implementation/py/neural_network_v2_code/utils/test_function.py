@@ -97,8 +97,10 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
     iou_mean_loss = np.round(np.mean(iou_loss), 4)
     iou_min_loss = np.round(np.min(iou_loss), 4)
     iou_max_loss = np.round(np.max(iou_loss), 4)
+    accuracy = np.round(np.mean(((1 - mae_mean_loss), iou_mean_loss)), 4)
 
     with open(out_path / "loss.txt", "w") as f:
+        f.write(f"Accuracy: {accuracy}\n\n")
         f.write(f"Mean Absolute Error summary:\n")
         f.write(f"   - Overall depth loss (MAE): {mae_mean_loss}\n")
         f.write(f"   - Min depth loss: {mae_min_loss}\n")
