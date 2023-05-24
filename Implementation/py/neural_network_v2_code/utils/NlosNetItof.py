@@ -2,7 +2,7 @@ import torch
 import torchvision
 from torch import nn
 from math import sqrt
-from torch.autograd import Function
+from utils.StraightThroughEstimators import StraightThroughEstimator
 
 
 class Block(nn.Module):
@@ -145,74 +145,6 @@ class FinalConv(nn.Module):
         return x
 
 
-class StraightThroughClean(Function):
-    """
-    Straight through estimator
-    Clean the iToF data, everything below 0.05 is set to 0
-    """
-
-    @staticmethod
-    def forward(ctx, x: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass
-        param:
-            - ctx: context
-            - x: input tensor
-        return:
-            - output tensor
-        """
-
-        return torch.where(abs(x) < 0.05, 0, x)  # Clean the itof data
-    
-    @staticmethod
-    def backward(ctx, grad_out) -> torch.Tensor:
-        """
-        Backward pass
-        param:
-            - ctx: context
-            - grad_out: gradient output
-        return:
-            - output tensor
-        """
-
-        return grad_out
-    
-
-class StraightThroughHardThreshold(Function):
-    """
-    Straight through estimator
-    Compute the hard threshold of the depth data
-    """
-
-    @staticmethod
-    def forward(ctx, x: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass
-        param:
-            - ctx: context
-            - x: input tensor
-        return:
-            - output tensor
-        """
-
-        from utils.utils import itof2depth
-        depth = itof2depth(x, 20e06)
-        return torch.where(depth == 0, 0, 1)
-    
-    @staticmethod
-    def backward(ctx, grad_out) -> torch.Tensor:
-        """
-        Backward pass
-        param:
-            - ctx: context
-            - grad_out: gradient output
-        return:
-            - output tensor
-        """
-
-        return grad_out
-
-
 class NlosNetItof(nn.Module):
 
     def __init__(self, enc_channels: tuple = (6, 64, 128, 256, 512, 1024), dec_channels: tuple = (1024, 512, 256, 128, 64), pad: int = 1, num_class: int = 1, additional_cnn_layers: int = 0) -> None:
@@ -239,8 +171,8 @@ class NlosNetItof(nn.Module):
         self.itof_estiamtor = FinalConv(chs=tuple(chs), additional_layers=additional_cnn_layers)  # Initialize the itof data estimator
 
         # Initialize the straight through estimators
-        self.st_clean = StraightThroughClean()
-        self.st_hard = StraightThroughHardThreshold()
+        self.st_clean = StraightThroughEstimator(task="clean")
+        self.st_hard = StraightThroughEstimator(task="threshold")
 
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
@@ -262,7 +194,7 @@ class NlosNetItof(nn.Module):
         itof = self.itof_estiamtor(out)
 
         # Compute the related depthmap and return a hard mask
-        clean_itof = self.st_clean.apply(itof)
-        depth = self.st_hard.apply(clean_itof)
+        clean_itof = self.st_clean(itof)
+        depth = self.st_hard(clean_itof)
 
         return itof.squeeze(1), depth.squeeze(1)
