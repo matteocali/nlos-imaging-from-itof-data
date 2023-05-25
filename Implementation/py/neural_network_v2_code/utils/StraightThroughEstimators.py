@@ -68,7 +68,8 @@ class STEThresholdFunc(torch.autograd.Function):
             - output tensor
         """
 
-        return torch.nn.Sigmoid()(grad_out)
+        # return torch.nn.Sigmoid()(grad_out)
+        return grad_out
     
 
 class StraightThroughEstimator(torch.nn.Module):
