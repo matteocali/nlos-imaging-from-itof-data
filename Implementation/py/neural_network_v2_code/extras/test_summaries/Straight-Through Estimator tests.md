@@ -5,11 +5,12 @@
 | attempt | description                                                      |   accuracy   |
 | :-----: | :--------------------------------------------------------------: | :----------: |
 |    1    |  no IoU loss                                                     |    0.8102    |
-|    2    |  standar IoU loss (no STE)                                       |  **0.8622**  |
+|    2    |  standar IoU loss (no STE) (IoU weightet 3)                      |  **0.8622**  |
 |    3    |  STE with only linear functions                                  |  **0.8556**  |
-|    4    |  STE witu only sigmoid functions                                 |    0.8476    |
-|    4    |  STE with linear for the cleaning and sigmoid for the threshold  |    0.8492    |
-|    5    |  STE parametric version                                          |    0.8490    |
+|    4    |  STE with only linear functions (IoU weightet 3)                 |    0.8425    |
+|    5    |  STE witu only sigmoid functions                                 |    0.8476    |
+|    6    |  STE with linear for the cleaning and sigmoid for the threshold  |    0.8492    |
+|    7    |  STE parametric version                                          |    0.8490    |
 
 ## Test on the full dataset
 

@@ -60,7 +60,7 @@
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/test.py",
             "args": [
                 "--dts-name", "fixed_camera_full_add_layer",
-                "--model", "nlos_nn_v2_itof_out_add_layer_aug_scale_0.01_iou_0.0_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403",
+                "--model", "nlos_nn_v2_itof_out_add_layer_aug_straight_trhough_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403",
                 "--encoder-channels", "32, 64, 128, 256, 512",
                 "--n-out-channels", "16",
                 "--additional-layers", "0",
