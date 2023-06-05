@@ -89,7 +89,13 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, depth: torch.Tensor,
     # Compute the Intersection over Union loss (only if l2 is not 0)
     if l2 != 0:
         # iou_loss = miou()(depth, gt_depth, 0)  # type: ignore
-        iou_loss = 1 - binary_jaccard_index(depth, torch.where(gt_depth > 0, 1, 0))
+
+        if depth.shape[1] == 2:
+            gt_depth = torch.where(gt_depth > 0, 1, 0)
+            iou = torch.tensor([binary_jaccard_index(depth[:, 0, ...], gt_depth), binary_jaccard_index(depth[:, 1, ...], gt_depth)])
+            iou_loss = 1 - torch.mean(iou)
+        else:
+            iou_loss = 1 - binary_jaccard_index(depth, torch.where(gt_depth > 0, 1, 0))
         # iou_loss = lovasz_hinge(depth, torch.where(gt_depth > 0, 1, 0)).item() # type: ignore
     else:
         iou_loss = 0
@@ -133,11 +139,14 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         optimizer.zero_grad()
 
         # Forward pass
-        itof, depth = net(itof_data)
+        itof, depth, mask = net(itof_data)
 
         # Compute the loss
         with amp.autocast():  # type: ignore
-            loss = compute_loss_itof(itof, gt_itof, depth, gt_depth, loss_fn, add_loss, l, l2)
+            if mask is not None:
+                loss = compute_loss_itof(itof, gt_itof, mask, gt_depth, loss_fn, add_loss, l, l2)
+            else:
+                loss = compute_loss_itof(itof, gt_itof, depth, gt_depth, loss_fn, add_loss, l, l2)
 
         # Backward pass
         scaler.scale(loss).backward()  # type: ignore
@@ -194,11 +203,14 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
             gt_depth = batch["gt_depth"].to(device)
 
             # Forward pass
-            itof, depth = net(itof_data)
+            itof, depth, mask = net(itof_data)
 
             # Compute the loss
             with amp.autocast():  # type: ignore
-                loss = compute_loss_itof(itof, gt_itof, depth, gt_depth, loss_fn, add_loss, l, l2)
+                if mask is not None:
+                    loss = compute_loss_itof(itof, gt_itof, mask, gt_depth, loss_fn, add_loss, l, l2)
+                else:
+                    loss = compute_loss_itof(itof, gt_itof, depth, gt_depth, loss_fn, add_loss, l, l2)
                 # loss = compute_loss_depth(itof, gt_depth, loss_fn)
 
             # Append the loss

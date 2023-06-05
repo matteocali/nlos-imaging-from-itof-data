@@ -171,16 +171,19 @@ class NlosNetItof(nn.Module):
         self.itof_estiamtor = FinalConv(chs=tuple(chs), additional_layers=additional_cnn_layers)  # Initialize the itof data estimator
 
         # Initialize the straight through estimators
-        STE_type = "std"
-        if STE_type == "std":
+        self.STE_type = "STE_on_itof"
+        if self.STE_type == "std":
             self.st_clean = StraightThroughEstimator(task="clean")
-            self.st_hard = StraightThroughEstimator(task="threshold")
-        elif STE_type == "param":
+            self.st_hard = StraightThroughEstimator(task="threshold_depth", threshold=0)
+        if self.STE_type == "STE_on_itof":
+            self.st_clean = StraightThroughEstimator(task="clean")
+            self.st_hard = StraightThroughEstimator(task="threshold", threshold=0.05)
+        elif self.STE_type == "param":
             self.st_clean = StraightThroughEstimatorParam(task="clean")
             self.st_hard = StraightThroughEstimatorParam(task="threshold")
 
 
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
         """
         Forward pass
         param:
@@ -202,4 +205,9 @@ class NlosNetItof(nn.Module):
         clean_itof = self.st_clean(itof)
         depth = self.st_hard(clean_itof)
 
-        return itof.squeeze(1), depth.squeeze(1)
+        if self.STE_type == "STE_on_itof":
+            mask = self.st_hard(itof).squeeze(1)
+        else:
+            mask = None
+
+        return itof.squeeze(1), depth.squeeze(1), mask

@@ -43,18 +43,18 @@ class STEThresholdFunc(torch.autograd.Function):
     """
 
     @staticmethod
-    def forward(ctx, x: torch.Tensor) -> torch.Tensor:
+    def forward(ctx, x: torch.Tensor, threshold: float) -> torch.Tensor:
         """
         Forward pass
         param:
             - ctx: context
             - x: input tensor
+            - threshold: threshold value
         return:
             - output tensor
         """
 
-        depth = itof2depth(x, 20e06)
-        return torch.where(depth == 0, 0, 1)
+        return torch.where(x <= threshold, 0, 1)
     
     @staticmethod
     def backward(ctx, grad_out) -> torch.Tensor:
@@ -70,20 +70,24 @@ class STEThresholdFunc(torch.autograd.Function):
 
         # return torch.nn.Sigmoid()(grad_out)
         return grad_out
-    
+
 
 class StraightThroughEstimator(torch.nn.Module):
     """Straight through estimator implementation"""
 
-    def __init__(self, task: str) -> None:
+    def __init__(self, task: str, threshold: float | None = None) -> None:
         """
         Constructor
         param:
             - task: task to perform (clean or threshold)
+            - threshold: threshold value
         """
 
         super().__init__()
         self.task = task
+
+        if self.task == "threshold" or self.task == "threshold_depth":
+            self.threshold = threshold
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -97,7 +101,10 @@ class StraightThroughEstimator(torch.nn.Module):
         if self.task == "clean":
             return STECleanFunc.apply(x)
         elif self.task == "threshold":
-            return STEThresholdFunc.apply(x)
+            return STEThresholdFunc.apply(x, self.threshold)
+        elif self.task == "threshold_depth":
+            depth = itof2depth(x, 20e06)
+            return STEThresholdFunc.apply(depth, self.threshold)
         else:
             raise ValueError(f"Unknown task {self.task}")
 
@@ -136,4 +143,3 @@ class StraightThroughEstimatorParam(torch.nn.Module):
             return x + (hard_x - x).detach()  # Straight through estimator
         else:
             raise ValueError(f"Unknown task {self.task}")
-        
