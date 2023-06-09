@@ -48,17 +48,17 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
             depth_loss = loss_fn(depth, gt_depth)  # Compute the loss over the depth
 
             # Compute the mean intersection over union on the depth
-            iou = miou(depth.to("cuda"), gt_depth.to("cuda"), 0).item()  # type: ignore
+            iou = miou(depth.to(device), gt_depth.to(device), 0).item()  # type: ignore
 
             # Update the loss list
-            epoch_loss.append(depth_loss.to("cuda").item())
+            epoch_loss.append(depth_loss.to(device).item())
             iou_loss.append(iou)
 
             # Remove the batch dimension and convert the data to numpy
-            n_itof = itof.to("cuda").squeeze(0).numpy()
-            n_gt_itof = gt_itof.to("cuda").squeeze(0).numpy()
-            n_depth = depth.to("cuda").squeeze(0).numpy()  # type: ignore
-            n_gt_depth = gt_depth.to("cuda").squeeze(0).numpy()
+            n_itof = itof.to("cpu").squeeze(0).numpy()
+            n_gt_itof = gt_itof.to("cpu").squeeze(0).numpy()
+            n_depth = depth.to("cpu").squeeze(0).numpy()  # type: ignore
+            n_gt_depth = gt_depth.to("cpu").squeeze(0).numpy()
 
             # Convert the depth from radial to cartesian
             n_depth = depth_radial2cartesian(n_depth, hfov2focal(320, 60))
@@ -80,7 +80,7 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
             tmp_out = torch.cat((depth.unsqueeze(0), itof), dim=1)  # Concatenate the depth and the mask  # type: ignore
 
             # Append the output
-            out = np.concatenate((out, tmp_out.to("cuda").numpy()), axis=0)
+            out = np.concatenate((out, tmp_out.to("cpu").numpy()), axis=0)
     
     out = np.delete(out, 0, axis=0)  # Delete the first empty array
 

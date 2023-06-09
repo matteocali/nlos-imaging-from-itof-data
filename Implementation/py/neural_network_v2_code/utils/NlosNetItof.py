@@ -2,6 +2,7 @@ import torch
 import torchvision
 from torch import nn
 from math import sqrt
+from utils.utils import itof2depth
 from utils.StraightThroughEstimators import StraightThroughEstimator, StraightThroughEstimatorParam
 
 
@@ -171,13 +172,10 @@ class NlosNetItof(nn.Module):
         self.itof_estiamtor = FinalConv(chs=tuple(chs), additional_layers=additional_cnn_layers)  # Initialize the itof data estimator
 
         # Initialize the straight through estimators
-        self.STE_type = "STE_on_itof"
+        self.STE_type = "std"
         if self.STE_type == "std":
             self.st_clean = StraightThroughEstimator(task="clean")
-            self.st_hard = StraightThroughEstimator(task="threshold_depth", threshold=0)
-        if self.STE_type == "STE_on_itof":
-            self.st_clean = StraightThroughEstimator(task="clean")
-            self.st_hard = StraightThroughEstimator(task="threshold", threshold=0.05)
+            self.st_hard = StraightThroughEstimator(task="threshold", threshold=0)
         elif self.STE_type == "param":
             self.st_clean = StraightThroughEstimatorParam(task="clean")
             self.st_hard = StraightThroughEstimatorParam(task="threshold")
@@ -203,11 +201,7 @@ class NlosNetItof(nn.Module):
 
         # Compute the related depthmap and return a hard mask
         clean_itof = self.st_clean(itof)
-        depth = self.st_hard(clean_itof)
+        depth = itof2depth(clean_itof, 20e06)
+        mask = self.st_hard(clean_itof)
 
-        if self.STE_type == "STE_on_itof":
-            mask = self.st_hard(itof).squeeze(1)
-        else:
-            mask = None
-
-        return itof.squeeze(1), depth.squeeze(1), mask
+        return itof, depth, mask

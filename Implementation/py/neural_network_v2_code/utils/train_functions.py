@@ -21,13 +21,13 @@ from utils.EarlyStopping import EarlyStopping
 from utils.SobelGradient import SobelGrad
 
 
-def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, depth: torch.Tensor, gt_depth: torch.Tensor, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None = None, l: float = 0.5, l2: float = 0.0) -> torch.Tensor:
+def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, depth_mask: torch.Tensor, gt_depth: torch.Tensor, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None = None, l: float = 0.5, l2: float = 0.0) -> torch.Tensor:
     """
     Function to compute the loss using itof data
         param:
             - itof: predicted itof
             - gt: ground truth itof
-            - depth: predicted depth
+            - depth_mask: predicted mask extracted from the depth
             - gt_depth: ground truth depth
             - loss_fn: loss function to use
             - add_loss: additional loss function to use
@@ -51,7 +51,7 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, depth: torch.Tensor,
     # Compute the additional loss if any (SSIM or Gradient)
     if isinstance(add_loss, SSIM):
         # Compute the ssim loss
-        second_loss = 1 - add_loss(depth.unsqueeze(0), gt_depth.unsqueeze(0))  # type: ignore
+        second_loss = 1 - add_loss(depth_mask.unsqueeze(0), gt_depth.unsqueeze(0))  # type: ignore
     elif isinstance(add_loss, torch.nn.Module):
         # The followig commented grad computation should be remove since is not precise as the Sobel operator
         """
@@ -90,13 +90,12 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, depth: torch.Tensor,
     if l2 != 0:
         # iou_loss = miou()(depth, gt_depth, 0)  # type: ignore
 
-        if depth.shape[1] == 2:
+        if depth_mask.shape[1] == 2:
             gt_depth = torch.where(gt_depth > 0, 1, 0)
-            iou = torch.tensor([binary_jaccard_index(depth[:, 0, ...], gt_depth), binary_jaccard_index(depth[:, 1, ...], gt_depth)])
+            iou = torch.tensor([binary_jaccard_index(depth_mask[:, 0, ...], gt_depth), binary_jaccard_index(depth_mask[:, 1, ...], gt_depth)])
             iou_loss = 1 - torch.mean(iou)
         else:
-            iou_loss = 1 - binary_jaccard_index(depth, torch.where(gt_depth > 0, 1, 0))
-        # iou_loss = lovasz_hinge(depth, torch.where(gt_depth > 0, 1, 0)).item() # type: ignore
+            iou_loss = 1 - binary_jaccard_index(depth_mask, torch.where(gt_depth > 0, 1, 0))
     else:
         iou_loss = 0
 
@@ -143,10 +142,7 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
 
         # Compute the loss
         with amp.autocast():  # type: ignore
-            if mask is not None:
-                loss = compute_loss_itof(itof, gt_itof, mask, gt_depth, loss_fn, add_loss, l, l2)
-            else:
-                loss = compute_loss_itof(itof, gt_itof, depth, gt_depth, loss_fn, add_loss, l, l2)
+            loss = compute_loss_itof(itof, gt_itof, mask, gt_depth, loss_fn, add_loss, l, l2)
 
         # Backward pass
         scaler.scale(loss).backward()  # type: ignore
@@ -206,12 +202,8 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
             itof, depth, mask = net(itof_data)
 
             # Compute the loss
-            with amp.autocast():  # type: ignore
-                if mask is not None:
-                    loss = compute_loss_itof(itof, gt_itof, mask, gt_depth, loss_fn, add_loss, l, l2)
-                else:
-                    loss = compute_loss_itof(itof, gt_itof, depth, gt_depth, loss_fn, add_loss, l, l2)
-                # loss = compute_loss_depth(itof, gt_depth, loss_fn)
+            with amp.autocast():
+                loss = compute_loss_itof(itof, gt_itof, mask, gt_depth, loss_fn, add_loss, l, l2)
 
             # Append the loss
             epoch_loss.append(loss.item())
