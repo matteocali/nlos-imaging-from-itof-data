@@ -122,7 +122,7 @@ if __name__ == '__main__':
     # Load the model
     model.load_state_dict(torch.load(state_dict_path, map_location=torch.device(device)))
 
-     # Compute the ratio between the number of background and object pixels
+    # Compute the ratio between the number of background and object pixels
     bg_obj_ratio = test_dts.get_bg_obj_ratio()
 
     # Create the loss function
