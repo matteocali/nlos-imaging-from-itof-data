@@ -228,12 +228,12 @@ def row_subplot_diff(fig, ax, data: tuple[np.ndarray, np.ndarray, np.ndarray, np
         k = 0
 
     for i in r:
-        img = ax[i].matshow(data[i - k].T, cmap="jet")               # Plot the sx plot # type: ignore
-        img.set_clim(np.min(data[i - k]), np.max(data[i - k]))           # Set the colorbar limits based on the ground truth data
+        img = ax[i].matshow(data[i - k].T, cmap="jet")           # Plot the sx plot # type: ignore
+        img.set_clim(np.min(data[i - k]), np.max(data[i - k]))   # Set the colorbar limits based on the ground truth data
         divider = make_axes_locatable(ax[i])                     # Defien the colorbar axis
         cax = divider.append_axes("right", size="5%", pad=0.05)  # Set the colorbar location
         fig.colorbar(img, cax=cax)                               # Plot the colorbar
-        ax[i].set_title(titles[i - k])                               # Set the title of the subplot
+        ax[i].set_title(titles[i - k])                           # Set the title of the subplot
         ax[i].set_xlabel("x")                                    # Set the x label of the subplot
         ax[i].set_ylabel("y")                                    # Set the y label of the subplot
 

@@ -202,3 +202,105 @@ class NlosTransientDatasetItofGt(Dataset):
         self.itof_data = torch.cat((self.itof_data, tmp_itof_data), dim=0)
         self.gt_itof = torch.cat((self.gt_itof, tmp_gt_itof), dim=0)
         self.gt_depth = torch.cat((self.gt_depth, tmp_gt_depth), dim=0)
+
+
+class NlosTransientDatasetItofReal(Dataset):
+    """
+    NLOS Transient Dataset class for real data
+    Each element contains:
+        - the raw iToF data (nf, dim_x, dim_y) (nf = number of frequencies) (dim_x, dim_y = image size)
+        - the ground truth iToF data (dim_x, dim_y)
+        - the ground truth depth map in radial coordinates (dim_x, dim_y)
+    """
+
+    def __init__(self, dts_folder: Path, frequencies: np.ndarray = np.array((20e06, 50e06, 60e06), dtype=np.float32), transform = None):
+        """
+        Args:
+            dts_folder (Path): path to the dataset folder
+            transform (callable, optional): Optional transform to be applied on a sample
+        """
+
+        # Set the transform attribute
+        self.transform = transform
+
+        phi = phi_func(frequencies)                                      # Compute the phi matrix (iToF data)
+        nf = phi.shape[0]                                                # Extract the number of frequencies
+
+        # Load the csv files
+        images = sorted(list(dts_folder.glob("*.h5")))
+
+        # Load the first image to get the size of the images
+        num_images = len(images)
+        with h5.File(images[0], "r") as h:
+            temp_data = h["itof_data"][:]  # type: ignore
+        [_, dim_x, dim_y] = temp_data.shape  # type: ignore
+
+        itof_data = np.zeros((num_images, nf, dim_x, dim_y), dtype=np.float32)  # Create the iToF data tensor
+        gt_itof = np.zeros((num_images, 2, dim_x, dim_y), dtype=np.float32)     # Create the ground truth iToF data tensor
+        gt_depth = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)       # Create the ground truth depth map tensor in radial coordinates
+
+        count = 0
+        for image in tqdm(images, desc="Loading images", total=num_images):
+            # Load the transient data
+            with h5.File(image, "r") as h:
+                temp_itof_data = h["itof_data"][:]  # Load the itof data  # type: ignore
+                temp_gt_depth = h["depth_gt"][:]    # Load the ground truth depth data  # type: ignore
+                temp_gt_itof = h["itof_gt"][:]      # Load the ground truth mask data  # type: ignore
+
+            # Add the itof data
+            itof_data[count, ...] = temp_itof_data
+
+            # Add the gt depth and alpha map
+            gt_itof[count, ...] = temp_gt_itof
+            gt_depth[count, ...] = temp_gt_depth
+
+            # Increment the counter
+            count += 1
+
+        # Transform the data to torch tensors
+        self.itof_data = torch.from_numpy(itof_data)
+        self.gt_itof = torch.from_numpy(gt_itof)
+        self.gt_depth = torch.from_numpy(gt_depth)
+
+
+    def __getitem__(self, index: int):
+        """
+        Args:
+            index (int): index of the item to get
+        Returns:
+            sample (dict): the sample at the given index
+        """
+
+        # Create the sample
+        sample = {"itof_data": self.itof_data[index, ...], "gt_itof": self.gt_itof[index, ...], "gt_depth": self.gt_depth[index, ...]}
+
+        # Apply the transformation to the data
+        if self.transform is not None:
+            sample = self.transform(sample)
+
+        return sample
+
+
+    def __len__(self) -> int:
+        """
+        Returns:
+            length (int): the length of the datasetuando vuoi
+        """
+        
+        return self.itof_data.shape[0]
+    
+    def get_bg_obj_ratio(self) -> float:
+        """
+        Returns:
+            bg_obj_ratio (dict): the ratio of the number of background pixels over the number of object pixels
+        """
+
+        # Compute the number of background and object pixels
+        bg_pixels = np.sum(self.gt_depth.numpy() == 0)
+        obj_pixels = np.sum(self.gt_depth.numpy() != 0)
+
+        # Compute the ratio
+        bg_obj_ratio = bg_pixels / obj_pixels
+
+        return bg_obj_ratio
+    

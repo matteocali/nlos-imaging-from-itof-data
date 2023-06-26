@@ -6,7 +6,7 @@ pydir=~/miniconda3/envs/pytorch_nn/bin
 
 $pydir/python3 test.py\
     --dts-name="full_dts_add_layer"\
-    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_1_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
+    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_pretrained_1_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
     --encoder-channels="32, 64, 128, 256, 512"\
     --n-out-channels="16"\
     --additional-layers="0"\
@@ -14,7 +14,7 @@ $pydir/python3 test.py\
 &\
 $pydir/python3 test.py\
     --dts-name="full_dts_add_layer"\
-    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_2_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
+    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_pretrained_2_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
     --encoder-channels="32, 64, 128, 256, 512"\
     --n-out-channels="16"\
     --additional-layers="0"\
@@ -22,7 +22,7 @@ $pydir/python3 test.py\
 &\
 $pydir/python3 test.py\
     --dts-name="full_dts_add_layer"\
-    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_3_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
+    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_pretrained_3_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
     --encoder-channels="32, 64, 128, 256, 512"\
     --n-out-channels="16"\
     --additional-layers="0"\
@@ -30,7 +30,7 @@ $pydir/python3 test.py\
 &\
 $pydir/python3 test.py\
     --dts-name="full_dts_add_layer"\
-    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_4_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
+    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_pretrained_4_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
     --encoder-channels="32, 64, 128, 256, 512"\
     --n-out-channels="16"\
     --additional-layers="0"\
@@ -38,7 +38,7 @@ $pydir/python3 test.py\
 &\
 $pydir/python3 test.py\
     --dts-name="full_dts_add_layer"\
-    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_5_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
+    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_pretrained_5_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
     --encoder-channels="32, 64, 128, 256, 512"\
     --n-out-channels="16"\
     --additional-layers="0"\
@@ -46,7 +46,7 @@ $pydir/python3 test.py\
 &\
 $pydir/python3 test.py\
     --dts-name="full_dts_add_layer"\
-    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_6_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
+    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_pretrained_6_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
     --encoder-channels="32, 64, 128, 256, 512"\
     --n-out-channels="16"\
     --additional-layers="0"\
@@ -54,7 +54,7 @@ $pydir/python3 test.py\
 &\
 $pydir/python3 test.py\
     --dts-name="full_dts_add_layer"\
-    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_7_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
+    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_pretrained_7_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
     --encoder-channels="32, 64, 128, 256, 512"\
     --n-out-channels="16"\
     --additional-layers="0"\
@@ -62,7 +62,7 @@ $pydir/python3 test.py\
 &\
 $pydir/python3 test.py\
     --dts-name="full_dts_add_layer"\
-    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_8_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
+    --model="nlos_nn_v2_itof_out_add_layer_aug_STE_full_dts_pretrained_8_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_806"\
     --lr="0.0001"\
     --encoder-channels="32, 64, 128, 256, 512"\
     --n-out-channels="16"\
