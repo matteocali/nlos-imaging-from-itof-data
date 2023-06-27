@@ -50,7 +50,7 @@ def phi_func(freqs, dim_t=2000, exp_time=0.01):
     return phi
 
 
-def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str, str], loss: float or None = None, iou: float | None = None) -> None:  # type: ignore
+def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str, str], loss: float or None = None, iou: float | None = None, clim: bool = True) -> None:  # type: ignore
     """
     Function used to generate the row subplot
         param:
@@ -60,12 +60,14 @@ def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str,
             - title: tuple containing the title of the subplot
             - loss: loss value
             - iou: intersection over union
+            - clim: if True set the colorbar limits based on the ground truth data
     """
 
     # Generate the plts for the depth
     for i in range(2):
         img = ax[i].matshow(data[i].T, cmap="jet")                             # Plot the sx plot # type: ignore
-        img.set_clim(np.min(data[0]), np.max(data[0]))                         # Set the colorbar limits based on the ground truth data
+        if clim:
+            img.set_clim(np.min(data[0]), np.max(data[0]))                         # Set the colorbar limits based on the ground truth data
         divider = make_axes_locatable(ax[i])                                   # Defien the colorbar axis
         cax = divider.append_axes("right", size="5%", pad=0.05)                # Set the colorbar location
         fig.colorbar(img, cax=cax)                                             # Plot the colorbar
@@ -192,13 +194,13 @@ def plt_itof(itof: np.ndarray, path: Path) -> None:
 
     # Generate the plts for the itof at 20MHz
     titles = ("20MHz real", "20MHz imaginary")
-    row_subplot(fig, ax[0], (itof[0, ...], itof[1, ...]), titles)
+    row_subplot(fig, ax[0], (itof[0, ...], itof[3, ...]), titles, clim=False)
     # Generate the plts for the itof at 50MHz
     titles = ("50MHz real", "50MHz imaginary")
-    row_subplot(fig, ax[1], (itof[2, ...], itof[3, ...]), titles)
+    row_subplot(fig, ax[1], (itof[1, ...], itof[4, ...]), titles, clim=False)
     # Generate the plts for the itof at 60MHz
     titles = ("60MHz real", "60MHz imaginary")
-    row_subplot(fig, ax[2], (itof[4, ...], itof[5, ...]), titles)
+    row_subplot(fig, ax[2], (itof[2, ...], itof[5, ...]), titles, clim=False)
     
     plt.tight_layout()
     plt.savefig(str(path))
