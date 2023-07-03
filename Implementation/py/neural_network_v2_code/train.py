@@ -179,7 +179,6 @@ if __name__ == '__main__':
     val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")
 
     # Create the dataloaders
-    t = train_dts[4]
     train_loader = DataLoader(train_dts, batch_size=batch_size,
                               shuffle=True, num_workers=4)  # Create the train dataloader
     # Create the validation dataloader

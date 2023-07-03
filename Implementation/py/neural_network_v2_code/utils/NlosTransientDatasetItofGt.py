@@ -222,8 +222,8 @@ class NlosTransientDatasetItofGt(Dataset):
             # Apply the transform
             itof_data = transform(itof_data).unsqueeze(0)
         
-        # Update the dataset
-        self.itof_data = itof_data
+            # Update the dataset
+            self.itof_data[index, ...] = itof_data
 
 
 
