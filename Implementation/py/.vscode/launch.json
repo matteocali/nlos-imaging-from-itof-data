@@ -19,13 +19,14 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/process_dts.py",
             "args": [
-                "--name", "real_test_dts",
-                "--input", "/media/matteocali/shared_ssd/NLoS imaging using iToF/real_dts/h5_files",
+                "--name", "fixed_camera_full_add_layer",
+                "--input", "/media/matteocali/shared_ssd/NLoS imaging using iToF/mirror_dts/fixed_camera_full/",
                 "--bg-value", "0",
                 "--add-layer", "True",
                 "--multi_freqs", "False",
                 "--data-augment-size", "403",
-                "--real-dts", "True",
+                "--add-noise", "True",
+                "--real-dts", "False",
                 "--slurm", "False"
             ],
             "console": "integratedTerminal",
@@ -50,6 +51,7 @@
                 "--n-epochs", "1500",
                 "--pre-train", "nlos_nn_v2_itof_out_add_layer_aug_straight_trhough_8_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403",
                 "--data-augment", "0",
+                "--noisy-dts", "True",
                 "--slurm", "False"
             ],
             "console": "integratedTerminal",

@@ -212,10 +212,10 @@ class NlosTransientDatasetItofGt(Dataset):
         transform = CT.AddGaussianNoise(mean=mean, std=std)
 
         # Define the tmp tensors that will contains the transformed data
-        tmp_itof_data = torch.zeros(self.itof_data.shape, dtype=torch.float32)
+        itof_data = torch.empty(0, dtype=torch.float32)
 
         # Apply the transforms to the dataset
-        for index in tqdm(range(self.itof_data.shape[0]), desc=f"Applying noise", leave=False):
+        for index in tqdm(range(self.itof_data.shape[0]), desc=f"Applying noise", leave=True):
             # Extract the sample
             itof_data = self.itof_data[index, ...].unsqueeze(0)
 
@@ -223,7 +223,7 @@ class NlosTransientDatasetItofGt(Dataset):
             itof_data = transform(itof_data).unsqueeze(0)
         
         # Update the dataset
-        self.itof_data = torch.cat((self.itof_data, tmp_itof_data), dim=0)
+        self.itof_data = itof_data
 
 
 

@@ -39,7 +39,7 @@ def arg_parser(argv):
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(argv[1:], "hn:i:b:s:l:f:a:N:r:S:", [
-                                   "help", "name=", "input=", "bg-value=", "shuffle=", "add-layer=", "multi_freqs=", "data-augment-size=", "add-noise=" "real-dts=", "slurm="])
+                                   "help", "name=", "input=", "bg-value=", "shuffle=", "add-layer=", "multi_freqs=", "data-augment-size=", "add-noise=", "real-dts=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -279,7 +279,7 @@ if __name__ == '__main__':
             print(f"The total computation time for generating the augmented dataset was {format_time(s_aug_time, f_aug_time)}\n")
 
     # Create the noisy dataset if required
-    if data_noise > 0:
+    if data_noise:
         # Defien the path to the noisy dataset
         noisy_data_path = processed_dts_path.parent.absolute() / "noisy_data"
         noisy_data_name = noisy_data_path / f"noisy_train_dts.pt"
@@ -297,9 +297,9 @@ if __name__ == '__main__':
                 train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")
             
             # Augment the training dataset avoiding the batch with gaussian noise
-            train_dts.augment_dts(batch_size=data_augment, noise=False)  # type: ignore
+            train_dts.augment_dts(batch_size=data_augment, gaussian=False)  # type: ignore
             # Add the noise to the whole dataset
-            train_dts.apply_noise(mean=0, std=1)  # type: ignore
+            train_dts.apply_noise(mean=0, std=0.381044)  # type: ignore
             # Save the noisy training dataset
             torch.save(train_dts, noisy_data_name)  # type: ignore
             # End the timer for the dataset augmentation
