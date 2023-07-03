@@ -28,17 +28,18 @@ def arg_parser(argv):
     arg_add_layer = False   # Argument defining if the iToF data will contains an additional 20MHz layer
     arg_multi_freq = False  # Argument defining if the dts will use more than 3 frequencies
     arg_augment_size = 0    # Argument defining if the dataset will be augmented
+    arg_noise = False       # Argument defining if will be added noise to the dataset
     arg_real_dts = False    # Argument defining if the dataset is a real dataset
     arg_slurm = False       # Argument defining if the code will be run on slurm
 
     # Help string
-    arg_help = "{0} -n <name> -i <input> -b <bg-value> -s <shuffle> -l <add-layer> -f <multi-freqs> -a <data-augment-size> -r <real-dts> -n <slurm>".format(
+    arg_help = "{0} -n <name> -i <input> -b <bg-value> -s <shuffle> -l <add-layer> -f <multi-freqs> -a <data-augment-size> -N <add-noise> -r <real-dts> -S <slurm>".format(
         argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:i:b:s:l:f:a:r:n:", [
-                                   "help", "name=", "input=", "bg-value=", "shuffle=", "add-layer=", "multi_freqs=", "data-augment-size=", "real-dts=", "slurm="])
+        opts, args = getopt.getopt(argv[1:], "hn:i:b:s:l:f:a:N:r:S:", [
+                                   "help", "name=", "input=", "bg-value=", "shuffle=", "add-layer=", "multi_freqs=", "data-augment-size=", "add-noise=" "real-dts=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -67,6 +68,11 @@ def arg_parser(argv):
                 arg_multi_freq = False
         elif opt in ("-a", "--data-augment-size"):
             arg_augment_size = int(arg)  # Set the data augmentation batch value
+        elif opt in ("-N", "--add-noise"):
+            if arg.lower() == "true":
+                arg_noise = True
+            else:
+                arg_noise = False
         elif opt in ("-r", "--real-dts"):
             if arg.lower() == "true":
                 arg_real_dts = True
@@ -85,11 +91,12 @@ def arg_parser(argv):
     print("Add layer: ", arg_add_layer)
     print("Multi freqs: ", arg_multi_freq)
     print("Data augmentation batch size: ", arg_augment_size)
+    print("Add noise: ", arg_noise)
     print("Real dataset: ", arg_real_dts)
     print("Slurm: ", arg_slurm)
     print()
 
-    return [arg_name, arg_data_path, arg_bg_value, arg_shuffle, arg_add_layer, arg_multi_freq, arg_augment_size, arg_real_dts, arg_slurm]
+    return [arg_name, arg_data_path, arg_bg_value, arg_shuffle, arg_add_layer, arg_multi_freq, arg_augment_size, arg_noise, arg_real_dts, arg_slurm]
 
 
 if __name__ == '__main__':
@@ -100,8 +107,9 @@ if __name__ == '__main__':
     add_layer = args[4]          # Get the add_layer flag
     multi_freqs = args[5]        # Get the multi_freqs flag
     data_augment = args[6]       # Get the data augmentation flag
-    real_dts = args[7]           # Get the real dataset flag
-    slurm = args[8]              # Get the slurm flag
+    data_noise = args[7]         # Get the data noise flag
+    real_dts = args[8]           # Get the real dataset flag
+    slurm = args[9]              # Get the slurm flag
 
     if real_dts:
         out_path = Path(__file__).parent.absolute() / \
@@ -269,6 +277,34 @@ if __name__ == '__main__':
             # End the timer for the dataset augmentation
             f_aug_time = time.time()
             print(f"The total computation time for generating the augmented dataset was {format_time(s_aug_time, f_aug_time)}\n")
+
+    # Create the noisy dataset if required
+    if data_noise > 0:
+        # Defien the path to the noisy dataset
+        noisy_data_path = processed_dts_path.parent.absolute() / "noisy_data"
+        noisy_data_name = noisy_data_path / f"noisy_train_dts.pt"
+        # Check if the folder already exists and is not empty
+        if noisy_data_name.exists():
+            print("The noisy dataset already exists - skipping...\n")
+        else:
+            noisy_data_path.mkdir(parents=True, exist_ok=True)  # Create the folder
+            # Start the timer for the dataset augmentation
+            s_noise_time = time.time()
+            print("Adding noise to the training dataset...")
+
+            # Load the training dataset if needed
+            if "train_dts" not in locals():
+                train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")
+            
+            # Augment the training dataset avoiding the batch with gaussian noise
+            train_dts.augment_dts(batch_size=data_augment, noise=False)  # type: ignore
+            # Add the noise to the whole dataset
+            train_dts.apply_noise(mean=0, std=1)  # type: ignore
+            # Save the noisy training dataset
+            torch.save(train_dts, noisy_data_name)  # type: ignore
+            # End the timer for the dataset augmentation
+            f_noise_time = time.time()
+            print(f"The total computation time for generating the noisy dataset was {format_time(s_noise_time, f_noise_time)}\n")
 
     # Ending total timer
     f_total_time = time.time()

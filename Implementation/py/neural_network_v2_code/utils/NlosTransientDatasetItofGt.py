@@ -84,7 +84,6 @@ class NlosTransientDatasetItofGt(Dataset):
         self.gt_itof = torch.from_numpy(gt_itof)
         self.gt_depth = torch.from_numpy(gt_depth)
 
-
     def __getitem__(self, index: int):
         """
         Args:
@@ -102,7 +101,6 @@ class NlosTransientDatasetItofGt(Dataset):
 
         return sample
 
-
     def __len__(self) -> int:
         """
         Returns:
@@ -111,7 +109,6 @@ class NlosTransientDatasetItofGt(Dataset):
         
         return self.itof_data.shape[0]
     
-
     def get_bg_obj_ratio(self) -> float:
         """
         Returns:
@@ -127,8 +124,7 @@ class NlosTransientDatasetItofGt(Dataset):
 
         return bg_obj_ratio
 
-    
-    def augment_dts(self, batch_size: int) -> None:
+    def augment_dts(self, batch_size: int, gaussian: bool = True) -> None:
         """
         Augment the dataset by applying: 
             - random rotations
@@ -136,12 +132,11 @@ class NlosTransientDatasetItofGt(Dataset):
             - horizzontal flip
             - vertical flip
             - gaussian random noise
-        to a random group of elements (of size batch size) sampled at random.
+        to a random group of elements (of size batch size) sampled at random.\n\n
 
-        params:
-            batch_size: the size of the batch to sample
-        returns:
-            the augmented dataset
+        Params:
+            batch_size (int): the size of the batch to sample
+            gaussian (bool): if True, gaussian noise will be one off the augmentation, otherwise it will be ignored
         """
 
         # Define the transforms to apply to the dataset
@@ -154,6 +149,8 @@ class NlosTransientDatasetItofGt(Dataset):
             "random hflip vflip": T.Compose([T.RandomHorizontalFlip(p=1.0), T.RandomVerticalFlip(p=1.0)]),  # "random hflip and vflip
             "random noise": CT.AddGaussianNoise(mean=0.0, std=1.0)
         }
+        if not gaussian:
+            transforms.pop("random noise")
         
         # Sample a random batch of elements for each transform
         indices = [np.random.choice(self.itof_data.shape[0], batch_size, replace=False) for _ in range(len(transforms.keys()))]
@@ -202,6 +199,32 @@ class NlosTransientDatasetItofGt(Dataset):
         self.itof_data = torch.cat((self.itof_data, tmp_itof_data), dim=0)
         self.gt_itof = torch.cat((self.gt_itof, tmp_gt_itof), dim=0)
         self.gt_depth = torch.cat((self.gt_depth, tmp_gt_depth), dim=0)
+
+    def apply_noise(self, mean:float, std:float) -> None:
+        """
+        This function will take the whole dataset and apply gaussian noise to it.\n
+        Params:
+            mean (float): the mean of the gaussian distribution
+            std (float): the standard deviation of the gaussian distribution
+        """
+
+        # Define the transformation function
+        transform = CT.AddGaussianNoise(mean=mean, std=std)
+
+        # Define the tmp tensors that will contains the transformed data
+        tmp_itof_data = torch.zeros(self.itof_data.shape, dtype=torch.float32)
+
+        # Apply the transforms to the dataset
+        for index in tqdm(range(self.itof_data.shape[0]), desc=f"Applying noise", leave=False):
+            # Extract the sample
+            itof_data = self.itof_data[index, ...].unsqueeze(0)
+
+            # Apply the transform
+            itof_data = transform(itof_data).unsqueeze(0)
+        
+        # Update the dataset
+        self.itof_data = torch.cat((self.itof_data, tmp_itof_data), dim=0)
+
 
 
 class NlosTransientDatasetItofReal(Dataset):
@@ -265,7 +288,6 @@ class NlosTransientDatasetItofReal(Dataset):
         self.gt_itof = torch.from_numpy(gt_itof)
         self.gt_depth = torch.from_numpy(gt_depth)
 
-
     def __getitem__(self, index: int):
         """
         Args:
@@ -282,7 +304,6 @@ class NlosTransientDatasetItofReal(Dataset):
             sample = self.transform(sample)
 
         return sample
-
 
     def __len__(self) -> int:
         """
