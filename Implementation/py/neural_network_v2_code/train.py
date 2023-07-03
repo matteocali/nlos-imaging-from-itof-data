@@ -282,3 +282,4 @@ if __name__ == '__main__':
         send_email(receiver_email="matteocaly@gmail.com",
                    subject="Training completed",
                    body=f"The \"{args[1]}\" training is over (required time: {format_time(start_time, f_train_time)})")
+
