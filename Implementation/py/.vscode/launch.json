@@ -19,12 +19,12 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/process_dts.py",
             "args": [
-                "--name", "fixed_camera_full_add_layer",
+                "--name", "full_dts_add_layer",
                 "--input", "/media/matteocali/shared_ssd/NLoS imaging using iToF/mirror_dts/fixed_camera_full/",
                 "--bg-value", "0",
                 "--add-layer", "True",
                 "--multi_freqs", "False",
-                "--data-augment-size", "403",
+                "--data-augment-size", "806",
                 "--add-noise", "True",
                 "--real-dts", "False",
                 "--slurm", "False"
@@ -64,7 +64,7 @@
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/test.py",
             "args": [
                 "--dts-name", "real_test_dts",
-                "--model", "nlos_nn_v2_itof_out_add_layer_aug_straight_trhough_8_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403",
+                "--model", "nlos_nn_v2_itof_out_add_layer_aug_noisy_test_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403",
                 "--encoder-channels", "32, 64, 128, 256, 512",
                 "--n-out-channels", "16",
                 "--additional-layers", "0",

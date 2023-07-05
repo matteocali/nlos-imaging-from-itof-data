@@ -1,13 +1,14 @@
-from utils import *
 import numpy as np
+import torch
+import h5py
+import scipy.constants as const
 from pathlib import Path
 from matplotlib import pyplot as plt
-import torch
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from utils import *
 from utils import CustomTransforms
 from utils import utils
-import h5py
 from utils.utils import depth_radial2cartesian
-import scipy.constants as const
 
 
 # Constants
@@ -183,18 +184,32 @@ if __name__ == "__main__":
     diff = abs(noisy_depth - depth).mean().item()
     print(f"Absolute mean difference synthetic depth: {round(diff, 4)}")
 
-    print(f"std used for the gaussian noise: {round(abs_diff/2.25, 6)}")
+    print(f"STD used for the gaussian noise: {round(abs_diff/2.25, 6)}")
 
     # Compute the real_itof_data
     real_itof_data = depth2itof([real_depth], [ACCEPTED_FREQS], [real_amplitude])  # type: ignore
+    real_itof_data = np.flip(np.flip(real_itof_data, axis=0), axis=1)
+
+    ampl_real_20 = np.sqrt(real_itof_data[0, ...]**2 + real_itof_data[1, ...]**2)
 
     # Plot the noisy and non noisy itof_data
     fig, ax = plt.subplots(1, 3, figsize=(15, 5))
-    ax[0].imshow(itof_data[0, ...].numpy().T, cmap='jet')
+    img0 = ax[0].imshow(itof_data[0, ...].numpy().T, cmap='jet')
     ax[0].set_title("Original itof data")
-    ax[1].imshow(noisy_itof[0, ...].numpy().T, cmap='jet')
-    ax[1].set_title("Noisy itof data")
-    ax[2].imshow(real_itof_data[0, ...].T, cmap='jet')
+    divider = make_axes_locatable(ax[0])                     # Defien the colorbar axis
+    cax = divider.append_axes("right", size="5%", pad=0.05)  # Set the colorbar location
+    fig.colorbar(img0, cax=cax)                              # Plot the colorbar
+    img1 = ax[1].imshow(noisy_itof[0, ...].numpy().T, cmap='jet')
+    ax[1].set_title(f"Noisy itof data (STD used = {round(abs_diff/2.25, 6)})")
+    divider = make_axes_locatable(ax[1])                     # Defien the colorbar axis
+    cax = divider.append_axes("right", size="5%", pad=0.05)  # Set the colorbar location
+    fig.colorbar(img1, cax=cax)                              # Plot the colorbar
+    img2 = ax[2].imshow((real_itof_data[0, ...]/ampl_real_20).T, cmap='jet')
+    img2.set_clim(0.5, 1)
     ax[2].set_title("Real itof data")
+    divider = make_axes_locatable(ax[2])                     # Defien the colorbar axis
+    cax = divider.append_axes("right", size="5%", pad=0.05)  # Set the colorbar location
+    fig.colorbar(img2, cax=cax)                              # Plot the colorbar
     plt.tight_layout()
+    plt.savefig("neural_network_v2_code/extras/noise evaluation.png")
     plt.show()

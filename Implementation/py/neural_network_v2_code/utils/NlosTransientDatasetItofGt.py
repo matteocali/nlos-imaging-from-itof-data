@@ -226,7 +226,6 @@ class NlosTransientDatasetItofGt(Dataset):
             self.itof_data[index, ...] = itof_data
 
 
-
 class NlosTransientDatasetItofReal(Dataset):
     """
     NLOS Transient Dataset class for real data
