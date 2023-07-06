@@ -7,7 +7,7 @@ import numpy as np
 from pathlib import Path
 from utils.dts_splitter import dts_splitter
 from utils.NlosTransientDatasetItofGt import NlosTransientDatasetItofGt, NlosTransientDatasetItofReal
-from utils.CustomTransforms import ItofNormalize, ItofNormalizeWithAddLayer, ChangeBgValue
+from utils.CustomTransforms import ItofNormalize, ItofNormalizeWithAddLayer, ChangeBgValue, RescaleRealData, MeanClipping
 from utils.utils import format_time, send_email
 from torchvision.transforms import Compose
 
@@ -133,6 +133,8 @@ if __name__ == '__main__':
                 transforms_elm.append(ItofNormalizeWithAddLayer(n_freq=n_freqs))
             if bg_value != 0:
                 transforms_elm.append(ChangeBgValue(0, bg_value))
+            #transforms_elm.append(MeanClipping())
+            transforms_elm.append(RescaleRealData())
             transforms = Compose(transforms_elm)
             # Create the dataset
             dts = NlosTransientDatasetItofReal(Path(args[1]), frequencies=freqs, transform=transforms)

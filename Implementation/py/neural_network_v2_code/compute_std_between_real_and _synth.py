@@ -173,8 +173,13 @@ if __name__ == "__main__":
     itof_data[1, ...] = itof_data[4, ...]
     itof_data = itof_data[:2, ...]
 
+    # Define the gaussian noise std
+    estimated_std = abs_diff / 2.25
+    guessed_std = 0.03
+
     # Apply the gaussian noise
-    noisy_itof = CustomTransforms.AddGaussianNoise(itof_data.mean(), abs_diff/2.25)(itof_data)
+    noisy_itof = CustomTransforms.AddGaussianNoise(itof_data.mean(), estimated_std)(itof_data)
+    noisy_itof_guess = CustomTransforms.AddGaussianNoise(itof_data.mean(), guessed_std)(itof_data)
 
     # Compute the depth of the extracted plane and of the original one
     depth = utils.itof2depth(itof_data, 20e6)
@@ -184,7 +189,7 @@ if __name__ == "__main__":
     diff = abs(noisy_depth - depth).mean().item()
     print(f"Absolute mean difference synthetic depth: {round(diff, 4)}")
 
-    print(f"STD used for the gaussian noise: {round(abs_diff/2.25, 6)}")
+    print(f"STD used for the gaussian noise: {round(estimated_std, 6)}")
 
     # Compute the real_itof_data
     real_itof_data = depth2itof([real_depth], [ACCEPTED_FREQS], [real_amplitude])  # type: ignore
@@ -193,23 +198,28 @@ if __name__ == "__main__":
     ampl_real_20 = np.sqrt(real_itof_data[0, ...]**2 + real_itof_data[1, ...]**2)
 
     # Plot the noisy and non noisy itof_data
-    fig, ax = plt.subplots(1, 3, figsize=(15, 5))
-    img0 = ax[0].imshow(itof_data[0, ...].numpy().T, cmap='jet')
-    ax[0].set_title("Original itof data")
-    divider = make_axes_locatable(ax[0])                     # Defien the colorbar axis
+    fig, ax = plt.subplots(2, 2, figsize=(10, 10))
+    img0 = ax[0, 0].imshow(itof_data[0, ...].numpy().T, cmap='jet')
+    ax[0, 0].set_title("Original itof data")
+    divider = make_axes_locatable(ax[0, 0])                  # Defien the colorbar axis
     cax = divider.append_axes("right", size="5%", pad=0.05)  # Set the colorbar location
     fig.colorbar(img0, cax=cax)                              # Plot the colorbar
-    img1 = ax[1].imshow(noisy_itof[0, ...].numpy().T, cmap='jet')
-    ax[1].set_title(f"Noisy itof data (STD used = {round(abs_diff/2.25, 6)})")
-    divider = make_axes_locatable(ax[1])                     # Defien the colorbar axis
+    img1 = ax[0, 1].imshow(noisy_itof[0, ...].numpy().T, cmap='jet')
+    ax[0, 1].set_title(f"Noisy itof data (STD used = {round(estimated_std, 6)})")
+    divider = make_axes_locatable(ax[0, 1])                  # Defien the colorbar axis
     cax = divider.append_axes("right", size="5%", pad=0.05)  # Set the colorbar location
     fig.colorbar(img1, cax=cax)                              # Plot the colorbar
-    img2 = ax[2].imshow((real_itof_data[0, ...]/ampl_real_20).T, cmap='jet')
-    img2.set_clim(0.5, 1)
-    ax[2].set_title("Real itof data")
-    divider = make_axes_locatable(ax[2])                     # Defien the colorbar axis
+    img2 = ax[1, 0].imshow(noisy_itof_guess[0, ...].numpy().T, cmap='jet')
+    ax[1, 0].set_title(f"Noisy itof data (STD used = {round(guessed_std, 6)})")
+    divider = make_axes_locatable(ax[1, 0])                  # Defien the colorbar axis
     cax = divider.append_axes("right", size="5%", pad=0.05)  # Set the colorbar location
     fig.colorbar(img2, cax=cax)                              # Plot the colorbar
+    img3 = ax[1, 1].imshow((real_itof_data[0, ...]/ampl_real_20).T, cmap='jet')
+    img3.set_clim(0.5, 1)
+    ax[1, 1].set_title("Real itof data")
+    divider = make_axes_locatable(ax[1, 1])                     # Defien the colorbar axis
+    cax = divider.append_axes("right", size="5%", pad=0.05)  # Set the colorbar location
+    fig.colorbar(img3, cax=cax)                              # Plot the colorbar
     plt.tight_layout()
     plt.savefig("neural_network_v2_code/extras/noise evaluation.png")
     plt.show()

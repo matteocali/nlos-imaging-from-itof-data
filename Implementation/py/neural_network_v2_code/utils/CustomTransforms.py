@@ -1,3 +1,4 @@
+from typing import Any
 import torch
 import torchvision.transforms as T
 from utils.utils import normalize
@@ -232,3 +233,60 @@ class AddGaussianNoise(object):
             str: string representation of the object
         """
         return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
+
+
+class RescaleRealData(object):
+    """
+    Transformation class to rescale the real data into the same range of the synthetic data.
+    """
+
+    def __init__(self, out_range: tuple[float, float] = (-1.02, 1.02)) -> None:
+        """
+        Params:
+            - out_range (tuple[float, float]): range of the output data
+        """
+        self.out_range = out_range  # Range of the output data
+
+    def __call__(self, sample: dict) -> dict:
+        """
+        Params.
+            - sample (dict): dictionary containing the iToF data, the ground truth itof data and the ground truth depth (radial coordinates)\n
+        Returns.
+            - dict: dictionary containing the iToF data, the ground truth itof data and the ground truth depth (radial coordinates) with the real data rescaled
+        """
+
+        itof_data, gt_itof, gt_depth = sample["itof_data"], sample["gt_itof"], sample["gt_depth"]
+
+        # Rescale the data in the given range
+        domain = torch.min(itof_data), torch.max(itof_data)
+        itof_data = (itof_data - (domain[1] + domain[0]) / 2) / (domain[1] - domain[0])
+        itof_data = itof_data * (self.out_range[1] - self.out_range[0]) + (self.out_range[1] + self.out_range[0]) / 2
+        gt_itof = (gt_itof - (domain[1] + domain[0]) / 2) / (domain[1] - domain[0])
+        gt_itof = gt_itof * (self.out_range[1] - self.out_range[0]) + (self.out_range[1] + self.out_range[0]) / 2
+
+        return {"itof_data": itof_data, "gt_itof": gt_itof, "gt_depth": gt_depth}
+
+
+class MeanClipping(object):
+    """
+    Transformation class to clip the data to the mean value + std
+    """
+
+    def __call__(self, sample: dict) -> dict:
+        """
+        Params.
+            - sample (dict): dictionary containing the iToF data, the ground truth itof data and the ground truth depth (radial coordinates)\n
+        Returns.
+            - dict: dictionary containing the iToF data, the ground truth itof data and the ground truth depth (radial coordinates) with the real data rescaled
+        """
+
+        itof_data, gt_itof, gt_depth = sample["itof_data"], sample["gt_itof"], sample["gt_depth"]
+
+        # Clip the data based on the mean value + std of the last 25 columns
+        mean_val = torch.mean(itof_data[:, -25:, :])
+        std_val = torch.std(itof_data[:, -25:, :])
+        threshold = torch.sign(mean_val) * (abs(mean_val) + std_val)
+
+        itof_data = torch.where(itof_data < threshold, threshold, itof_data)
+
+        return {"itof_data": itof_data, "gt_itof": gt_itof, "gt_depth": gt_depth}

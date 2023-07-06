@@ -67,7 +67,7 @@ def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str,
     for i in range(2):
         img = ax[i].matshow(data[i].T, cmap="jet")                             # Plot the sx plot # type: ignore
         if clim:
-            img.set_clim(np.min(data[0]), np.max(data[0]))                         # Set the colorbar limits based on the ground truth data
+            img.set_clim(np.min(data[0]), np.max(data[0]))                     # Set the colorbar limits based on the ground truth data
         divider = make_axes_locatable(ax[i])                                   # Defien the colorbar axis
         cax = divider.append_axes("right", size="5%", pad=0.05)                # Set the colorbar location
         fig.colorbar(img, cax=cax)                                             # Plot the colorbar
@@ -134,16 +134,19 @@ def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: t
     # Generate the plot
     fig, ax = plt.subplots(3, 2, figsize=(16, 16))
 
+    # Force the clim
+    clim = True
+
     # Generate the plts for the depth
     titles = ("Grount truth depth", "Predicted depth")
-    row_subplot(fig, ax[0], (depth_data[0], depth_data[1]), titles, losses[0], iou)
+    row_subplot(fig, ax[0], (depth_data[0], depth_data[1]), titles, losses[0], iou, clim)
     # Generate the plts for the itof
     # Real iToF
     titles = ("Grount truth real iToF", "Predicted real iToF")
-    row_subplot(fig, ax[1], (itof_data[0][0, ...], itof_data[1][0, ...]), titles, losses[1])
+    row_subplot(fig, ax[1], (itof_data[0][0, ...], itof_data[1][0, ...]), titles, losses[1], clim)
     # Imaginary iToF
     titles = ("Grount truth imaginary iToF", "Predicted imaginary iToF")
-    row_subplot(fig, ax[2], (itof_data[0][1, ...], itof_data[1][1, ...]), titles, losses[2])
+    row_subplot(fig, ax[2], (itof_data[0][1, ...], itof_data[1][1, ...]), titles, losses[2], clim)
     
     plt.tight_layout()
     plt.savefig(str(path / f"{index + 1}.svg"))
