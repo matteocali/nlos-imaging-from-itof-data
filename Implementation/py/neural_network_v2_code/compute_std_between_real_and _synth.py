@@ -178,8 +178,8 @@ if __name__ == "__main__":
     guessed_std = 0.03
 
     # Apply the gaussian noise
-    noisy_itof = CustomTransforms.AddGaussianNoise(itof_data.mean(), estimated_std)(itof_data)
-    noisy_itof_guess = CustomTransforms.AddGaussianNoise(itof_data.mean(), guessed_std)(itof_data)
+    noisy_itof = CustomTransforms.AddGaussianNoise(0, estimated_std)(itof_data)
+    noisy_itof_guess = CustomTransforms.AddGaussianNoise(0, guessed_std)(itof_data)
 
     # Compute the depth of the extracted plane and of the original one
     depth = utils.itof2depth(itof_data, 20e6)

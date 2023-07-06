@@ -301,7 +301,7 @@ if __name__ == '__main__':
             # Augment the training dataset avoiding the batch with gaussian noise
             train_dts.augment_dts(batch_size=data_augment, gaussian=False)  # type: ignore
             # Add the noise to the whole dataset
-            train_dts.apply_noise(mean=0, std=0.381044)  # type: ignore
+            train_dts.apply_noise(mean=0, std=0.03)  # type: ignore
             # Save the noisy training dataset
             torch.save(train_dts, noisy_data_name)  # type: ignore
             # End the timer for the dataset augmentation
