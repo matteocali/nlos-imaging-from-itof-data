@@ -70,7 +70,7 @@ for obj in OBJECTS:
                 # Add a row of zeros to the dato to reach shape 320x240
                 data[data_type][-1] = np.hstack((data[data_type][-1], np.zeros((320, 1), dtype=np.float32)))
             
-        itof_data = itof.depth2itof(data["depth"], ACCEPTED_FREQS, data["amplitude"])
+        itof_data = itof.depth2itof(np.array(data["depth"]), np.array(ACCEPTED_FREQS), np.array(data["amplitude"]))
         
         depth_gt = np.zeros((320, 240), dtype=np.float32)
         itof_gt = np.zeros((2, 320, 240), dtype=np.float32)
@@ -94,7 +94,8 @@ for freq in ACCEPTED_FREQS:
         # Add a row of zeros to the dato to reach shape 320x240
         data[data_type][-1] = np.hstack((data[data_type][-1], np.zeros((320, 1), dtype=np.float32)))
     
-itof_data = itof.depth2itof(data["depth"], ACCEPTED_FREQS, data["amplitude"])
+itof_data = itof.depth2itof(np.array(data["depth"]), np.array(ACCEPTED_FREQS), np.array(data["amplitude"]))
+pred_depth = itof.itof2depth(itof_data, np.array(ACCEPTED_FREQS))
 
 depth_gt = np.zeros((320, 240), dtype=np.float32)
 itof_gt = np.zeros((2, 320, 240), dtype=np.float32)

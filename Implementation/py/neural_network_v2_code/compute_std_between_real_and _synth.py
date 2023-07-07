@@ -87,29 +87,59 @@ def plot_fitted_plane(X, Y, Z, a, b, c, d):
     plt.show()
 
 
-def depth2itof(depths: list[np.ndarray], freqs: list[int], ampls: list[float]) -> np.ndarray:
+# def depth2itof(depths: list[np.ndarray], freqs: list[int], ampls: list[float]) -> np.ndarray:
+#     """
+#     Function used to convert the depth map to the correspondent itof depth map\n
+#     Param:
+#         - depth (list[np.ndarray]): The depth map
+#         - freqs (list[int]): The frequencies of the data (Hz)
+#         - ampl (list[float]): The amplitude of the data\n
+#     Return:
+#         - itof (np.ndarray): The itof data
+#     """
+
+#     # Compute the conversion value
+#     conv_values = [(4 * const.pi * freq) / const.c for freq in freqs]
+#     # Computhe the shift value
+#     phis = [depth * conv_value for depth, conv_value in zip(depths, conv_values)]
+
+#     # Compute the iToF data
+#     itof = np.empty((len(freqs) * 2, depths[0].shape[0], depths[0].shape[1]), dtype=np.float32)
+#     for i, ampl, phi in zip(range(len(ampls)), ampls, phis):
+#         itof[i] = ampl * np.cos(phi)               # Real part
+#         itof[i + len(freqs)] = ampl * np.sin(phi)  # Imaginary part
+
+#     return itof
+
+
+def depth2itof(depth: np.ndarray, freqs: np.ndarray, ampl: np.ndarray) -> np.ndarray:
     """
-    Function used to convert the depth map to the correspondent itof depth map\n
-    Param:
-        - depth (list[np.ndarray]): The depth map
-        - freqs (list[int]): The frequencies of the data (Hz)
-        - ampl (list[float]): The amplitude of the data\n
-    Return:
-        - itof (np.ndarray): The itof data
+    Function used to convert the depth map to the correspondent itof depth map
+        param:
+            - depth: radial depth map
+            - freqs: frequency of the itof sensor (Hz)
+            - ampl: amplitude of the data
+        return:
+            - itof data at the given frequence (Hz) as the real and immaginary part of the correspondent phasor
     """
 
     # Compute the conversion value
-    conv_values = [(4 * const.pi * freq) / const.c for freq in freqs]
+    conv_value = (4 * const.pi * freqs) / const.c
     # Computhe the shift value
-    phis = [depth * conv_value for depth, conv_value in zip(depths, conv_values)]
+    phi = np.empty(depth.shape, dtype=np.float32)
+    for i in range(conv_value.shape[0]):
+        phi = depth[i, ...] * conv_value[i]
+
+    # Compute the real and imaginary part of the phasor
+    real_phi = ampl * np.cos(phi)
+    im_phi = ampl * np.sin(phi)
 
     # Compute the iToF data
-    itof = np.empty((len(freqs) * 2, depths[0].shape[0], depths[0].shape[1]), dtype=np.float32)
-    for i, ampl, phi in zip(range(len(ampls)), ampls, phis):
-        itof[i] = ampl * np.cos(phi)               # Real part
-        itof[i + len(freqs)] = ampl * np.sin(phi)  # Imaginary part
+    itof = np.empty((real_phi.shape[0] * 2, real_phi.shape[1], real_phi.shape[2]), dtype=np.float32)
+    itof[:real_phi.shape[0], ...] = real_phi
+    itof[real_phi.shape[0]:, ...] = im_phi
 
-    return itof
+    return itof  # type: ignore
 
 
 def load(path: Path) -> np.ndarray:
@@ -192,7 +222,7 @@ if __name__ == "__main__":
     print(f"STD used for the gaussian noise: {round(estimated_std, 6)}")
 
     # Compute the real_itof_data
-    real_itof_data = depth2itof([real_depth], [ACCEPTED_FREQS], [real_amplitude])  # type: ignore
+    real_itof_data = depth2itof(np.array([real_depth]), np.array([ACCEPTED_FREQS]), np.array([real_amplitude]))  # type: ignore
     real_itof_data = np.flip(np.flip(real_itof_data, axis=0), axis=1)
 
     ampl_real_20 = np.sqrt(real_itof_data[0, ...]**2 + real_itof_data[1, ...]**2)
@@ -214,10 +244,10 @@ if __name__ == "__main__":
     divider = make_axes_locatable(ax[1, 0])                  # Defien the colorbar axis
     cax = divider.append_axes("right", size="5%", pad=0.05)  # Set the colorbar location
     fig.colorbar(img2, cax=cax)                              # Plot the colorbar
-    img3 = ax[1, 1].imshow((real_itof_data[0, ...]/ampl_real_20).T, cmap='jet')
+    img3 = ax[1, 1].imshow((real_itof_data[1, ...]/ampl_real_20).T, cmap='jet')
     img3.set_clim(0.5, 1)
     ax[1, 1].set_title("Real itof data")
-    divider = make_axes_locatable(ax[1, 1])                     # Defien the colorbar axis
+    divider = make_axes_locatable(ax[1, 1])                  # Defien the colorbar axis
     cax = divider.append_axes("right", size="5%", pad=0.05)  # Set the colorbar location
     fig.colorbar(img3, cax=cax)                              # Plot the colorbar
     plt.tight_layout()

@@ -284,9 +284,10 @@ if __name__ == '__main__':
     if data_noise:
         # Defien the path to the noisy dataset
         noisy_data_path = processed_dts_path.parent.absolute() / "noisy_data"
-        noisy_data_name = noisy_data_path / f"noisy_train_dts.pt"
+        noisy_train_path = noisy_data_path / f"noisy_train_dts.pt"
+        noisy_val_path = noisy_data_path / f"noisy_validation_dts.pt"
         # Check if the folder already exists and is not empty
-        if noisy_data_name.exists():
+        if noisy_train_path.exists():
             print("The noisy dataset already exists - skipping...\n")
         else:
             noisy_data_path.mkdir(parents=True, exist_ok=True)  # Create the folder
@@ -297,13 +298,21 @@ if __name__ == '__main__':
             # Load the training dataset if needed
             if "train_dts" not in locals():
                 train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")
+            if "val_dts" not in locals():
+                val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")
             
             # Augment the training dataset avoiding the batch with gaussian noise
             train_dts.augment_dts(batch_size=data_augment, gaussian=False)  # type: ignore
             # Add the noise to the whole dataset
             train_dts.apply_noise(mean=0, std=0.03)  # type: ignore
             # Save the noisy training dataset
-            torch.save(train_dts, noisy_data_name)  # type: ignore
+            torch.save(train_dts, noisy_train_path)  # type: ignore
+
+            # Add the noise to the validation dataset
+            val_dts.apply_noise(mean=0, std=0.03)  # type: ignore
+            # Save the noisy validation dataset
+            torch.save(val_dts, noisy_val_path)  # type: ignore
+
             # End the timer for the dataset augmentation
             f_noise_time = time.time()
             print(f"The total computation time for generating the noisy dataset was {format_time(s_noise_time, f_noise_time)}\n")

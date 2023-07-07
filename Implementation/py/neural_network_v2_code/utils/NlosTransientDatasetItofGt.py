@@ -273,7 +273,7 @@ class NlosTransientDatasetItofReal(Dataset):
             temp_itof_data[:, :, 239] = temp_itof_data[:, :, 238]    # Fill the last row copying the second to last one # type: ignore
             temp_itof_data = np.flip(temp_itof_data, axis=0)         # Rotate the data 180 degrees
             temp_itof_data = np.flip(temp_itof_data, axis=1)         # using two consecutive flips
-            itof_data[count, ...] = np.flip(temp_itof_data, axis=0)  # type: ignore
+            itof_data[count, ...] = temp_itof_data
 
             # Add the gt depth and alpha map
             gt_itof[count, ...] = temp_gt_itof

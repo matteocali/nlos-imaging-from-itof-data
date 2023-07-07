@@ -173,10 +173,12 @@ if __name__ == '__main__':
     elif noisy:
         noisy_dts_path = processed_dts_path.parent.absolute() / "noisy_data"
         train_dts = torch.load(noisy_dts_path / "noisy_train_dts.pt")
+        val_dts = torch.load(noisy_dts_path / "noisy_validation_dts.pt")
     else:
         train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")
     # Load the validation dataset
-    val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")
+    if not noisy:
+        val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")
 
     # Create the dataloaders
     train_loader = DataLoader(train_dts, batch_size=batch_size,
