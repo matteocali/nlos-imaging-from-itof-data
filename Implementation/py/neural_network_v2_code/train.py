@@ -65,7 +65,10 @@ def arg_parser(argv):
         sys.exit(2)
 
     for opt, arg in opts:
-        if opt in ("-d", "--dataset"):
+        if opt in ("-h", "--help"):
+            print(arg_help)  # Print the help message
+            sys.exit(2)
+        elif opt in ("-d", "--dataset"):
             dts_name = arg                    # Set the name of the dataset
         elif opt in ("-n", "--name"):
             arg_model_name = arg              # Set the name of the model

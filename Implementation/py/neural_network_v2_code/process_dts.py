@@ -45,7 +45,10 @@ def arg_parser(argv):
         sys.exit(2)
 
     for opt, arg in opts:
-        if opt in ("-n", "--name"):
+        if opt in ("-h", "--help"):
+            print(arg_help)  # Print the help message
+            sys.exit(2)
+        elif opt in ("-n", "--name"):
             arg_name = arg  # Set the attempt name
         elif opt in ("-i", "--input"):
             arg_data_path = Path(arg)  # Set the path to the raw data

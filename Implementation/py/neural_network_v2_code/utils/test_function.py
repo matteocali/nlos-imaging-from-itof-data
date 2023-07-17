@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import pickle
 from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -22,6 +23,7 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
 
     epoch_loss = []                                        # Initialize the loss
     iou_loss = []                                          # Initialize the IoU loss
+    out_dict = {"pred": {"depth": np.empty((len(data_loader.dataset), 320, 240)), "itof": np.empty((len(data_loader.dataset), 2, 320, 240))}, "gt": {"depth": np.empty((len(data_loader.dataset), 320, 240)), "itof": np.empty((len(data_loader.dataset), 2, 320, 240))}}             # Initialize the output dictionary
     out = np.empty((1, 3, 320, 240), dtype=np.float32)     # Initialize the output depth maps
 
     # Set the network in evaluation mode
@@ -77,12 +79,18 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
                 plots_dir,
                 iou)
 
-            tmp_out = torch.cat((depth.unsqueeze(0), itof), dim=1)  # Concatenate the depth and the mask  # type: ignore
+            # tmp_out = torch.cat((depth.unsqueeze(0), itof), dim=1)  # Concatenate the depth and the mask  # type: ignore
+
+            # Save the output
+            out_dict["pred"]["depth"][i, ...] = n_depth
+            out_dict["pred"]["itof"][i, ...] = n_itof
+            out_dict["gt"]["depth"][i, ...] = n_gt_depth
+            out_dict["gt"]["itof"][i, ...] = n_gt_itof
 
             # Append the output
-            out = np.concatenate((out, tmp_out.to("cpu").numpy()), axis=0)
+            # out = np.concatenate((out, tmp_out.to("cpu").numpy()), axis=0)
     
-    out = np.delete(out, 0, axis=0)  # Delete the first empty array
+    # out = np.delete(out, 0, axis=0)  # Delete the first empty array
 
     # Save the overall depth loss
     mae_mean_loss = np.round(np.mean(epoch_loss), 4)
@@ -105,5 +113,7 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
         f.write(f"   - Max IoU: {iou_max_loss}")
 
     # Save the output npy
-    np.save(out_path / "results.npy", out)
+    # np.save(out_path / "results.npy", out)
+    with open(out_path / "results.pkl", 'wb') as f:
+        pickle.dump(out_dict, f)
     

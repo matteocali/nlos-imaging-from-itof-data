@@ -43,7 +43,10 @@ def arg_parser(argv):
         sys.exit(2)
 
     for opt, arg in opts:
-        if opt in ("-d", "--dts-name"):
+        if opt in ("-h", "--help"):
+            print(arg_help)  # Print the help message
+            sys.exit(2)
+        elif opt in ("-d", "--dts-name"):
             arg_dts_name = arg           # Set thename of the dataset toi use
         elif opt in ("-m", "--model"):
             arg_net_name = arg           # Set the name of the model to load
