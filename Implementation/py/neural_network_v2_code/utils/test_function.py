@@ -24,7 +24,7 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
     epoch_loss = []                                        # Initialize the loss
     iou_loss = []                                          # Initialize the IoU loss
     out_dict = {"pred": {"depth": np.empty((len(data_loader.dataset), 320, 240)), "itof": np.empty((len(data_loader.dataset), 2, 320, 240))}, "gt": {"depth": np.empty((len(data_loader.dataset), 320, 240)), "itof": np.empty((len(data_loader.dataset), 2, 320, 240))}}             # Initialize the output dictionary
-    out = np.empty((1, 3, 320, 240), dtype=np.float32)     # Initialize the output depth maps
+    # out = np.empty((1, 3, 320, 240), dtype=np.float32)     # Initialize the output depth maps
 
     # Set the network in evaluation mode
     net.eval()

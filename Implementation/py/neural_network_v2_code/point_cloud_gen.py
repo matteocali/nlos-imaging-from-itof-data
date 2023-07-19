@@ -189,25 +189,31 @@ if __name__ == '__main__':
         pc_gt = point_cloud_gen(depthmap=gt_depth[i, ...])
 
         # Visualize the point cloud and the mesh in matplotlib
-        titles = ['Predicted', 'Ground Truth']
+        titles = ['Predicted', 'Ground Truth', 'Predicted and Ground Truth']
         data = [pc_pred, pc_gt]
         z_min, z_max = min(np.min(pc_gt[:, 2]), np.min(pc_pred[:, 2])), max(np.max(pc_gt[:, 2]), np.max(pc_pred[:, 2]))
         fig = plt.figure(figsize=(20, 20))
-        for j in trange(len(titles)):
-            ax = fig.add_subplot(2, 2, j + 1, projection='3d')
+        axes = []
+        for j in trange(len(titles), leave=False, desc='Buildimng the plot'):
+            if j < len(titles) - 1:
+                ax = fig.add_subplot(2, 2, j + 1, projection='3d')
+            else:
+                ax = fig.add_subplot(2, 1, 2, projection='3d')
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
             ax.set_zlabel('Z')
             ax.set_zlim(z_min, z_max)
             ax.set_title(titles[j])
-            ax.scatter(data[j][:, 0], data[j][:, 1], data[j][:, 2], cmap='viridis', c=data[j][:, 2], linewidth=0.5, edgecolors='black', s=10)
-        mix = fig.add_subplot(2, 1, 2, projection='3d')
-        mix.set_xlabel('X')
-        mix.set_ylabel('Y')
-        mix.set_zlabel('Z')
-        mix.set_title("Predicted and Ground Truth")
-        mix.scatter(pc_pred[:, 0], pc_pred[:, 1], pc_pred[:, 2], cmap='viridis', c=pc_pred[:, 2], linewidth=0.5, edgecolors='black', s=10)
-        mix.scatter(pc_gt[:, 0], pc_gt[:, 1], pc_gt[:, 2], cmap='viridis', c=pc_gt[:, 2], linewidth=0.5, edgecolors='black', s=10, marker='^')
-        mix.legend(['Predicted', 'Ground Truth'])
+            if j < len(titles) - 1:
+                ax.scatter(data[j][:, 0], data[j][:, 1], data[j][:, 2], cmap='viridis', c=data[j][:, 2], linewidth=0.5, edgecolors='black', s=10)
+            else:
+                ax.scatter(data[0][:, 0], data[0][:, 1], data[0][:, 2], linewidth=0.5, edgecolors='black', s=10)
+                ax.scatter(data[1][:, 0], data[1][:, 1], data[1][:, 2], linewidth=0.5, edgecolors='black', s=10, marker='^')
+                ax.legend(['Predicted', 'Ground Truth'])
+            axes.append(ax)
         plt.tight_layout()
-        plt.savefig(out_folder / f"point_cloud_{i+1}.png")
+        for ii in trange(0, 360, 45, leave=False, desc='Saving the plot of different view points'):
+            for ax in axes:
+                ax.view_init(elev=10., azim=ii)
+            plt.savefig(out_folder / f"point_cloud_{i+1}_{ii}.png")
+        plt.close()
