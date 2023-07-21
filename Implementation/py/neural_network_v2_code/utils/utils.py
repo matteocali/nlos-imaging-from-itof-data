@@ -70,7 +70,8 @@ def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str,
             img.set_clim(np.min(data[0]), np.max(data[0]))                     # Set the colorbar limits based on the ground truth data
         divider = make_axes_locatable(ax[i])                                   # Defien the colorbar axis
         cax = divider.append_axes("right", size="5%", pad=0.05)                # Set the colorbar location
-        fig.colorbar(img, cax=cax)                                             # Plot the colorbar
+        fig.colorbar(img, cax=cax, label="Depth [m]")                          # Plot the colorbar
+        
         if i == 1 and loss is not None:                                        # If the plot is the predicted one and the loss is not None
             box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)  # Define the box style
             ax[i].text(20, 20, f"MAE: {round(loss, 3)}", 
@@ -83,8 +84,8 @@ def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str,
                             fontfamily='monospace',
                             color='black', bbox=box_style)                     # Add the box for the miou to the plot # type: ignore
         ax[i].set_title(titles[i])                                             # Set the title of the subplot
-        ax[i].set_xlabel("x")                                                  # Set the x label of the subplot
-        ax[i].set_ylabel("y")                                                  # Set the y label of the subplot
+        ax[i].set_xlabel("X")                                                  # Set the x label of the subplot
+        ax[i].set_ylabel("Y", rotation=0)                                      # Set the y label of the subplot and rotrate it
 
 
 def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float], index: int, path: Path):
@@ -97,9 +98,6 @@ def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[
             - index: index of the test sample
             - path: path where to save the plots
     """
-
-    # Set seaborn style
-    sns.set_style()
 
     # Generate the plot
     fig, ax = plt.subplots(2, 2, figsize=(16, 11))
@@ -128,9 +126,6 @@ def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: t
             - iou: mean intersection over union
     """
 
-    # Set seaborn style
-    sns.set_style()
-
     # Generate the plot
     fig, ax = plt.subplots(3, 2, figsize=(16, 16))
 
@@ -148,6 +143,7 @@ def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: t
     titles = ("Grount truth imaginary iToF", "Predicted imaginary iToF")
     row_subplot(fig, ax[2], (itof_data[0][1, ...], itof_data[1][1, ...]), titles, losses[2], clim)
     
+    plt.grid(False)
     plt.tight_layout()
     plt.savefig(str(path / f"{index + 1}.svg"))
     plt.close()
@@ -518,3 +514,42 @@ def mean_intersection_over_union(pred: torch.Tensor, target: torch.Tensor, bg_cl
     iou_2 = binary_jaccard_index(torch.where(pred == bg_class_value, 1, 0), torch.where(target == bg_class_value, 1, 0))
 
     return (iou_1 + iou_2) / 2
+
+
+def plt_loss_hists(losses:np.ndarray, accuracies:np.ndarray, path: Path) -> None:
+    """
+    Function that plots the histograms of the losses and accuracies
+        param:
+            - losses: losses
+            - accuracies: accuracies
+            - path: path where to save the plots
+    """
+
+    # Set seaborn style
+    sns.set_theme()
+
+    fig = plt.figure(figsize=(16, 8))
+
+    titles = ("Losses", "Accuracies")
+    x_labels = ("Loss value", "Accuracy value")
+    y_label = "Number of occurrences"
+    data = (losses, accuracies)
+
+    # Set the main title
+    fig.suptitle("Histograms of the losses and accuracies on the test set", fontsize=14)
+
+    # Define the axis
+    ax = []
+    ax.append(fig.add_subplot(1, 2, 1))
+    ax.append(fig.add_subplot(1, 2, 2, sharey=ax[0]))
+
+    for i, a in enumerate(ax):
+        a.set_xlabel(x_labels[i])
+        if i == 0:
+            a.set_ylabel(y_label)
+        a.set_title(titles[i])
+        a.hist(data[i], bins=20)
+    
+    plt.tight_layout()
+    plt.savefig(str(path.parent / "losses_histograms.svg"))
+    plt.close()

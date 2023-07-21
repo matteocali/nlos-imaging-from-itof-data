@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from pathlib import Path
 from utils.utils import mean_intersection_over_union as miou
-from utils.utils import save_test_plots_itof, depth_radial2cartesian, hfov2focal, itof2depth
+from utils.utils import save_test_plots_itof, depth_radial2cartesian, hfov2focal, plt_loss_hists
 
 
 def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, device: torch.device, out_path: Path, bg: int = 0) -> None:
@@ -21,10 +21,18 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
         - bg: background value
     """
 
-    epoch_loss = []                                        # Initialize the loss
-    iou_loss = []                                          # Initialize the IoU loss
-    out_dict = {"pred": {"depth": np.empty((len(data_loader.dataset), 320, 240)), "itof": np.empty((len(data_loader.dataset), 2, 320, 240))}, "gt": {"depth": np.empty((len(data_loader.dataset), 320, 240)), "itof": np.empty((len(data_loader.dataset), 2, 320, 240))}}             # Initialize the output dictionary
-    # out = np.empty((1, 3, 320, 240), dtype=np.float32)     # Initialize the output depth maps
+    epoch_loss = []  # Initialize the loss
+    iou_loss = []    # Initialize the IoU loss
+    out_dict = {
+        "pred": {
+            "depth": np.empty((len(data_loader.dataset), 320, 240)),   # type: ignore
+            "itof": np.empty((len(data_loader.dataset), 2, 320, 240))  # type: ignore
+            }, 
+        "gt": {
+            "depth": np.empty((len(data_loader.dataset), 320, 240)),   # type: ignore
+            "itof": np.empty((len(data_loader.dataset), 2, 320, 240))  # type: ignore
+            }
+        }  # Initialize the output dictionary
 
     # Set the network in evaluation mode
     net.eval()
@@ -47,7 +55,7 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
             # Compute the losses
             itof_loss_real = loss_fn(itof.squeeze(0)[0, ...], gt_itof.squeeze(0)[0, ...])  # Compute the loss over the itof data (real)
             itof_loss_imag = loss_fn(itof.squeeze(0)[1, ...], gt_itof.squeeze(0)[1, ...])  # Compute the loss over the itof data (imaginary)
-            depth_loss = loss_fn(depth, gt_depth)  # Compute the loss over the depth
+            depth_loss = loss_fn(depth, gt_depth)                                          # Compute the loss over the depth
 
             # Compute the mean intersection over union on the depth
             iou = miou(depth.to(device), gt_depth.to(device), 0).item()  # type: ignore
@@ -79,18 +87,11 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
                 plots_dir,
                 iou)
 
-            # tmp_out = torch.cat((depth.unsqueeze(0), itof), dim=1)  # Concatenate the depth and the mask  # type: ignore
-
             # Save the output
             out_dict["pred"]["depth"][i, ...] = n_depth
             out_dict["pred"]["itof"][i, ...] = n_itof
             out_dict["gt"]["depth"][i, ...] = n_gt_depth
             out_dict["gt"]["itof"][i, ...] = n_gt_itof
-
-            # Append the output
-            # out = np.concatenate((out, tmp_out.to("cpu").numpy()), axis=0)
-    
-    # out = np.delete(out, 0, axis=0)  # Delete the first empty array
 
     # Save the overall depth loss
     mae_mean_loss = np.round(np.mean(epoch_loss), 4)
@@ -99,10 +100,25 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
     iou_mean_loss = np.round(np.mean(iou_loss), 4)
     iou_min_loss = np.round(np.min(iou_loss), 4)
     iou_max_loss = np.round(np.max(iou_loss), 4)
-    accuracy = np.round(np.mean(((1 - mae_mean_loss), iou_mean_loss)), 4)
+
+    # Compute the accuracy
+    accuracies = np.mean((1 - np.array(epoch_loss), np.array(iou_loss)), axis=0)
+    accuracy_std = np.round(np.std(accuracies), 4)  # Compute the std
+    accuracy = np.round(np.mean(accuracies) * 100, 1)
+
+    # Compute the overall loss (mae_loss + 1 - iou_loss)
+    overall_losses = np.mean((np.array(epoch_loss), 1 - np.array(iou_loss)), axis=0)
+    overall_losses_std = np.round(np.std(overall_losses), 4)  # Compute the std
+    overall_loss = np.round(np.mean(overall_losses), 4)
+
+    # Plot the histograms of the loss and the accuracy
+    plt_loss_hists(overall_losses, accuracies, plots_dir)  # type: ignore
 
     with open(out_path / "loss.txt", "w") as f:
-        f.write(f"Accuracy: {accuracy}\n\n")
+        f.write(f"Overall accuracy: {accuracy}%\n")
+        f.write(f"Overall accuracy std: {accuracy_std}\n")
+        f.write(f"Overall loss: {overall_loss}\n")
+        f.write(f"Overall loss std: {overall_losses_std}\n\n")
         f.write(f"Mean Absolute Error summary:\n")
         f.write(f"   - Overall depth loss (MAE): {mae_mean_loss}\n")
         f.write(f"   - Min depth loss: {mae_min_loss}\n")
@@ -113,7 +129,6 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
         f.write(f"   - Max IoU: {iou_max_loss}")
 
     # Save the output npy
-    # np.save(out_path / "results.npy", out)
     with open(out_path / "results.pkl", 'wb') as f:
         pickle.dump(out_dict, f)
     

@@ -110,7 +110,7 @@ def point_cloud_gen(depthmap: np.ndarray) -> np.ndarray:
 
     # Undistort the depth map and find the x, y, z coordinates of the points in the camera coordinates system
     pc = undistort_depthmap(dph=np.copy(depthmap),
-                            dm="RADIAL",
+                            dm="STANDARD",
                             k_ideal=k_matrix,
                             k_real=k_matrix,
                             d_real=np.array([[0, 0, 0, 0, 0]], dtype=np.float32))[0]
@@ -216,4 +216,13 @@ if __name__ == '__main__':
             for ax in axes:
                 ax.view_init(elev=10., azim=ii)
             plt.savefig(out_folder / f"point_cloud_{i+1}_{ii}.png")
+        for ax in axes:
+            ax.view_init(elev=-100., azim=70)
+        plt.savefig(out_folder / f"point_cloud_{i+1}_frontal.png")
+        plt.close()
+
+        # Plot the depth map and save it 
+        fig = plt.figure(figsize=(8, 8))
+        plt.matshow(gt_depth[i, ...].T, cmap='viridis')
+        plt.savefig(out_folder / f"depthmap_{i+1}.png")
         plt.close()
