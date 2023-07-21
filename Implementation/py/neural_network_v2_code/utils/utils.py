@@ -579,7 +579,7 @@ def plt_mae_hist(mae_losses: np.ndarray, path: Path, tex: bool = False) -> None:
     # Set seaborn style
     sns.set_theme()
 
-    fig = plt.figure(figsize=(16, 8))
+    fig = plt.figure(figsize=(8, 7))
 
     # Set the main title
     fig.suptitle("Histogram of the MAE losses on the test set", fontsize=14)
