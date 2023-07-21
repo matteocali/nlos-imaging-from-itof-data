@@ -3,6 +3,7 @@ import scipy.constants as const
 import smtplib
 import torch
 import seaborn as sns
+import tikzplotlib
 from pathlib import Path
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -114,7 +115,7 @@ def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[
     plt.close()
 
 
-def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float, float], index: int, path: Path, iou:float | None = None):
+def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float, float], index: int, path: Path, iou:float | None = None, tex: bool = False) -> None:
     """
     Function used to save the test plots
         param:
@@ -124,7 +125,13 @@ def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: t
             - index: index of the test sample
             - path: path where to save the plots
             - iou: mean intersection over union
+            - tex: if True save the plots in tex format
     """
+
+    # Create the tex folder if needed
+    if tex:
+        tex_path = path / "tex"
+        Path.mkdir(tex_path, exist_ok=True, parents=True)
 
     # Generate the plot
     fig, ax = plt.subplots(3, 2, figsize=(16, 16))
@@ -146,6 +153,8 @@ def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: t
     plt.grid(False)
     plt.tight_layout()
     plt.savefig(str(path / f"{index + 1}.svg"))
+    if tex:
+        tikzplotlib.save(str(tex_path / f"{index + 1}.tex"))  # type: ignore
     plt.close()
         
 
@@ -516,13 +525,14 @@ def mean_intersection_over_union(pred: torch.Tensor, target: torch.Tensor, bg_cl
     return (iou_1 + iou_2) / 2
 
 
-def plt_loss_hists(losses:np.ndarray, accuracies:np.ndarray, path: Path) -> None:
+def plt_loss_hists(losses:np.ndarray, accuracies:np.ndarray, path: Path, tex: bool = False) -> None:
     """
     Function that plots the histograms of the losses and accuracies
         param:
             - losses: losses
             - accuracies: accuracies
             - path: path where to save the plots
+            - tex: if True save the plots in tex format
     """
 
     # Set seaborn style
@@ -552,4 +562,36 @@ def plt_loss_hists(losses:np.ndarray, accuracies:np.ndarray, path: Path) -> None
     
     plt.tight_layout()
     plt.savefig(str(path.parent / "losses_histograms.svg"))
+    if tex:
+        tikzplotlib.save(str(path.parent / "losses_histograms.tex"))
+    plt.close()
+
+
+def plt_mae_hist(mae_losses: np.ndarray, path: Path, tex: bool = False) -> None:
+    """
+    Function that plots the histogram of the mae losses
+        param:
+            - mae_losses: mae losses
+            - path: path where to save the plots
+            - tex: if True save the plots in tex format
+    """
+
+    # Set seaborn style
+    sns.set_theme()
+
+    fig = plt.figure(figsize=(16, 8))
+
+    # Set the main title
+    fig.suptitle("Histogram of the MAE losses on the test set", fontsize=14)
+
+    # Define the axis
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel("Loss value")
+    ax.set_ylabel("Number of occurrences")
+    ax.hist(mae_losses, bins=20)
+    
+    plt.tight_layout()
+    plt.savefig(str(path.parent / "mae_losses_histogram.svg"))
+    if tex:
+        tikzplotlib.save(str(path.parent / "mae_losses_histogram.tex"))
     plt.close()

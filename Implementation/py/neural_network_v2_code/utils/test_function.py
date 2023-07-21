@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from pathlib import Path
 from utils.utils import mean_intersection_over_union as miou
-from utils.utils import save_test_plots_itof, depth_radial2cartesian, hfov2focal, plt_loss_hists
+from utils.utils import save_test_plots_itof, depth_radial2cartesian, hfov2focal, plt_loss_hists, plt_mae_hist
 
 
 def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, device: torch.device, out_path: Path, bg: int = 0) -> None:
@@ -85,7 +85,8 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
                 (depth_loss.item(), itof_loss_real.item(), itof_loss_imag.item()), 
                 i,
                 plots_dir,
-                iou)
+                iou,
+                True)
 
             # Save the output
             out_dict["pred"]["depth"][i, ...] = n_depth
@@ -112,7 +113,10 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
     overall_loss = np.round(np.mean(overall_losses), 4)
 
     # Plot the histograms of the loss and the accuracy
-    plt_loss_hists(overall_losses, accuracies, plots_dir)  # type: ignore
+    plt_loss_hists(overall_losses, accuracies, plots_dir, True)  # type: ignore
+
+    # Plot the histogram of the MAE loss
+    plt_mae_hist(epoch_loss, plots_dir, True)  # type: ignore
 
     with open(out_path / "loss.txt", "w") as f:
         f.write(f"Overall accuracy: {accuracy}%\n")
