@@ -525,13 +525,15 @@ def mean_intersection_over_union(pred: torch.Tensor, target: torch.Tensor, bg_cl
     return (iou_1 + iou_2) / 2
 
 
-def plt_loss_hists(losses:np.ndarray, accuracies:np.ndarray, path: Path, tex: bool = False) -> None:
+def plt_loss_hists(losses:np.ndarray, accuracies:np.ndarray, path: Path, bins: int = 40, a_only: bool = True, tex: bool = False) -> None:
     """
     Function that plots the histograms of the losses and accuracies
         param:
             - losses: losses
             - accuracies: accuracies
             - path: path where to save the plots
+            - bins: number of bins
+            - a_only: if True plot only the accuracies
             - tex: if True save the plots in tex format
     """
 
@@ -545,20 +547,27 @@ def plt_loss_hists(losses:np.ndarray, accuracies:np.ndarray, path: Path, tex: bo
     y_label = "Number of occurrences"
     data = (losses, accuracies)
 
-    # Set the main title
-    fig.suptitle("Histograms of the losses and accuracies on the test set", fontsize=14)
 
-    # Define the axis
-    ax = []
-    ax.append(fig.add_subplot(1, 2, 1))
-    ax.append(fig.add_subplot(1, 2, 2, sharey=ax[0]))
+    if not a_only:
+        # Set the main title
+        fig.suptitle("Histograms of the losses and accuracies on the test set", fontsize=14)
+        
+        # Define the axis
+        ax = []
+        ax.append(fig.add_subplot(1, 2, 1))
+        ax.append(fig.add_subplot(1, 2, 2, sharey=ax[0]))
 
-    for i, a in enumerate(ax):
-        a.set_xlabel(x_labels[i])
-        if i == 0:
-            a.set_ylabel(y_label)
-        a.set_title(titles[i])
-        a.hist(data[i], bins=20)
+        for i, a in enumerate(ax):
+            a.set_xlabel(x_labels[i])
+            if i == 0:
+                a.set_ylabel(y_label)
+            a.set_title(titles[i])
+            a.hist(data[i], bins=bins)
+    else:
+        plt.title(titles[1])
+        plt.xlabel(x_labels[1])
+        plt.ylabel(y_label)
+        plt.hist(data[1], bins=bins)
     
     plt.tight_layout()
     plt.savefig(str(path.parent / "losses_histograms.svg"))

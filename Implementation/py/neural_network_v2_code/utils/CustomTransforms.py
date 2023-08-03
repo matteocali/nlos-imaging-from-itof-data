@@ -27,12 +27,16 @@ class ItofNormalize(object):
 
         itof_data, gt_itof, gt_depth = sample["itof_data"], sample["gt_itof"], sample["gt_depth"]
 
-        # Compute the normalization factor for the iToF data
-        v_a = torch.sqrt(torch.square(itof_data[0, ...]) + torch.square(itof_data[self.n_frequencies, ...]))
-        v_a = v_a.unsqueeze(0)
+        # Compute the amplitude at 20MHz (normalization factor for the iToF data)
+        ampl_20 = torch.sqrt(torch.square(itof_data[0, ...]) + torch.square(itof_data[self.n_frequencies, ...])).unsqueeze(0)
+        
+        # Check if there is zero value in the ampl_20 tensor
+        if not torch.is_nonzero(ampl_20.all()):
+            # Change the zero values with 1e-10
+            ampl_20 = torch.where(ampl_20 == 0, 1e-10, ampl_20)
         
         # Scale the iToF raw data
-        itof_data = itof_data / v_a
+        itof_data = itof_data / ampl_20
 
         return {"itof_data": itof_data, "gt_itof": gt_itof, "gt_depth": gt_depth}
 

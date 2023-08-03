@@ -88,8 +88,6 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, depth_mask: torch.Te
 
     # Compute the Intersection over Union loss (only if l2 is not 0)
     if l2 != 0:
-        # iou_loss = miou()(depth, gt_depth, 0)  # type: ignore
-
         if depth_mask.shape[1] == 2:
             gt_depth = torch.where(gt_depth > 0, 1, 0)
             iou = torch.tensor([binary_jaccard_index(depth_mask[:, 0, ...], gt_depth), binary_jaccard_index(depth_mask[:, 1, ...], gt_depth)])
@@ -138,7 +136,7 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         optimizer.zero_grad()
 
         # Forward pass
-        itof, depth, mask = net(itof_data)
+        itof, _, mask = net(itof_data)
 
         # Compute the loss
         with amp.autocast():  # type: ignore

@@ -14,3 +14,6 @@
 **/net_state/**
 **/results/**
 **/tensorboard_logs/**
+**/datasets/fixed_camera_full
+**/datasets/fixed_camera_full_add_layer_*
+**/point_clouds/**
