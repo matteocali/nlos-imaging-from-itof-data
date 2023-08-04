@@ -57,7 +57,9 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
             itof_loss_real = loss_fn(itof.squeeze(0)[0, ...], gt_itof.squeeze(0)[0, ...])        # Compute the loss over the itof data (real)
             itof_loss_imag = loss_fn(itof.squeeze(0)[1, ...], gt_itof.squeeze(0)[1, ...])        # Compute the loss over the itof data (imaginary)
             depth_loss = loss_fn(depth, gt_depth)                                                # Compute the loss over the depth
-            depth_mask = torch.where(depth == 0, 0, 1)                                           # Create the mask to compute the loss over the object
+            pred_depth_mask = torch.where(depth == 0, 0, 1)                                      # Create the mask on the predicted obj
+            gt_depth_mask = torch.where(gt_depth == 0, 0, 1)                                     # Create the mask on the gt obj
+            depth_mask = pred_depth_mask * gt_depth_mask                                         # Create the mask on the obj as the intersection of the other two
             loss_fn.reduction = "none"                                                           # Set the reduction to none
             obj_loss = torch.sum(depth_mask * loss_fn(depth, gt_depth)) / torch.sum(depth_mask)  # Compute the loss over the object
             loss_fn.reduction = "mean"                                                           # Set the reduction to mean
@@ -109,10 +111,10 @@ def test(net: nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Module, devi
     iou_std_loss = np.round(np.std(iou_loss), 4)  # Compute the std
     iou_min_loss = np.round(np.min(iou_loss), 4)
     iou_max_loss = np.round(np.max(iou_loss), 4)
-    obj_mean_loss = np.round(np.mean(epoch_loss_obj), 4)
-    obj_std_loss = np.round(np.std(epoch_loss_obj), 4)  # Compute the std
-    obj_min_loss = np.round(np.min(epoch_loss_obj), 4)
-    obj_max_loss = np.round(np.max(epoch_loss_obj), 4)
+    obj_mean_loss = np.round(np.nanmean(epoch_loss_obj), 4)
+    obj_std_loss = np.round(np.nanstd(epoch_loss_obj), 4)  # Compute the std
+    obj_min_loss = np.round(np.nanmin(epoch_loss_obj), 4)
+    obj_max_loss = np.round(np.nanmax(epoch_loss_obj), 4)
 
     # Compute the accuracy
     accuracies = np.mean((1 - np.array(epoch_loss), np.array(iou_loss)), axis=0)
