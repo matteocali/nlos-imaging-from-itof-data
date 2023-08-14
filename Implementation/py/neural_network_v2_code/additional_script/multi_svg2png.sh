@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd ../results/itof_out_new_batch
+cd '../results/test using the straight through estimator'
 
 for d in */ ; do
     cd "$d"/plots

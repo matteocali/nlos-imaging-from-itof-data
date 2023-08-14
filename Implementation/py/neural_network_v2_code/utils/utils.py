@@ -3,6 +3,7 @@ import scipy.constants as const
 import smtplib
 import torch
 import seaborn as sns
+import tikzplotlib
 from pathlib import Path
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -50,7 +51,7 @@ def phi_func(freqs, dim_t=2000, exp_time=0.01):
     return phi
 
 
-def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str, str], loss: float or None = None, iou: float | None = None) -> None:  # type: ignore
+def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str, str], loss: float or None = None, iou: float | None = None, clim: bool = True) -> None:  # type: ignore
     """
     Function used to generate the row subplot
         param:
@@ -60,15 +61,18 @@ def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str,
             - title: tuple containing the title of the subplot
             - loss: loss value
             - iou: intersection over union
+            - clim: if True set the colorbar limits based on the ground truth data
     """
 
     # Generate the plts for the depth
     for i in range(2):
         img = ax[i].matshow(data[i].T, cmap="jet")                             # Plot the sx plot # type: ignore
-        img.set_clim(np.min(data[0]), np.max(data[0]))                         # Set the colorbar limits based on the ground truth data
+        if clim:
+            img.set_clim(np.min(data[0]), np.max(data[0]))                     # Set the colorbar limits based on the ground truth data
         divider = make_axes_locatable(ax[i])                                   # Defien the colorbar axis
         cax = divider.append_axes("right", size="5%", pad=0.05)                # Set the colorbar location
-        fig.colorbar(img, cax=cax)                                             # Plot the colorbar
+        fig.colorbar(img, cax=cax, label="Depth [m]")                          # Plot the colorbar
+        
         if i == 1 and loss is not None:                                        # If the plot is the predicted one and the loss is not None
             box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)  # Define the box style
             ax[i].text(20, 20, f"MAE: {round(loss, 3)}", 
@@ -81,8 +85,8 @@ def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str,
                             fontfamily='monospace',
                             color='black', bbox=box_style)                     # Add the box for the miou to the plot # type: ignore
         ax[i].set_title(titles[i])                                             # Set the title of the subplot
-        ax[i].set_xlabel("x")                                                  # Set the x label of the subplot
-        ax[i].set_ylabel("y")                                                  # Set the y label of the subplot
+        ax[i].set_xlabel("X")                                                  # Set the x label of the subplot
+        ax[i].set_ylabel("Y", rotation=0)                                      # Set the y label of the subplot and rotrate it
 
 
 def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float], index: int, path: Path):
@@ -95,9 +99,6 @@ def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[
             - index: index of the test sample
             - path: path where to save the plots
     """
-
-    # Set seaborn style
-    sns.set_style()
 
     # Generate the plot
     fig, ax = plt.subplots(2, 2, figsize=(16, 11))
@@ -114,7 +115,7 @@ def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[
     plt.close()
 
 
-def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float, float], index: int, path: Path, iou:float | None = None):
+def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float, float], index: int, path: Path, iou:float | None = None, tex: bool = False) -> None:
     """
     Function used to save the test plots
         param:
@@ -124,27 +125,36 @@ def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: t
             - index: index of the test sample
             - path: path where to save the plots
             - iou: mean intersection over union
+            - tex: if True save the plots in tex format
     """
 
-    # Set seaborn style
-    sns.set_style()
+    # Create the tex folder if needed
+    if tex:
+        tex_path = path / "tex"
+        Path.mkdir(tex_path, exist_ok=True, parents=True)
 
     # Generate the plot
     fig, ax = plt.subplots(3, 2, figsize=(16, 16))
 
+    # Force the clim
+    clim = True
+
     # Generate the plts for the depth
     titles = ("Grount truth depth", "Predicted depth")
-    row_subplot(fig, ax[0], (depth_data[0], depth_data[1]), titles, losses[0], iou)
+    row_subplot(fig, ax[0], (depth_data[0], depth_data[1]), titles, losses[0], iou, clim)
     # Generate the plts for the itof
     # Real iToF
     titles = ("Grount truth real iToF", "Predicted real iToF")
-    row_subplot(fig, ax[1], (itof_data[0][0, ...], itof_data[1][0, ...]), titles, losses[1])
+    row_subplot(fig, ax[1], (itof_data[0][0, ...], itof_data[1][0, ...]), titles, losses[1], clim)
     # Imaginary iToF
     titles = ("Grount truth imaginary iToF", "Predicted imaginary iToF")
-    row_subplot(fig, ax[2], (itof_data[0][1, ...], itof_data[1][1, ...]), titles, losses[2])
+    row_subplot(fig, ax[2], (itof_data[0][1, ...], itof_data[1][1, ...]), titles, losses[2], clim)
     
+    plt.grid(False)
     plt.tight_layout()
     plt.savefig(str(path / f"{index + 1}.svg"))
+    if tex:
+        tikzplotlib.save(str(tex_path / f"{index + 1}.tex"))  # type: ignore
     plt.close()
         
 
@@ -192,13 +202,13 @@ def plt_itof(itof: np.ndarray, path: Path) -> None:
 
     # Generate the plts for the itof at 20MHz
     titles = ("20MHz real", "20MHz imaginary")
-    row_subplot(fig, ax[0], (itof[0, ...], itof[1, ...]), titles)
+    row_subplot(fig, ax[0], (itof[0, ...], itof[3, ...]), titles, clim=False)
     # Generate the plts for the itof at 50MHz
     titles = ("50MHz real", "50MHz imaginary")
-    row_subplot(fig, ax[1], (itof[2, ...], itof[3, ...]), titles)
+    row_subplot(fig, ax[1], (itof[1, ...], itof[4, ...]), titles, clim=False)
     # Generate the plts for the itof at 60MHz
     titles = ("60MHz real", "60MHz imaginary")
-    row_subplot(fig, ax[2], (itof[4, ...], itof[5, ...]), titles)
+    row_subplot(fig, ax[2], (itof[2, ...], itof[5, ...]), titles, clim=False)
     
     plt.tight_layout()
     plt.savefig(str(path))
@@ -228,12 +238,12 @@ def row_subplot_diff(fig, ax, data: tuple[np.ndarray, np.ndarray, np.ndarray, np
         k = 0
 
     for i in r:
-        img = ax[i].matshow(data[i - k].T, cmap="jet")               # Plot the sx plot # type: ignore
-        img.set_clim(np.min(data[i - k]), np.max(data[i - k]))           # Set the colorbar limits based on the ground truth data
+        img = ax[i].matshow(data[i - k].T, cmap="jet")           # Plot the sx plot # type: ignore
+        img.set_clim(np.min(data[i - k]), np.max(data[i - k]))   # Set the colorbar limits based on the ground truth data
         divider = make_axes_locatable(ax[i])                     # Defien the colorbar axis
         cax = divider.append_axes("right", size="5%", pad=0.05)  # Set the colorbar location
         fig.colorbar(img, cax=cax)                               # Plot the colorbar
-        ax[i].set_title(titles[i - k])                               # Set the title of the subplot
+        ax[i].set_title(titles[i - k])                           # Set the title of the subplot
         ax[i].set_xlabel("x")                                    # Set the x label of the subplot
         ax[i].set_ylabel("y")                                    # Set the y label of the subplot
 
@@ -513,3 +523,84 @@ def mean_intersection_over_union(pred: torch.Tensor, target: torch.Tensor, bg_cl
     iou_2 = binary_jaccard_index(torch.where(pred == bg_class_value, 1, 0), torch.where(target == bg_class_value, 1, 0))
 
     return (iou_1 + iou_2) / 2
+
+
+def plt_loss_hists(losses:np.ndarray, accuracies:np.ndarray, path: Path, bins: int = 40, a_only: bool = True, tex: bool = False) -> None:
+    """
+    Function that plots the histograms of the losses and accuracies
+        param:
+            - losses: losses
+            - accuracies: accuracies
+            - path: path where to save the plots
+            - bins: number of bins
+            - a_only: if True plot only the accuracies
+            - tex: if True save the plots in tex format
+    """
+
+    # Set seaborn style
+    sns.set_theme()
+
+    fig = plt.figure(figsize=(16, 8))
+
+    titles = ("Losses", "Accuracies")
+    x_labels = ("Loss value", "Accuracy value")
+    y_label = "Number of occurrences"
+    data = (losses, accuracies)
+
+
+    if not a_only:
+        # Set the main title
+        fig.suptitle("Histograms of the losses and accuracies on the test set", fontsize=14)
+        
+        # Define the axis
+        ax = []
+        ax.append(fig.add_subplot(1, 2, 1))
+        ax.append(fig.add_subplot(1, 2, 2, sharey=ax[0]))
+
+        for i, a in enumerate(ax):
+            a.set_xlabel(x_labels[i])
+            if i == 0:
+                a.set_ylabel(y_label)
+            a.set_title(titles[i])
+            a.hist(data[i], bins=bins)
+    else:
+        plt.title(titles[1])
+        plt.xlabel(x_labels[1])
+        plt.ylabel(y_label)
+        plt.hist(data[1], bins=bins)
+    
+    plt.tight_layout()
+    plt.savefig(str(path.parent / "losses_histograms.svg"))
+    if tex:
+        tikzplotlib.save(str(path.parent / "losses_histograms.tex"))
+    plt.close()
+
+
+def plt_mae_hist(mae_losses: np.ndarray, path: Path, tex: bool = False) -> None:
+    """
+    Function that plots the histogram of the mae losses
+        param:
+            - mae_losses: mae losses
+            - path: path where to save the plots
+            - tex: if True save the plots in tex format
+    """
+
+    # Set seaborn style
+    sns.set_theme()
+
+    fig = plt.figure(figsize=(8, 7))
+
+    # Set the main title
+    fig.suptitle("Histogram of the MAE losses on the test set", fontsize=14)
+
+    # Define the axis
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel("Loss value")
+    ax.set_ylabel("Number of occurrences")
+    ax.hist(mae_losses, bins=20)
+    
+    plt.tight_layout()
+    plt.savefig(str(path.parent / "mae_losses_histogram.svg"))
+    if tex:
+        tikzplotlib.save(str(path.parent / "mae_losses_histogram.tex"))
+    plt.close()

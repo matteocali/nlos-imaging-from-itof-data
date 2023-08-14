@@ -15,17 +15,19 @@ from torch.utils.tensorboard.writer import SummaryWriter
 from torchmetrics import StructuralSimilarityIndexMeasure as SSIM
 from utils.utils import format_time, generate_fig, itof2depth
 from utils.CustomLosses import BinaryMeanIntersectionOverUnion as miou
+from torchmetrics.functional.classification.jaccard import binary_jaccard_index
 from utils.lovasz_losses import lovasz_hinge
 from utils.EarlyStopping import EarlyStopping
 from utils.SobelGradient import SobelGrad
 
 
-def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tensor, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None = None, l: float = 0.5, l2: float = 0.0) -> torch.Tensor:
+def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, depth_mask: torch.Tensor, gt_depth: torch.Tensor, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None = None, l: float = 0.5, l2: float = 0.0) -> torch.Tensor:
     """
     Function to compute the loss using itof data
         param:
             - itof: predicted itof
             - gt: ground truth itof
+            - depth_mask: predicted mask extracted from the depth
             - gt_depth: ground truth depth
             - loss_fn: loss function to use
             - add_loss: additional loss function to use
@@ -46,14 +48,10 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
     # Compute the main loss (Balanced MAE)
     loss_itof = loss_fn(itof, gt) # nn.MAELoss(reduction="none")
 
-    # Compute the depth
-    clean_itof = torch.where(abs(itof.detach()) < 0.05, 0, itof.detach())  # Clean the itof data 
-    depth = itof2depth(clean_itof, 20e06)
-
     # Compute the additional loss if any (SSIM or Gradient)
     if isinstance(add_loss, SSIM):
         # Compute the ssim loss
-        second_loss = 1 - add_loss(depth.unsqueeze(0), gt_depth.unsqueeze(0))  # type: ignore
+        second_loss = 1 - add_loss(depth_mask.unsqueeze(0), gt_depth.unsqueeze(0))  # type: ignore
     elif isinstance(add_loss, torch.nn.Module):
         # The followig commented grad computation should be remove since is not precise as the Sobel operator
         """
@@ -90,29 +88,17 @@ def compute_loss_itof(itof: torch.Tensor, gt: torch.Tensor, gt_depth: torch.Tens
 
     # Compute the Intersection over Union loss (only if l2 is not 0)
     if l2 != 0:
-        # iou_loss = miou()(depth, gt_depth, 0)  # type: ignore
-        iou_loss = lovasz_hinge(torch.where(depth > 0, 1, 0), torch.where(gt_depth > 0, 1, 0)).item() # type: ignore
+        if depth_mask.shape[1] == 2:
+            gt_depth = torch.where(gt_depth > 0, 1, 0)
+            iou = torch.tensor([binary_jaccard_index(depth_mask[:, 0, ...], gt_depth), binary_jaccard_index(depth_mask[:, 1, ...], gt_depth)])
+            iou_loss = 1 - torch.mean(iou)
+        else:
+            iou_loss = 1 - binary_jaccard_index(depth_mask, torch.where(gt_depth > 0, 1, 0))
     else:
         iou_loss = 0
 
     # Compose the losses based on the lambda value
     return loss_itof + (l * second_loss) + (l2 * iou_loss)
-
-
-def compute_loss_depth(itof: torch.Tensor, gt: torch.Tensor, loss_fn: torch.nn.Module) -> torch.Tensor:
-    """
-    Function to compute the loss using itof data
-        param:
-            - itof: predicted itof
-            - gt: ground truth depth
-            - loss_fn: loss function to use
-        return:
-            - final loss
-    """
-
-    depth = itof2depth(itof, 20e06)  # type: ignore
-
-    return loss_fn(depth, gt)
 
 
 def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None, device: torch.device, l: float, l2: float, scaler: amp.GradScaler) -> float:  # type: ignore
@@ -150,12 +136,11 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
         optimizer.zero_grad()
 
         # Forward pass
-        itof = net(itof_data)
+        itof, _, mask = net(itof_data)
 
         # Compute the loss
         with amp.autocast():  # type: ignore
-            loss = compute_loss_itof(itof, gt_itof, gt_depth, loss_fn, add_loss, l, l2)
-            # loss = compute_loss_depth(itof, gt_depth, loss_fn)
+            loss = compute_loss_itof(itof, gt_itof, mask, gt_depth, loss_fn, add_loss, l, l2)
 
         # Backward pass
         scaler.scale(loss).backward()  # type: ignore
@@ -212,12 +197,11 @@ def val_fn(net: torch.nn.Module, data_loader: DataLoader, loss_fn: torch.nn.Modu
             gt_depth = batch["gt_depth"].to(device)
 
             # Forward pass
-            itof = net(itof_data)
+            itof, depth, mask = net(itof_data)
 
             # Compute the loss
-            with amp.autocast():  # type: ignore
-                loss = compute_loss_itof(itof, gt_itof, gt_depth, loss_fn, add_loss, l, l2)
-                # loss = compute_loss_depth(itof, gt_depth, loss_fn)
+            with amp.autocast():
+                loss = compute_loss_itof(itof, gt_itof, mask, gt_depth, loss_fn, add_loss, l, l2)
 
             # Append the loss
             epoch_loss.append(loss.item())

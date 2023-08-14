@@ -43,7 +43,10 @@ def arg_parser(argv):
         sys.exit(2)
 
     for opt, arg in opts:
-        if opt in ("-d", "--dts-name"):
+        if opt in ("-h", "--help"):
+            print(arg_help)  # Print the help message
+            sys.exit(2)
+        elif opt in ("-d", "--dts-name"):
             arg_dts_name = arg           # Set thename of the dataset toi use
         elif opt in ("-m", "--model"):
             arg_net_name = arg           # Set the name of the model to load
@@ -122,8 +125,11 @@ if __name__ == '__main__':
     # Load the model
     model.load_state_dict(torch.load(state_dict_path, map_location=torch.device(device)))
 
-     # Compute the ratio between the number of background and object pixels
-    bg_obj_ratio = test_dts.get_bg_obj_ratio()
+    # Compute the ratio between the number of background and object pixels
+    if "real" not in args[0]:
+        bg_obj_ratio = test_dts.get_bg_obj_ratio()
+    else:
+        bg_obj_ratio = 35.48
 
     # Create the loss function
     loss_fn = torch.nn.L1Loss(reduction="mean")

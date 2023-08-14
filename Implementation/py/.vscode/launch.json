@@ -19,12 +19,14 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/process_dts.py",
             "args": [
-                "--name", "fixed_camera_full_add_layer_bg_30",
+                "--name", "fixed_camera_full_add_layer_20_60",
                 "--input", "/media/matteocali/shared_ssd/NLoS imaging using iToF/mirror_dts/fixed_camera_full",
-                "--bg-value", "30",
+                "--bg-value", "0",
                 "--add-layer", "True",
                 "--multi_freqs", "False",
                 "--data-augment-size", "403",
+                "--add-noise", "False",
+                "--real-dts", "False",
                 "--slurm", "False"
             ],
             "console": "integratedTerminal",
@@ -36,7 +38,7 @@
             "request": "launch",
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/train.py",
             "args": [
-                "--dataset", "fixed_camera_diffuse_wall",
+                "--dataset", "fixed_camera_full_add_layer_20_60",
                 "--name", "test",
                 "--lr", "0.0001",
                 "--lambda", "0.0",
@@ -48,6 +50,7 @@
                 "--additional-layers", "0",
                 "--n-epochs", "1500",
                 "--data-augment", "0",
+                "--noisy-dts", "False",
                 "--slurm", "False"
             ],
             "console": "integratedTerminal",
@@ -60,7 +63,7 @@
             "program": "/media/matteocali/shared_ssd/NLoS imaging using iToF/nlos_code_repo/Implementation/py/neural_network_v2_code/test.py",
             "args": [
                 "--dts-name", "fixed_camera_full_add_layer",
-                "--model", "nlos_nn_v2_itof_out_add_layer_aug_scale_0.01_iou_0.0_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403",
+                "--model", "nlos_nn_v2_itof_out_add_layer_aug_straight_trhough_8_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403",
                 "--encoder-channels", "32, 64, 128, 256, 512",
                 "--n-out-channels", "16",
                 "--additional-layers", "0",
@@ -81,6 +84,18 @@
                 "-d", "/media/matteocali/shared_hdd/mitsuba_renders/nlos_scenes/datasets/test/dts_out",
                 "-f", "/media/matteocali/shared_hdd/mitsuba_renders/nlos_scenes/datasets/test/final_out",
                 "-t", "mirror"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: pt generator",
+            "type": "python",
+            "request": "launch",
+            "program": "neural_network_v2_code/point_cloud_gen.py",
+            "args": [
+                "-i", "neural_network_v2_code/results/fixed_camera_full_add_layer__nlos_nn_v2_itof_out_add_layer_aug_straight_trhough_8_model_lr_0.0001_ochannel_16_l_0.0_addlayers_0_aug_403",
+                "-o", "neural_network_v2_code/point_clouds",
             ],
             "console": "integratedTerminal",
             "justMyCode": true

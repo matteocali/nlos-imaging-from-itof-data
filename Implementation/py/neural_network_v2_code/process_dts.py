@@ -6,8 +6,8 @@ import torch
 import numpy as np
 from pathlib import Path
 from utils.dts_splitter import dts_splitter
-from utils.NlosTransientDatasetItofGt import NlosTransientDatasetItofGt
-from utils.CustomTransforms import ItofNormalize, ItofNormalizeWithAddLayer, ChangeBgValue
+from utils.NlosTransientDatasetItofGt import NlosTransientDatasetItofGt, NlosTransientDatasetItofReal
+from utils.CustomTransforms import ItofNormalize, ItofNormalizeWithAddLayer, ChangeBgValue, RescaleRealData, MeanClipping
 from utils.utils import format_time, send_email
 from torchvision.transforms import Compose
 
@@ -28,22 +28,27 @@ def arg_parser(argv):
     arg_add_layer = False   # Argument defining if the iToF data will contains an additional 20MHz layer
     arg_multi_freq = False  # Argument defining if the dts will use more than 3 frequencies
     arg_augment_size = 0    # Argument defining if the dataset will be augmented
+    arg_noise = False       # Argument defining if will be added noise to the dataset
+    arg_real_dts = False    # Argument defining if the dataset is a real dataset
     arg_slurm = False       # Argument defining if the code will be run on slurm
 
     # Help string
-    arg_help = "{0} -n <name> -i <input> -b <bg-value> -s <shuffle> -l <add-layer> -f <multi-freqs> -a <data-augment-size> -n <slurm>".format(
+    arg_help = "{0} -n <name> -i <input> -b <bg-value> -s <shuffle> -l <add-layer> -f <multi-freqs> -a <data-augment-size> -N <add-noise> -r <real-dts> -S <slurm>".format(
         argv[0])
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:i:b:s:l:f:a:n:", [
-                                   "help", "name=", "input=", "bg-value=", "shuffle=", "add-layer=", "multi_freqs=", "data-augment-size=", "slurm="])
+        opts, args = getopt.getopt(argv[1:], "hn:i:b:s:l:f:a:N:r:S:", [
+                                   "help", "name=", "input=", "bg-value=", "shuffle=", "add-layer=", "multi_freqs=", "data-augment-size=", "add-noise=", "real-dts=", "slurm="])
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
 
     for opt, arg in opts:
-        if opt in ("-n", "--name"):
+        if opt in ("-h", "--help"):
+            print(arg_help)  # Print the help message
+            sys.exit(2)
+        elif opt in ("-n", "--name"):
             arg_name = arg  # Set the attempt name
         elif opt in ("-i", "--input"):
             arg_data_path = Path(arg)  # Set the path to the raw data
@@ -66,6 +71,16 @@ def arg_parser(argv):
                 arg_multi_freq = False
         elif opt in ("-a", "--data-augment-size"):
             arg_augment_size = int(arg)  # Set the data augmentation batch value
+        elif opt in ("-N", "--add-noise"):
+            if arg.lower() == "true":
+                arg_noise = True
+            else:
+                arg_noise = False
+        elif opt in ("-r", "--real-dts"):
+            if arg.lower() == "true":
+                arg_real_dts = True
+            else:
+                arg_real_dts = False
         elif opt in ("-s", "--slurm"):
             if arg.lower() == "true":  # Check if the code is run on slurm
                 arg_slurm = True  # Set the slurm flag
@@ -79,10 +94,12 @@ def arg_parser(argv):
     print("Add layer: ", arg_add_layer)
     print("Multi freqs: ", arg_multi_freq)
     print("Data augmentation batch size: ", arg_augment_size)
+    print("Add noise: ", arg_noise)
+    print("Real dataset: ", arg_real_dts)
     print("Slurm: ", arg_slurm)
     print()
 
-    return [arg_name, arg_data_path, arg_bg_value, arg_shuffle, arg_add_layer, arg_multi_freq, arg_augment_size, arg_slurm]
+    return [arg_name, arg_data_path, arg_bg_value, arg_shuffle, arg_add_layer, arg_multi_freq, arg_augment_size, arg_noise, arg_real_dts, arg_slurm]
 
 
 if __name__ == '__main__':
@@ -93,7 +110,43 @@ if __name__ == '__main__':
     add_layer = args[4]          # Get the add_layer flag
     multi_freqs = args[5]        # Get the multi_freqs flag
     data_augment = args[6]       # Get the data augmentation flag
-    slurm = args[7]              # Get the slurm flag
+    data_noise = args[7]         # Get the data noise flag
+    real_dts = args[8]           # Get the real dataset flag
+    slurm = args[9]              # Get the slurm flag
+
+    if real_dts:
+        out_path = Path(__file__).parent.absolute() / \
+            "datasets" / args[0] / "processed_data"
+        if out_path.exists() and len(list(out_path.glob("*.pt"))) > 0:
+            print("The dataset has already been processed - skipping...\n")
+            sys.exit(0)
+        else:
+            out_path.mkdir(parents=True, exist_ok=True)
+            # Start the timer for the dataset creation
+            s_dts_time = time.time()
+            print("Creating the dataset...")
+            # Define the frequencies vector
+            freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
+            n_freqs = freqs.shape[0]
+            # Define the transforms to apply to the dataset
+            transforms_elm = []
+            if not add_layer:
+                transforms_elm.append(ItofNormalize(n_freq=n_freqs))
+            else:
+                transforms_elm.append(ItofNormalizeWithAddLayer(n_freq=n_freqs))
+            if bg_value != 0:
+                transforms_elm.append(ChangeBgValue(0, bg_value))
+            #transforms_elm.append(MeanClipping())
+            transforms_elm.append(RescaleRealData())
+            transforms = Compose(transforms_elm)
+            # Create the dataset
+            dts = NlosTransientDatasetItofReal(Path(args[1]), frequencies=freqs, transform=transforms)
+            # Save the dataset
+            torch.save(dts, out_path / "processed_test_dts.pt")
+            # End the timer for the dataset creation
+            f_dts_time = time.time()
+            print(f"The total computation time for generating the dataset was {format_time(s_dts_time, f_dts_time)}\n")
+            sys.exit(0)
 
     # Check if the dataset has alreay been splitted
     if not slurm:
@@ -229,6 +282,43 @@ if __name__ == '__main__':
             # End the timer for the dataset augmentation
             f_aug_time = time.time()
             print(f"The total computation time for generating the augmented dataset was {format_time(s_aug_time, f_aug_time)}\n")
+
+    # Create the noisy dataset if required
+    if data_noise:
+        # Defien the path to the noisy dataset
+        noisy_data_path = processed_dts_path.parent.absolute() / "noisy_data"
+        noisy_train_path = noisy_data_path / f"noisy_train_dts.pt"
+        noisy_val_path = noisy_data_path / f"noisy_validation_dts.pt"
+        # Check if the folder already exists and is not empty
+        if noisy_train_path.exists():
+            print("The noisy dataset already exists - skipping...\n")
+        else:
+            noisy_data_path.mkdir(parents=True, exist_ok=True)  # Create the folder
+            # Start the timer for the dataset augmentation
+            s_noise_time = time.time()
+            print("Adding noise to the training dataset...")
+
+            # Load the training dataset if needed
+            if "train_dts" not in locals():
+                train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")
+            if "val_dts" not in locals():
+                val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")
+            
+            # Augment the training dataset avoiding the batch with gaussian noise
+            train_dts.augment_dts(batch_size=data_augment, gaussian=False)  # type: ignore
+            # Add the noise to the whole dataset
+            train_dts.apply_noise(mean=0, std=0.03)  # type: ignore
+            # Save the noisy training dataset
+            torch.save(train_dts, noisy_train_path)  # type: ignore
+
+            # Add the noise to the validation dataset
+            val_dts.apply_noise(mean=0, std=0.03)  # type: ignore
+            # Save the noisy validation dataset
+            torch.save(val_dts, noisy_val_path)  # type: ignore
+
+            # End the timer for the dataset augmentation
+            f_noise_time = time.time()
+            print(f"The total computation time for generating the noisy dataset was {format_time(s_noise_time, f_noise_time)}\n")
 
     # Ending total timer
     f_total_time = time.time()

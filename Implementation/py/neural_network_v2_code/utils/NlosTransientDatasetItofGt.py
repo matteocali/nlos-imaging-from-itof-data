@@ -84,7 +84,6 @@ class NlosTransientDatasetItofGt(Dataset):
         self.gt_itof = torch.from_numpy(gt_itof)
         self.gt_depth = torch.from_numpy(gt_depth)
 
-
     def __getitem__(self, index: int):
         """
         Args:
@@ -102,7 +101,6 @@ class NlosTransientDatasetItofGt(Dataset):
 
         return sample
 
-
     def __len__(self) -> int:
         """
         Returns:
@@ -111,7 +109,6 @@ class NlosTransientDatasetItofGt(Dataset):
         
         return self.itof_data.shape[0]
     
-
     def get_bg_obj_ratio(self) -> float:
         """
         Returns:
@@ -127,8 +124,7 @@ class NlosTransientDatasetItofGt(Dataset):
 
         return bg_obj_ratio
 
-    
-    def augment_dts(self, batch_size: int) -> None:
+    def augment_dts(self, batch_size: int, gaussian: bool = True) -> None:
         """
         Augment the dataset by applying: 
             - random rotations
@@ -136,12 +132,11 @@ class NlosTransientDatasetItofGt(Dataset):
             - horizzontal flip
             - vertical flip
             - gaussian random noise
-        to a random group of elements (of size batch size) sampled at random.
+        to a random group of elements (of size batch size) sampled at random.\n\n
 
-        params:
-            batch_size: the size of the batch to sample
-        returns:
-            the augmented dataset
+        Params:
+            batch_size (int): the size of the batch to sample
+            gaussian (bool): if True, gaussian noise will be one off the augmentation, otherwise it will be ignored
         """
 
         # Define the transforms to apply to the dataset
@@ -154,6 +149,8 @@ class NlosTransientDatasetItofGt(Dataset):
             "random hflip vflip": T.Compose([T.RandomHorizontalFlip(p=1.0), T.RandomVerticalFlip(p=1.0)]),  # "random hflip and vflip
             "random noise": CT.AddGaussianNoise(mean=0.0, std=1.0)
         }
+        if not gaussian:
+            transforms.pop("random noise")
         
         # Sample a random batch of elements for each transform
         indices = [np.random.choice(self.itof_data.shape[0], batch_size, replace=False) for _ in range(len(transforms.keys()))]
@@ -202,3 +199,131 @@ class NlosTransientDatasetItofGt(Dataset):
         self.itof_data = torch.cat((self.itof_data, tmp_itof_data), dim=0)
         self.gt_itof = torch.cat((self.gt_itof, tmp_gt_itof), dim=0)
         self.gt_depth = torch.cat((self.gt_depth, tmp_gt_depth), dim=0)
+
+    def apply_noise(self, mean:float, std:float) -> None:
+        """
+        This function will take the whole dataset and apply gaussian noise to it.\n
+        Params:
+            mean (float): the mean of the gaussian distribution
+            std (float): the standard deviation of the gaussian distribution
+        """
+
+        # Define the transformation function
+        transform = CT.AddGaussianNoise(mean=mean, std=std)
+
+        # Define the tmp tensors that will contains the transformed data
+        itof_data = torch.empty(0, dtype=torch.float32)
+
+        # Apply the transforms to the dataset
+        for index in tqdm(range(self.itof_data.shape[0]), desc=f"Applying noise", leave=True):
+            # Extract the sample
+            itof_data = self.itof_data[index, ...].unsqueeze(0)
+
+            # Apply the transform
+            itof_data = transform(itof_data).unsqueeze(0)
+        
+            # Update the dataset
+            self.itof_data[index, ...] = itof_data
+
+
+class NlosTransientDatasetItofReal(Dataset):
+    """
+    NLOS Transient Dataset class for real data
+    Each element contains:
+        - the raw iToF data (nf, dim_x, dim_y) (nf = number of frequencies) (dim_x, dim_y = image size)
+        - the ground truth iToF data (dim_x, dim_y)
+        - the ground truth depth map in radial coordinates (dim_x, dim_y)
+    """
+
+    def __init__(self, dts_folder: Path, frequencies: np.ndarray = np.array((20e06, 50e06, 60e06), dtype=np.float32), transform = None):
+        """
+        Args:
+            dts_folder (Path): path to the dataset folder
+            transform (callable, optional): Optional transform to be applied on a sample
+        """
+
+        # Set the transform attribute
+        self.transform = transform
+
+        phi = phi_func(frequencies)                                      # Compute the phi matrix (iToF data)
+        nf = phi.shape[0]                                                # Extract the number of frequencies
+
+        # Load the csv files
+        images = sorted(list(dts_folder.glob("*.h5")))
+
+        # Load the first image to get the size of the images
+        num_images = len(images)
+        with h5.File(images[0], "r") as h:
+            temp_data = h["itof_data"][:]  # type: ignore
+        [_, dim_x, dim_y] = temp_data.shape  # type: ignore
+
+        itof_data = np.zeros((num_images, nf, dim_x, dim_y), dtype=np.float32)  # Create the iToF data tensor
+        gt_itof = np.zeros((num_images, 2, dim_x, dim_y), dtype=np.float32)     # Create the ground truth iToF data tensor
+        gt_depth = np.zeros((num_images, dim_x, dim_y), dtype=np.float32)       # Create the ground truth depth map tensor in radial coordinates
+
+        count = 0
+        for image in tqdm(images, desc="Loading images", total=num_images):
+            # Load the transient data
+            with h5.File(image, "r") as h:
+                temp_itof_data = h["itof_data"][:]  # Load the itof data  # type: ignore
+                temp_gt_depth = h["depth_gt"][:]    # Load the ground truth depth data  # type: ignore
+                temp_gt_itof = h["itof_gt"][:]      # Load the ground truth mask data  # type: ignore
+
+            # Add the itof data
+            temp_itof_data[:, :, 239] = temp_itof_data[:, :, 238]    # Fill the last row copying the second to last one # type: ignore
+            temp_itof_data = np.flip(temp_itof_data, axis=0)         # Rotate the data 180 degrees
+            temp_itof_data = np.flip(temp_itof_data, axis=1)         # using two consecutive flips
+            itof_data[count, ...] = temp_itof_data
+
+            # Add the gt depth and alpha map
+            gt_itof[count, ...] = temp_gt_itof
+            gt_depth[count, ...] = temp_gt_depth
+
+            # Increment the counter
+            count += 1
+
+        # Transform the data to torch tensors
+        self.itof_data = torch.from_numpy(itof_data)
+        self.gt_itof = torch.from_numpy(gt_itof)
+        self.gt_depth = torch.from_numpy(gt_depth)
+
+    def __getitem__(self, index: int):
+        """
+        Args:
+            index (int): index of the item to get
+        Returns:
+            sample (dict): the sample at the given index
+        """
+
+        # Create the sample
+        sample = {"itof_data": self.itof_data[index, ...], "gt_itof": self.gt_itof[index, ...], "gt_depth": self.gt_depth[index, ...]}
+
+        # Apply the transformation to the data
+        if self.transform is not None:
+            sample = self.transform(sample)
+
+        return sample
+
+    def __len__(self) -> int:
+        """
+        Returns:
+            length (int): the length of the datasetuando vuoi
+        """
+        
+        return self.itof_data.shape[0]
+    
+    def get_bg_obj_ratio(self) -> float:
+        """
+        Returns:
+            bg_obj_ratio (dict): the ratio of the number of background pixels over the number of object pixels
+        """
+
+        # Compute the number of background and object pixels
+        bg_pixels = np.sum(self.gt_depth.numpy() == 0)
+        obj_pixels = np.sum(self.gt_depth.numpy() != 0)
+
+        # Compute the ratio
+        bg_obj_ratio = bg_pixels / obj_pixels
+
+        return bg_obj_ratio
+    
