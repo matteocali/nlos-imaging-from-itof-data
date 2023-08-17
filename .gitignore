@@ -1,4 +1,18 @@
 # Default ignored files
-.idea
-*'h5
+*.idea
+*.h5
+*.png
+*.avi
+*.svg
+*.npy
+*.exr
+*.v2
+*.csv
+*.ply
+**/.VSCodeCounter/**
+**/net_state/**
+**/results/**
+**/tensorboard_logs/**
+**/datasets/**
+**/point_clouds/**
 **/__pycache__/**

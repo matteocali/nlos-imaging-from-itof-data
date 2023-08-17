@@ -1,15 +1,14 @@
-# GENERAL README #
+# PY README #
 
-This GitLab repository contains just the implementation of the master thesis project.
-
-All the work related to *Mitsuba 2* is referred to the fork [`mitsuba2-transient-nlos`](https://gitlab.com/andrea.montanari/mitsuba2-transient-nlos) (commit: 8c0a1bcaf244af96c1060ad33ade1065a1d3c91a).\
-In `/cig/common04nb/students/decaligm/tools` is provided a precompiled version that works with `Ubuntu 20.04`.\
-In `/cig/common04nb/students/decaligm/mirror_dts` is provided the dataset used for the training of the network.
-
-In the `2_Implementation` folder is provided all the code needed for the project, while in the folder `5_Tools` is contained some additional useful files.
-
-
-The documentation can be found on SVN at the link below: https://destc0strsvn01/svn/eutecStudents/220401_MatteoCaligiuri
-
-
-
+This folder contains all the Python code developed during this project, in particular there are two main folders:
+* general_purposes_code: contains all the code that is not related to the neural network
+  * `mitsuba_tester`: contains the code to test the *Mitsuba Renderer 2* (and all the related forks)
+  * `transient_tools`: contains the code to performa all kinds of transient data manipulation and analysis
+  * `dataset_generator`: contains the code to generate the dataset
+  * `ground_truth_generator`: contains the code to generate the ground truth both for the *mirror trick* and the *Fermat flow* network
+  * `mirror_scene_rebuilder`: contains the code to generate the point cloud from the output of the network (mainly for the *mirror trick*)
+* neural_network_code: contains all the code related to the neural network, subdivided into four groups:
+  * `dataset_creation`: contains the code to create the dataset for the neural network, starting from the *mirror dataset* it performs the split in train, validation and test set, and for the first two also performs the extraction of the patches
+  * `training`: contains the code to train the neural network
+  * `test`: contains the code to test the neural network (performs inference)
+  * `utils`: contains some utility functions used by the other scripts
