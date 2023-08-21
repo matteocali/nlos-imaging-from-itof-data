@@ -1,13 +1,21 @@
-import modules.fermat_tools
-from modules import utilities as ut, transient_handler as tr
-from pathlib import Path
 import os
-from os.path import exists
 import getopt
 import sys
 import time
-import numpy as np
 import open3d as o3d
+import modules.fermat_utils as fu
+import modules.utilities as ut
+import modules.transient_utils as tr
+from pathlib import Path
+from os.path import exists
+
+
+"""
+Script to perform the following tasks:
+- generate a bitmap with a white spots grid pattern
+- convert a np array in mat format
+- clean a point cloud
+"""
 
 
 def arg_parser(argv):
@@ -21,12 +29,28 @@ def arg_parser(argv):
     arg_out = ""  # Argument containing the output directory
     arg_task = ""  # Argument that defines the function that will be used
     arg_img_size = None  # Argument that defines the img resolution
-    arg_spot_size = None  # Argument that defines the size of the white spot in the bitmap
+    arg_spot_size = (
+        None  # Argument that defines the size of the white spot in the bitmap
+    )
     arg_threshold = None  # Argument that defines the threshold for the bitmap
-    arg_help = "{0} -i <input> -o <output> -t <task> -m <img_resolution> -s <spot_size> -r <threshold>".format(argv[0])  # Help string
+    arg_help = "{0} -i <input> -o <output> -t <task> -m <img_resolution> -s <spot_size> -r <threshold>".format(
+        argv[0]
+    )  # Help string
 
     try:
-        opts, args = getopt.getopt(argv[1:], "hi:o:t:m:s:r:", ["help", "input=", "output=", "task=", "img_resolution=", "spot_size=", "threshold="])  # Recover the passed options and arguments from the command line (if any)
+        opts, args = getopt.getopt(
+            argv[1:],
+            "hi:o:t:m:s:r:",
+            [
+                "help",
+                "input=",
+                "output=",
+                "task=",
+                "img_resolution=",
+                "spot_size=",
+                "threshold=",
+            ],
+        )  # Recover the passed options and arguments from the command line (if any)
     except:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -52,58 +76,70 @@ def arg_parser(argv):
         elif opt in ("-r", "--threshold"):
             arg_threshold = int(arg)  # Set the threshold
 
-    print('Input path: ', arg_in)
+    print("Input path: ", arg_in)
     if arg_out != "":
-        print('Output path: ', arg_out)
+        print("Output path: ", arg_out)
     if arg_img_size is not None:
-        print('Image size: ', arg_img_size)
+        print("Image size: ", arg_img_size)
     if arg_spot_size is not None:
-        print('Spot size: ', arg_spot_size)
+        print("Spot size: ", arg_spot_size)
     if arg_threshold is not None:
-        print('Threshold: ', arg_threshold)
+        print("Threshold: ", arg_threshold)
     print()
 
     return [arg_in, arg_out, arg_task, arg_img_size, arg_spot_size, arg_threshold]
 
 
-if __name__ == '__main__':
-    arg_in, arg_out, arg_task, arg_img_size, arg_spot_size, arg_threshold = arg_parser(sys.argv)  # Recover the input and output folder from the console args
+if __name__ == "__main__":
+    arg_in, arg_out, arg_task, arg_img_size, arg_spot_size, arg_threshold = arg_parser(
+        sys.argv
+    )  # Recover the input and output folder from the console args
 
     if arg_task == "spot_bitmap":
         print(f"TASK: {arg_task}")
         start = time.time()
 
-        ut.spot_bitmap_gen(file_path=arg_out / "bitmaps",
-                           img_size=arg_img_size,
-                           spot_size=None,
-                           exact=False,
-                           pattern=arg_spot_size,
-                           split=False)
+        ut.spot_bitmap_gen(
+            file_path=arg_out / "bitmaps",
+            img_size=arg_img_size,
+            spot_size=None,
+            exact=False,
+            pattern=arg_spot_size,
+            split=False,
+        )
 
         end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+        print(
+            f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2))
+        )
     elif arg_task == "np2mat":
         print(f"TASK: {arg_task}")
         start = time.time()
 
         ut.create_folder(arg_out, "all")
-        transient = tr.grid_transient_loader(transient_path=arg_in,
-                                             np_path=arg_out / "np_transient.npy",
-                                             store=(not exists(arg_out / "np_transient.npy")))  # Load the transient
+        transient = tr.loader.grid_transient_loader(
+            transient_path=arg_in,
+            np_path=arg_out / "np_transient.npy",
+            store=(not exists(arg_out / "np_transient.npy")),
+        )  # Load the transient
 
-        modules.fermat_tools.np2mat(data=transient,
-                                    file_path=arg_out / "hidden_obj",
-                                    data_grid_size=arg_spot_size,
-                                    img_shape=arg_img_size,
-                                    store_glb=False,
-                                    show_plt=False,
-                                    data_clean=True,
-                                    cl_threshold=arg_threshold,
-                                    fov=60,
-                                    exp_time=0.01)
+        fu.utils.np2mat(
+            data=transient,
+            file_path=arg_out / "hidden_obj",
+            data_grid_size=arg_spot_size,
+            img_shape=arg_img_size,
+            store_glb=False,
+            show_plt=False,
+            data_clean=True,
+            cl_threshold=arg_threshold,
+            fov=60,
+            exp_time=0.01,
+        )
 
         end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+        print(
+            f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2))
+        )
     elif arg_task == "point_cloud_cleaner":
         print(f"TASK: {arg_task}")
         start = time.time()
@@ -117,6 +153,10 @@ if __name__ == '__main__':
         o3d.io.write_point_cloud(str(arg_out / "test.ply"), cl)
 
         end = time.time()
-        print(f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2)))
+        print(
+            f"Task <{arg_task}> concluded in in %.2f sec\n" % (round((end - start), 2))
+        )
     else:
-        print("Wrong task provided\nPossibilities are: spot_bitmap, np2mat, point_cloud_cleaner")
+        print(
+            "Wrong task provided\nPossibilities are: spot_bitmap, np2mat, point_cloud_cleaner"
+        )

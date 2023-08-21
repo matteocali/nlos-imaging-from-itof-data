@@ -65,19 +65,25 @@ for obj in OBJECTS:
         pbar.update(1)
         data = dict()
         for i in ACCEPTED_DTYPES:
-            data[i] = [] 
+            data[i] = []
         for freq in ACCEPTED_FREQS:
             for data_type in ACCEPTED_DTYPES:
                 mat_file = scenes_path[obj][dist][freq][data_type]
                 data[data_type].append(h5.load(mat_file)[data_type])
                 # Add a row of zeros to the dato to reach shape 320x240
-                data[data_type][-1] = np.hstack((data[data_type][-1], np.zeros((320, 1), dtype=np.float32)))
-            
-        itof_data = itof.depth2itof(np.array(data["depth"]), np.array(ACCEPTED_FREQS), np.array(data["amplitude"]))
-        
+                data[data_type][-1] = np.hstack(
+                    (data[data_type][-1], np.zeros((320, 1), dtype=np.float32))
+                )
+
+        itof_data = itof.depth2itof(
+            np.array(data["depth"]),
+            np.array(ACCEPTED_FREQS),
+            np.array(data["amplitude"]),
+        )
+
         depth_gt = np.zeros((320, 240), dtype=np.float32)
         itof_gt = np.zeros((2, 320, 240), dtype=np.float32)
-        
+
         name = f"{obj}_{dist}m.h5"
         out_data = dict()
         out_data["itof_data"] = itof_data
@@ -89,15 +95,19 @@ for obj in OBJECTS:
 # Save the empty scene
 data = dict()
 for i in ACCEPTED_DTYPES:
-        data[i] = []
+    data[i] = []
 for freq in ACCEPTED_FREQS:
     for data_type in ACCEPTED_DTYPES:
         mat_file = empty_scenes_path[freq][data_type]
         data[data_type].append(h5.load(mat_file)[data_type])
         # Add a row of zeros to the dato to reach shape 320x240
-        data[data_type][-1] = np.hstack((data[data_type][-1], np.zeros((320, 1), dtype=np.float32)))
-    
-itof_data = itof.depth2itof(np.array(data["depth"]), np.array(ACCEPTED_FREQS), np.array(data["amplitude"]))
+        data[data_type][-1] = np.hstack(
+            (data[data_type][-1], np.zeros((320, 1), dtype=np.float32))
+        )
+
+itof_data = itof.depth2itof(
+    np.array(data["depth"]), np.array(ACCEPTED_FREQS), np.array(data["amplitude"])
+)
 pred_depth = itof.itof2depth(itof_data, np.array(ACCEPTED_FREQS))
 
 depth_gt = np.zeros((320, 240), dtype=np.float32)
