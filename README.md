@@ -23,4 +23,4 @@ This project was created by:
 - [Pietro Zanuttigh](https://github.com/zanuttigh)
 - Adriano Simonetto
 
-(Dipartimento di Ingegneria dell'Informazione (DEI) - UniPD)
+(Department of Information Engineering (DEI) - UniPD)
