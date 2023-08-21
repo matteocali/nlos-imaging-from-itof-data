@@ -1,11 +1,12 @@
-# NEURAL NETWORK CODE V2 README #
+# ITOFNET
 
 The code contained in this folder is used to train and test the neural network. Other than that it also includes the necessary code used to perform the splitting of the dataset into train, validation and test set.
-All the scripts in here requires the conda environment `pytorch_nn.yml` provided in `../../../5_Tools/conda_environments`.\
+All the scripts in here requires the conda environment `pytorch_nn.yml` provided in the [conda_environments](../tools/conda_environments/) folder.
+
+## Folder structure
 
 The folder structure is the following:
 
-* `additional_script`: contains some bash scripts used to perform some operations on the cluster;
 * `datasets`: the processed datasets data;
 * `extras`: contains some *.pdf* files with the results of the tests performed on the network;
 * `utils`: contains all the auxiliary functions and classes used by the others script;
