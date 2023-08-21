@@ -1,0 +1,23 @@
+name: mitsuba2
+channels:
+  - open3d-admin
+  - conda-forge
+  - defaults
+dependencies:
+  - scikit-learn
+  - open3d
+  - lxml
+  - openexr
+  - h5py
+  - matplotlib
+  - python=3.9
+  - opencv
+  - pathlib2
+  - imageio
+  - natsort
+  - openexr-python
+  - tqdm
+  - av
+  - scipy
+  - numpy
+prefix: /home/matteocali/miniconda3/envs/mitsuba2
