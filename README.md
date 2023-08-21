@@ -1,14 +1,26 @@
-# PY README #
+# Non-Line-of-Sight imaging from indirect Time of Flight data
 
-This folder contains all the Python code developed during this project, in particular there are two main folders:
-* general_purposes_code: contains all the code that is not related to the neural network
-  * `mitsuba_tester`: contains the code to test the *Mitsuba Renderer 2* (and all the related forks)
-  * `transient_tools`: contains the code to performa all kinds of transient data manipulation and analysis
-  * `dataset_generator`: contains the code to generate the dataset
-  * `ground_truth_generator`: contains the code to generate the ground truth both for the *mirror trick* and the *Fermat flow* network
-  * `mirror_scene_rebuilder`: contains the code to generate the point cloud from the output of the network (mainly for the *mirror trick*)
-* neural_network_code: contains all the code related to the neural network, subdivided into four groups:
-  * `dataset_creation`: contains the code to create the dataset for the neural network, starting from the *mirror dataset* it performs the split in train, validation and test set, and for the first two also performs the extraction of the patches
-  * `training`: contains the code to train the neural network
-  * `test`: contains the code to test the neural network (performs inference)
-  * `utils`: contains some utility functions used by the other scripts
+This repository contains all the code and tools related to the work pressented in the paper [Non-Line-of-Sight Imaging from indirect Time of Flight data](https://arxiv.org).
+
+The repository is organized in three sub folder:
+
+1. [additional_scripts](./additional_scripts/): contains all the code to genrate and pre-proces the presented synthetic dataset;
+2. [itofNet_code](./itofNet_code/): contains the code of the proposed network;
+3. [tools](./tools/): contains all the additional data and tools used in the previous two sections.
+
+To download the dataset please use this [link](https://lttm.dei.unipd.it/paper_data/syndrone/syndrone.zip)
+
+## How to run the code
+
+In order to run the proposed code follow the instruction presented in the [additional_scripts](./additional_scripts/README.md) and [itofNet_code](./itofNet_code/README.md) README.
+
+## Credits
+
+This project was created by:
+
+- [Matteo Caligiuri](https://github.com/matteocali)
+- Gianluca Agresti
+- [Pietro Zanuttigh](https://github.com/zanuttigh)
+- Adriano Simonetto
+
+(Dipartimento di Ingegneria dell'Informazione (DEI) - UniPD)
