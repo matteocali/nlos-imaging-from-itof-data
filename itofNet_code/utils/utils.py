@@ -66,56 +66,62 @@ def row_subplot(fig, ax, data: tuple[np.ndarray, np.ndarray], titles: tuple[str,
 
     # Generate the plts for the depth
     for i in range(2):
-        img = ax[i].matshow(data[i].T, cmap="jet")                             # Plot the sx plot # type: ignore
+        img = ax[i].matshow(data[i].T, cmap="jet")  # Plot the sx plot # type: ignore
         if clim:
-            img.set_clim(np.min(data[0]), np.max(data[0]))                     # Set the colorbar limits based on the ground truth data
-        divider = make_axes_locatable(ax[i])                                   # Defien the colorbar axis
-        cax = divider.append_axes("right", size="5%", pad=0.05)                # Set the colorbar location
-        fig.colorbar(img, cax=cax, label="Depth [m]")                          # Plot the colorbar
-        
-        if i == 1 and loss is not None:                                        # If the plot is the predicted one and the loss is not None
-            box_style = dict(boxstyle="round", fc="w", ec="black", alpha=0.9)  # Define the box style
-            ax[i].text(20, 20, f"MAE: {round(loss, 3)}", 
-                          ha='left', va='top', fontsize=11, 
-                          fontfamily='monospace',
-                          color='black', bbox=box_style)                       # Add the box to the plot # type: ignore
-            if iou is not None:                                                # If the miou is not None
-                ax[i].text(20, 40, f"IoU: {round(iou, 3)}",
-                            ha='left', va='top', fontsize=11,
-                            fontfamily='monospace',
-                            color='black', bbox=box_style)                     # Add the box for the miou to the plot # type: ignore
-        ax[i].set_title(titles[i])                                             # Set the title of the subplot
-        ax[i].set_xlabel("X")                                                  # Set the x label of the subplot
-        ax[i].set_ylabel("Y", rotation=0)                                      # Set the y label of the subplot and rotrate it
+            img.set_clim(
+                np.min(data[0]), np.max(data[0])
+            )  # Set the colorbar limits based on the ground truth data
+        divider = make_axes_locatable(ax[i])  # Defien the colorbar axis
+        cax = divider.append_axes(
+            "right", size="5%", pad=0.05
+        )  # Set the colorbar location
+        fig.colorbar(img, cax=cax, label="Depth [m]")  # Plot the colorbar
+
+        if (
+            i == 1 and loss is not None
+        ):  # If the plot is the predicted one and the loss is not None
+            box_style = dict(
+                boxstyle="round", fc="w", ec="black", alpha=0.9
+            )  # Define the box style
+            ax[i].text(
+                20,
+                20,
+                f"MAE: {round(loss, 3)}",
+                ha="left",
+                va="top",
+                fontsize=11,
+                fontfamily="monospace",
+                color="black",
+                bbox=box_style,
+            )  # Add the box to the plot # type: ignore
+            if iou is not None:  # If the miou is not None
+                ax[i].text(
+                    20,
+                    40,
+                    f"IoU: {round(iou, 3)}",
+                    ha="left",
+                    va="top",
+                    fontsize=11,
+                    fontfamily="monospace",
+                    color="black",
+                    bbox=box_style,
+                )  # Add the box for the miou to the plot # type: ignore
+        ax[i].set_title(titles[i])  # Set the title of the subplot
+        ax[i].set_xlabel("X")  # Set the x label of the subplot
+        ax[i].set_ylabel(
+            "Y", rotation=0
+        )  # Set the y label of the subplot and rotrate it
 
 
-def save_test_plots(depth_data: tuple[np.ndarray, np.ndarray], mask_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float], index: int, path: Path):
-    """
-    Function used to save the test plots
-        param:
-            - depth_data: (gt_depth, predicted depth)
-            - mask_data: (gt_mask, predicted mask)
-            - losses: tuple containing the loss and the accuracy
-            - index: index of the test sample
-            - path: path where to save the plots
-    """
-
-    # Generate the plot
-    fig, ax = plt.subplots(2, 2, figsize=(16, 11))
-
-    # Generate the plts for the depth
-    titles = ("Grount truth depth", "Predicted depth")
-    row_subplot(fig, ax[0], (depth_data[0], depth_data[1]), titles, losses[0])
-    # Generate the plts for the mask
-    titles = ("Grount truth mask", "Predicted mask")
-    row_subplot(fig, ax[1], (mask_data[0], mask_data[1]), titles, losses[1])
-    
-    plt.tight_layout()
-    plt.savefig(str(path / f"{index + 1}.svg"))
-    plt.close()
-
-
-def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: tuple[np.ndarray, np.ndarray], losses: tuple[float, float, float], index: int, path: Path, iou:float | None = None, tex: bool = False) -> None:
+def save_test_plots_itof(
+    depth_data: tuple[np.ndarray, np.ndarray],
+    itof_data: tuple[np.ndarray, np.ndarray],
+    losses: tuple[float, float, float],
+    index: int,
+    path: Path,
+    iou: float | None = None,
+    tex: bool = False,
+) -> None:
     """
     Function used to save the test plots
         param:
@@ -141,22 +147,38 @@ def save_test_plots_itof(depth_data: tuple[np.ndarray, np.ndarray], itof_data: t
 
     # Generate the plts for the depth
     titles = ("Grount truth depth", "Predicted depth")
-    row_subplot(fig, ax[0], (depth_data[0], depth_data[1]), titles, losses[0], iou, clim)
+    row_subplot(
+        fig, ax[0], (depth_data[0], depth_data[1]), titles, losses[0], iou, clim
+    )
     # Generate the plts for the itof
     # Real iToF
     titles = ("Grount truth real iToF", "Predicted real iToF")
-    row_subplot(fig, ax[1], (itof_data[0][0, ...], itof_data[1][0, ...]), titles, losses[1], clim)
+    row_subplot(
+        fig,
+        ax[1],
+        (itof_data[0][0, ...], itof_data[1][0, ...]),
+        titles,
+        losses[1],
+        clim,
+    )
     # Imaginary iToF
     titles = ("Grount truth imaginary iToF", "Predicted imaginary iToF")
-    row_subplot(fig, ax[2], (itof_data[0][1, ...], itof_data[1][1, ...]), titles, losses[2], clim)
-    
+    row_subplot(
+        fig,
+        ax[2],
+        (itof_data[0][1, ...], itof_data[1][1, ...]),
+        titles,
+        losses[2],
+        clim,
+    )
+
     plt.grid(False)
     plt.tight_layout()
     plt.savefig(str(path / f"{index + 1}.svg"))
     if tex:
         tikzplotlib.save(str(tex_path / f"{index + 1}.tex"))  # type: ignore
     plt.close()
-        
+
 
 def generate_fig(data: tuple[np.ndarray, np.ndarray], c_range: tuple[float, float] = None):  # type: ignore
     """
@@ -167,7 +189,7 @@ def generate_fig(data: tuple[np.ndarray, np.ndarray], c_range: tuple[float, floa
         return:
             - figure
     """
-    
+
     # Set seaborn style
     sns.set_style()
 
@@ -209,85 +231,9 @@ def plt_itof(itof: np.ndarray, path: Path) -> None:
     # Generate the plts for the itof at 60MHz
     titles = ("60MHz real", "60MHz imaginary")
     row_subplot(fig, ax[2], (itof[2, ...], itof[5, ...]), titles, clim=False)
-    
+
     plt.tight_layout()
     plt.savefig(str(path))
-    plt.close()    
-
-
-def row_subplot_diff(fig, ax, data: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray] | tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray], titles: tuple[str, str, str, str] | tuple[str, str, str, str, str]) -> None:  # type: ignore
-    """
-    Function used to generate the row subplot
-        param:
-            - fig: figure
-            - ax: axis
-            - data: tuple containing the ground truth and the predicted data
-            - titles: tuple containing the title of the subplot
-    """
-
-    # Generate the plts for the depth
-
-    row_length = len(data)
-
-    if row_length == 4:
-        ax[0].axis("off")
-        r = range(1, 5)
-        k = 1
-    else:
-        r = range(5)
-        k = 0
-
-    for i in r:
-        img = ax[i].matshow(data[i - k].T, cmap="jet")           # Plot the sx plot # type: ignore
-        img.set_clim(np.min(data[i - k]), np.max(data[i - k]))   # Set the colorbar limits based on the ground truth data
-        divider = make_axes_locatable(ax[i])                     # Defien the colorbar axis
-        cax = divider.append_axes("right", size="5%", pad=0.05)  # Set the colorbar location
-        fig.colorbar(img, cax=cax)                               # Plot the colorbar
-        ax[i].set_title(titles[i - k])                           # Set the title of the subplot
-        ax[i].set_xlabel("x")                                    # Set the x label of the subplot
-        ax[i].set_ylabel("y")                                    # Set the y label of the subplot
-
-
-def plot_difference(depth: torch.Tensor | np.ndarray, itof: torch.Tensor | np.ndarray, empty: torch.Tensor | np.ndarray, index: int, path: Path) -> None:
-    """
-    Function used to save the test plots
-        param:
-            - depth: depth map
-            - itof: itof data
-            - empty: itof data of the empty scene (only white wall)
-            - index: index of the test sample
-            - path: path where to save the plots
-    """
-
-    # If necessary convert the data to numpy
-    if isinstance(depth, torch.Tensor):
-        depth = depth.to("cpu").numpy()
-    if isinstance(itof, torch.Tensor):
-        itof = itof.to("cpu").numpy()
-    if isinstance(empty, torch.Tensor):
-        empty = empty.to("cpu").numpy()
-
-    # Compute the difference
-    diff = itof - empty
-
-    # Set seaborn style
-    sns.set_style()
-
-    # Generate the plot
-    fig, ax = plt.subplots(3, 5, figsize=(32, 16))
-
-    # Generate the plts for the 20MHz
-    titles = ("iToF data at 20MHz (real)", "iToF data at 20MHz (imaginary)", "Difference with the empty scene 20MHz (real)", "Difference with the empty scene 20MHz (imaginary)")
-    row_subplot_diff(fig, ax[0], (itof[0, ...], itof[1, ...], diff[0, ...], diff[1, ...]), titles)  # type: ignore
-    # Generate the plts for the 50MHz
-    titles = ("GT depth map", "iToF data at 50MHz (real)", "iToF data at 50MHz (imaginary)", "Difference with the empty scene 50MHz (real)", "Difference with the empty scene 50MHz (imaginary)")
-    row_subplot_diff(fig, ax[1], (depth, itof[2, ...], itof[3, ...], diff[2, ...], diff[3, ...]), titles)  # type: ignore
-    # Generate the plts for the 60MHz
-    titles = ("iToF data at 60MHz (real)", "iToF data at 60MHz (imaginary)", "Difference with the empty scene 60MHz (real)", "Difference with the empty scene 60MHz (imaginary)")
-    row_subplot_diff(fig, ax[2], (itof[4, ...], itof[5, ...], diff[4, ...], diff[5, ...]), titles)  # type: ignore
-    
-    plt.tight_layout()
-    plt.savefig(str(path / f"{index + 1}.png"))
     plt.close()
 
 
@@ -300,37 +246,24 @@ def send_email(receiver_email: str, subject: str, body: str):
             - body: body of the email
     """
 
-    email = 'py.script.notifier@gmail.com'
-    password = 'sxruxiufydfhknov'
+    email = "py.script.notifier@gmail.com"
+    password = "sxruxiufydfhknov"
 
     message = MIMEMultipart()
     message["To"] = receiver_email
     message["From"] = "Python Notifier"
     message["Subject"] = subject
 
-    messageText = MIMEText(body, 'html')
+    messageText = MIMEText(body, "html")
     message.attach(messageText)
 
-    server = smtplib.SMTP('smtp.gmail.com', 587)
-    server.ehlo('Gmail')
+    server = smtplib.SMTP("smtp.gmail.com", 587)
+    server.ehlo("Gmail")
     server.starttls()
     server.login(email, password)
     server.sendmail(email, receiver_email, message.as_string())
 
     server.quit()
-
-
-def update_lr(optimizer: Optimizer, epoch: int) -> None:
-    """
-    Function to update the learning rate
-        param:
-            - optimizer: optimizer used to update the weights
-            - epoch: current epoch
-    """
-
-    if epoch == 10:
-        for param_group in optimizer.param_groups:
-            param_group["lr"] = param_group["lr"] * 0.1
 
 
 def hfov2focal(hdim: int, hfov: float) -> float:
@@ -346,7 +279,9 @@ def hfov2focal(hdim: int, hfov: float) -> float:
     return 0.5 * hdim / np.tan(0.5 * hfov * np.pi / 180)
 
 
-def depth_cartesian2radial(depth: torch.Tensor or np.ndarray, focal: float) -> torch.Tensor or np.ndarray:
+def depth_cartesian2radial(
+    depth: torch.Tensor or np.ndarray, focal: float
+) -> torch.Tensor or np.ndarray:
     """
     Function used to convert the depth map from cartesian to radial coordinates
         param:
@@ -363,19 +298,21 @@ def depth_cartesian2radial(depth: torch.Tensor or np.ndarray, focal: float) -> t
 
     res_v = depth.shape[0]
     res_h = depth.shape[1]
-    
-    axis_v = env.linspace(-res_v/2 + 1/2, res_v/2 - 1/2, res_v)
-    axis_h = env.linspace(-res_h/2 + 1/2, res_h/2 - 1/2, res_h)
+
+    axis_v = env.linspace(-res_v / 2 + 1 / 2, res_v / 2 - 1 / 2, res_v)
+    axis_h = env.linspace(-res_h / 2 + 1 / 2, res_h / 2 - 1 / 2, res_h)
 
     conversion_matrix = env.zeros((res_v, res_h))
     for i in range(res_v):
         for j in range(res_h):
-            conversion_matrix[i, j] = 1 / env.sqrt(1 + (axis_v[i] / focal)**2 + (axis_h[j] / focal)**2)  # type: ignore
+            conversion_matrix[i, j] = 1 / env.sqrt(1 + (axis_v[i] / focal) ** 2 + (axis_h[j] / focal) ** 2)  # type: ignore
 
     return depth / conversion_matrix
 
 
-def depth_radial2cartesian(depth: torch.Tensor or np.ndarray, focal: float) -> torch.Tensor or np.ndarray:
+def depth_radial2cartesian(
+    depth: torch.Tensor or np.ndarray, focal: float
+) -> torch.Tensor or np.ndarray:
     """
     Function used to convert the depth map from radial to cartesian coordinates
         param:
@@ -392,18 +329,20 @@ def depth_radial2cartesian(depth: torch.Tensor or np.ndarray, focal: float) -> t
 
     res_v = depth.shape[0]
     res_h = depth.shape[1]
-    axis_v = env.linspace(-res_v/2 + 1/2, res_v/2 - 1/2, res_v)
-    axis_h = env.linspace(-res_h/2 + 1/2, res_h/2 - 1/2, res_h)
+    axis_v = env.linspace(-res_v / 2 + 1 / 2, res_v / 2 - 1 / 2, res_v)
+    axis_h = env.linspace(-res_h / 2 + 1 / 2, res_h / 2 - 1 / 2, res_h)
 
     conversion_matrix = env.zeros((res_v, res_h))
     for i in range(res_v):
         for j in range(res_h):
-            conversion_matrix[i, j] = env.sqrt(1 + (axis_v[i] / focal)**2 + (axis_h[j] / focal)**2)  # type: ignore
+            conversion_matrix[i, j] = env.sqrt(1 + (axis_v[i] / focal) ** 2 + (axis_h[j] / focal) ** 2)  # type: ignore
 
     return depth * conversion_matrix
 
 
-def normalize(data: np.ndarray or torch.Tensor, bounds: dict[str, dict[str, float]]) -> np.ndarray or torch.Tensor:
+def normalize(
+    data: np.ndarray or torch.Tensor, bounds: dict[str, dict[str, float]]
+) -> np.ndarray or torch.Tensor:
     """
     Function used to normalize the data
         param:
@@ -419,10 +358,14 @@ def normalize(data: np.ndarray or torch.Tensor, bounds: dict[str, dict[str, floa
             - normalized data
     """
 
-    return bounds['desired']['lower'] + (data - bounds['actual']['lower']) * (bounds['desired']['upper'] - bounds['desired']['lower']) / (bounds['actual']['upper'] - bounds['actual']['lower'])
+    return bounds["desired"]["lower"] + (data - bounds["actual"]["lower"]) * (
+        bounds["desired"]["upper"] - bounds["desired"]["lower"]
+    ) / (bounds["actual"]["upper"] - bounds["actual"]["lower"])
 
 
-def itof2depth(itof: torch.Tensor | np.ndarray, freqs: tuple | float | int) -> torch.Tensor | np.ndarray:
+def itof2depth(
+    itof: torch.Tensor | np.ndarray, freqs: tuple | float | int
+) -> torch.Tensor | np.ndarray:
     """
     Function used to convert the itof depth map to the correspondent radial depth map
         param:
@@ -441,7 +384,11 @@ def itof2depth(itof: torch.Tensor | np.ndarray, freqs: tuple | float | int) -> t
         arr = torch.Tensor
 
     # Perform a check on freqs tu ensure that it is a tuple
-    freqs = tuple([freqs]) if (isinstance(freqs, float) or isinstance(freqs, int)) else freqs
+    freqs = (
+        tuple([freqs])
+        if (isinstance(freqs, float) or isinstance(freqs, int))
+        else freqs
+    )
 
     # Check if there is the batch dimension
     if len(itof.shape) == 3 and isinstance(itof, torch.Tensor):
@@ -449,16 +396,20 @@ def itof2depth(itof: torch.Tensor | np.ndarray, freqs: tuple | float | int) -> t
     elif len(itof.shape) == 3 and isinstance(itof, np.ndarray):
         itof = itof[np.newaxis, ...]
 
-    n_freqs = 1 if isinstance(freqs, float) or isinstance(freqs, int) else len(freqs)  # Number of frequencies used by the iToF sensor
+    n_freqs = (
+        1 if isinstance(freqs, float) or isinstance(freqs, int) else len(freqs)
+    )  # Number of frequencies used by the iToF sensor
 
     if n_freqs != itof.shape[1] // 2:
-        raise ValueError("The number of frequencies is not equal to the number of channels in the itof map")
+        raise ValueError(
+            "The number of frequencies is not equal to the number of channels in the itof map"
+        )
 
     # Compute the phase shift value (for each frequency)
     phi = env.arctan2(itof[:, n_freqs:, ...], itof[:, :n_freqs, ...]).squeeze(0)  # type: ignore
 
     # Compute the conversion value (for each frequency)
-    conv_value =  const.c / (4 * const.pi * arr(freqs))
+    conv_value = const.c / (4 * const.pi * arr(freqs))
     # If necessary change the device of the conversion value
     if isinstance(itof, torch.Tensor):
         conv_value = conv_value.to(itof.device)  # type: ignore
@@ -472,11 +423,13 @@ def itof2depth(itof: torch.Tensor | np.ndarray, freqs: tuple | float | int) -> t
     # Remove unnecessary dimensions
     if isinstance(depth, torch.Tensor) and len(depth.shape) == 4:
         depth = depth.squeeze(1)
-    
+
     return depth  # type: ignore
 
 
-def depth2itof(depth: torch.Tensor or np.ndarray, freq: float, ampl: float = 1.) -> torch.Tensor or np.ndarray:
+def depth2itof(
+    depth: torch.Tensor or np.ndarray, freq: float, ampl: float = 1.0
+) -> torch.Tensor or np.ndarray:
     """
     Function used to convert the depth map to the correspondent itof depth map
         param:
@@ -508,7 +461,9 @@ def depth2itof(depth: torch.Tensor or np.ndarray, freq: float, ampl: float = 1.)
     return itof  # type: ignore
 
 
-def mean_intersection_over_union(pred: torch.Tensor, target: torch.Tensor, bg_class_value: int) -> torch.Tensor:
+def mean_intersection_over_union(
+    pred: torch.Tensor, target: torch.Tensor, bg_class_value: int
+) -> torch.Tensor:
     """
     Function used to compute the binary mean Intersection over Union (mIoU)
         param:
@@ -519,13 +474,26 @@ def mean_intersection_over_union(pred: torch.Tensor, target: torch.Tensor, bg_cl
             - mean intersection over union
     """
 
-    iou_1 = binary_jaccard_index(torch.where(pred > bg_class_value, 1, 0), torch.where(target > bg_class_value, 1, 0))
-    iou_2 = binary_jaccard_index(torch.where(pred == bg_class_value, 1, 0), torch.where(target == bg_class_value, 1, 0))
+    iou_1 = binary_jaccard_index(
+        torch.where(pred > bg_class_value, 1, 0),
+        torch.where(target > bg_class_value, 1, 0),
+    )
+    iou_2 = binary_jaccard_index(
+        torch.where(pred == bg_class_value, 1, 0),
+        torch.where(target == bg_class_value, 1, 0),
+    )
 
     return (iou_1 + iou_2) / 2
 
 
-def plt_loss_hists(losses:np.ndarray, accuracies:np.ndarray, path: Path, bins: int = 40, a_only: bool = True, tex: bool = False) -> None:
+def plt_loss_hists(
+    losses: np.ndarray,
+    accuracies: np.ndarray,
+    path: Path,
+    bins: int = 40,
+    a_only: bool = True,
+    tex: bool = False,
+) -> None:
     """
     Function that plots the histograms of the losses and accuracies
         param:
@@ -547,11 +515,12 @@ def plt_loss_hists(losses:np.ndarray, accuracies:np.ndarray, path: Path, bins: i
     y_label = "Number of occurrences"
     data = (losses, accuracies)
 
-
     if not a_only:
         # Set the main title
-        fig.suptitle("Histograms of the losses and accuracies on the test set", fontsize=14)
-        
+        fig.suptitle(
+            "Histograms of the losses and accuracies on the test set", fontsize=14
+        )
+
         # Define the axis
         ax = []
         ax.append(fig.add_subplot(1, 2, 1))
@@ -568,39 +537,9 @@ def plt_loss_hists(losses:np.ndarray, accuracies:np.ndarray, path: Path, bins: i
         plt.xlabel(x_labels[1])
         plt.ylabel(y_label)
         plt.hist(data[1], bins=bins)
-    
+
     plt.tight_layout()
     plt.savefig(str(path.parent / "losses_histograms.svg"))
     if tex:
         tikzplotlib.save(str(path.parent / "losses_histograms.tex"))
-    plt.close()
-
-
-def plt_mae_hist(mae_losses: np.ndarray, path: Path, tex: bool = False) -> None:
-    """
-    Function that plots the histogram of the mae losses
-        param:
-            - mae_losses: mae losses
-            - path: path where to save the plots
-            - tex: if True save the plots in tex format
-    """
-
-    # Set seaborn style
-    sns.set_theme()
-
-    fig = plt.figure(figsize=(8, 7))
-
-    # Set the main title
-    fig.suptitle("Histogram of the MAE losses on the test set", fontsize=14)
-
-    # Define the axis
-    ax = fig.add_subplot(1, 1, 1)
-    ax.set_xlabel("Loss value")
-    ax.set_ylabel("Number of occurrences")
-    ax.hist(mae_losses, bins=20)
-    
-    plt.tight_layout()
-    plt.savefig(str(path.parent / "mae_losses_histogram.svg"))
-    if tex:
-        tikzplotlib.save(str(path.parent / "mae_losses_histogram.tex"))
     plt.close()

@@ -25,16 +25,23 @@ class ItofNormalize(object):
             dict: dictionary containing the normalized iToF data, the ground truth itof data and the ground truth depth (radial coordinates)
         """
 
-        itof_data, gt_itof, gt_depth = sample["itof_data"], sample["gt_itof"], sample["gt_depth"]
+        itof_data, gt_itof, gt_depth = (
+            sample["itof_data"],
+            sample["gt_itof"],
+            sample["gt_depth"],
+        )
 
         # Compute the amplitude at 20MHz (normalization factor for the iToF data)
-        ampl_20 = torch.sqrt(torch.square(itof_data[0, ...]) + torch.square(itof_data[self.n_frequencies, ...])).unsqueeze(0)
-        
+        ampl_20 = torch.sqrt(
+            torch.square(itof_data[0, ...])
+            + torch.square(itof_data[self.n_frequencies, ...])
+        ).unsqueeze(0)
+
         # Check if there is zero value in the ampl_20 tensor
         if not torch.is_nonzero(ampl_20.all()):
             # Change the zero values with 1e-10
             ampl_20 = torch.where(ampl_20 == 0, 1e-10, ampl_20)
-        
+
         # Scale the iToF raw data
         itof_data = itof_data / ampl_20
 
@@ -63,11 +70,18 @@ class ItofNormalizeWithAddLayer(object):
             dict: dictionary containing the normalized iToF data, the ground truth itof data and the ground truth depth (radial coordinates)
         """
 
-        itof_data, gt_itof, gt_depth = sample["itof_data"], sample["gt_itof"], sample["gt_depth"]
-        
+        itof_data, gt_itof, gt_depth = (
+            sample["itof_data"],
+            sample["gt_itof"],
+            sample["gt_depth"],
+        )
+
         # Compute the amplitude at 20MHz (normalization factor for the iToF data)
-        ampl_20 = torch.sqrt(torch.square(itof_data[0, ...]) + torch.square(itof_data[self.n_frequencies, ...])).unsqueeze(0)
-        
+        ampl_20 = torch.sqrt(
+            torch.square(itof_data[0, ...])
+            + torch.square(itof_data[self.n_frequencies, ...])
+        ).unsqueeze(0)
+
         # Check if there is zero value in the ampl_20 tensor
         if not torch.is_nonzero(ampl_20.all()):
             # Change the zero values with 1e-10
@@ -75,7 +89,7 @@ class ItofNormalizeWithAddLayer(object):
 
         # Scale the iToF raw data
         itof_data = itof_data / ampl_20
-        
+
         # Add a dimension containing the amplitude at 20MHz rescaled by 10e9
         ampl_20 = ampl_20 / 10e9  # Rescale the amplitude at 20MHz
         itof_data = torch.cat((ampl_20, itof_data), dim=0)  # type: ignore
@@ -95,7 +109,7 @@ class ChangeBgValue(object):
             target_value (int): background target value
         """
 
-        self.bg_value = bg_value          # Background value
+        self.bg_value = bg_value  # Background value
         self.target_value = target_value  # Target value
 
     def __call__(self, sample: dict):
@@ -106,7 +120,11 @@ class ChangeBgValue(object):
             dict: dictionary containing the iToF data, the ground truth itof data and the ground truth depth (radial coordinates) with the background value changed
         """
 
-        itof_data, gt_itof, gt_depth = sample["itof_data"], sample["gt_itof"], sample["gt_depth"]
+        itof_data, gt_itof, gt_depth = (
+            sample["itof_data"],
+            sample["gt_itof"],
+            sample["gt_depth"],
+        )
 
         # Change the background value from bg_value to target_value (for the gt_depth)
         gt_itof = torch.where(gt_itof == self.bg_value, self.target_value, gt_itof)
@@ -121,7 +139,14 @@ class RandomRotation(T.RandomRotation):
     If fill is set to float("inf"), the filling area will be set to the original value of the input image nont to a fixed value.
     """
 
-    def __init__(self, degrees: int, interpolation: T.InterpolationMode = T.InterpolationMode.NEAREST, expand: bool = False, center = None, fill: float = 0):
+    def __init__(
+        self,
+        degrees: int,
+        interpolation: T.InterpolationMode = T.InterpolationMode.NEAREST,
+        expand: bool = False,
+        center=None,
+        fill: float = 0,
+    ):
         """
         Args:
             degrees (int): Range of degrees to select from. If degrees is a number instead of sequence like (min, max), the range of degrees will be (-degrees, +degrees).
@@ -140,7 +165,6 @@ class RandomRotation(T.RandomRotation):
             fill = int(-1e10)
             self.wrap = True
         super().__init__(degrees, interpolation, expand, center, int(fill))
-    
 
     def __call__(self, sample: torch.Tensor):
         """
@@ -150,10 +174,14 @@ class RandomRotation(T.RandomRotation):
             Tensor: Rotated Tensor image.
         """
 
-        m_sample = super(RandomRotation, self).__call__(sample)  # Call the super class to rotate the imnage
+        m_sample = super(RandomRotation, self).__call__(
+            sample
+        )  # Call the super class to rotate the imnage
 
         if self.wrap:
-            m_sample = torch.where(m_sample == -1e10, sample, m_sample)  # If the fill value is set to float("inf"), set the filling area to the original value of the input image
+            m_sample = torch.where(
+                m_sample == -1e10, sample, m_sample
+            )  # If the fill value is set to float("inf"), set the filling area to the original value of the input image
 
         return m_sample
 
@@ -164,7 +192,16 @@ class RandomAffine(T.RandomAffine):
     If fill is set to float("inf"), the filling area will be set to the original value of the input image nont to a fixed value.
     """
 
-    def __init__(self, degrees: int, translate = None, scale = None, shear = None, interpolation: T.InterpolationMode = T.InterpolationMode.NEAREST, fill: float = 0, center = None):
+    def __init__(
+        self,
+        degrees: int,
+        translate=None,
+        scale=None,
+        shear=None,
+        interpolation: T.InterpolationMode = T.InterpolationMode.NEAREST,
+        fill: float = 0,
+        center=None,
+    ):
         """
         Args:
             degrees (int): Range of degrees to select from. If degrees is a number instead of sequence like (min, max), the range of degrees will be (-degrees, +degrees).
@@ -189,8 +226,9 @@ class RandomAffine(T.RandomAffine):
         if fill == float("inf"):
             fill = int(-1e10)
             self.wrap = True
-        super().__init__(degrees, translate, scale, shear, interpolation, int(fill), center)
-    
+        super().__init__(
+            degrees, translate, scale, shear, interpolation, int(fill), center
+        )
 
     def __call__(self, sample: torch.Tensor):
         """
@@ -200,10 +238,14 @@ class RandomAffine(T.RandomAffine):
             Tensor: Rotated Tensor image.
         """
 
-        m_sample = super(RandomAffine, self).__call__(sample)  # Call the super to and transform the imnage
+        m_sample = super(RandomAffine, self).__call__(
+            sample
+        )  # Call the super to and transform the imnage
 
         if self.wrap:
-            m_sample = torch.where(m_sample == -1e10, sample, m_sample)  # If the fill value is set to float("inf"), set the filling area to the original value of the input image
+            m_sample = torch.where(
+                m_sample == -1e10, sample, m_sample
+            )  # If the fill value is set to float("inf"), set the filling area to the original value of the input image
 
         return m_sample
 
@@ -211,7 +253,7 @@ class RandomAffine(T.RandomAffine):
 class AddGaussianNoise(object):
     """Add gaussian noise to a tensor."""
 
-    def __init__(self, mean: float = 0., std: float = 1.):
+    def __init__(self, mean: float = 0.0, std: float = 1.0):
         """
         Args:
             mean (float): mean of the gaussian distribution
@@ -220,7 +262,7 @@ class AddGaussianNoise(object):
 
         self.std = std
         self.mean = mean
-        
+
     def __call__(self, tensor):
         """
         Args:
@@ -230,13 +272,15 @@ class AddGaussianNoise(object):
         """
 
         return tensor + torch.randn(tensor.size()) * self.std + self.mean
-    
+
     def __repr__(self):
         """
         Returns:
             str: string representation of the object
         """
-        return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
+        return self.__class__.__name__ + "(mean={0}, std={1})".format(
+            self.mean, self.std
+        )
 
 
 class RescaleRealData(object):
@@ -259,14 +303,24 @@ class RescaleRealData(object):
             - dict: dictionary containing the iToF data, the ground truth itof data and the ground truth depth (radial coordinates) with the real data rescaled
         """
 
-        itof_data, gt_itof, gt_depth = sample["itof_data"], sample["gt_itof"], sample["gt_depth"]
+        itof_data, gt_itof, gt_depth = (
+            sample["itof_data"],
+            sample["gt_itof"],
+            sample["gt_depth"],
+        )
 
         # Rescale the data in the given range
         domain = torch.min(itof_data), torch.max(itof_data)
         itof_data = (itof_data - (domain[1] + domain[0]) / 2) / (domain[1] - domain[0])
-        itof_data = itof_data * (self.out_range[1] - self.out_range[0]) + (self.out_range[1] + self.out_range[0]) / 2
+        itof_data = (
+            itof_data * (self.out_range[1] - self.out_range[0])
+            + (self.out_range[1] + self.out_range[0]) / 2
+        )
         gt_itof = (gt_itof - (domain[1] + domain[0]) / 2) / (domain[1] - domain[0])
-        gt_itof = gt_itof * (self.out_range[1] - self.out_range[0]) + (self.out_range[1] + self.out_range[0]) / 2
+        gt_itof = (
+            gt_itof * (self.out_range[1] - self.out_range[0])
+            + (self.out_range[1] + self.out_range[0]) / 2
+        )
 
         return {"itof_data": itof_data, "gt_itof": gt_itof, "gt_depth": gt_depth}
 
@@ -284,7 +338,11 @@ class MeanClipping(object):
             - dict: dictionary containing the iToF data, the ground truth itof data and the ground truth depth (radial coordinates) with the real data rescaled
         """
 
-        itof_data, gt_itof, gt_depth = sample["itof_data"], sample["gt_itof"], sample["gt_depth"]
+        itof_data, gt_itof, gt_depth = (
+            sample["itof_data"],
+            sample["gt_itof"],
+            sample["gt_depth"],
+        )
 
         # Clip the data based on the mean value + std of the last 25 columns
         mean_val = torch.mean(itof_data[:, -25:, :])

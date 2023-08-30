@@ -3,7 +3,9 @@ import torchvision
 from torch import nn
 from math import sqrt
 from utils.utils import itof2depth
-from utils.StraightThroughEstimators import StraightThroughEstimator, StraightThroughEstimatorParam
+from utils.StraightThroughEstimators import (
+    StraightThroughEstimator,
+)
 
 
 class Block(nn.Module):
@@ -51,7 +53,9 @@ class Encoder(nn.Module):
         """
 
         super().__init__()
-        self.enc_blocks = nn.ModuleList([Block(chs[i], chs[i + 1], pad) for i in range(len(chs) - 1)])
+        self.enc_blocks = nn.ModuleList(
+            [Block(chs[i], chs[i + 1], pad) for i in range(len(chs) - 1)]
+        )
         self.pool = nn.MaxPool2d(kernel_size=2)
 
     def forward(self, x: torch.Tensor) -> list:
@@ -73,7 +77,7 @@ class Encoder(nn.Module):
 
 class Decoder(nn.Module):
     """Decoder of the proposed network architecture"""
-    
+
     def __init__(self, chs: tuple = (1024, 512, 256, 128, 64), pad: int = 0) -> None:
         """
         Decoder
@@ -84,8 +88,15 @@ class Decoder(nn.Module):
 
         super().__init__()
         self.chs = chs
-        self.upconv = nn.ModuleList([nn.ConvTranspose2d(chs[i], chs[i + 1], kernel_size=2, stride=2) for i in range(len(chs) - 1)])
-        self.dec_blocks = nn.ModuleList([Block(chs[i], chs[i + 1], pad) for i in range(len(chs) - 1)])
+        self.upconv = nn.ModuleList(
+            [
+                nn.ConvTranspose2d(chs[i], chs[i + 1], kernel_size=2, stride=2)
+                for i in range(len(chs) - 1)
+            ]
+        )
+        self.dec_blocks = nn.ModuleList(
+            [Block(chs[i], chs[i + 1], pad) for i in range(len(chs) - 1)]
+        )
 
     def forward(self, x: torch.Tensor, enc_features: list) -> torch.Tensor:
         """
@@ -113,7 +124,9 @@ class Decoder(nn.Module):
 class FinalConv(nn.Module):
     """Final convolutional layers of the proposed network architecture"""
 
-    def __init__(self, chs: tuple = (8, 4, 2), additional_layers: int = 0, pad: int = 1) -> None:
+    def __init__(
+        self, chs: tuple = (8, 4, 2), additional_layers: int = 0, pad: int = 1
+    ) -> None:
         """
         Final convolutional layers
         param:
@@ -127,7 +140,12 @@ class FinalConv(nn.Module):
         channels = list(chs)
         for _ in range(additional_layers):
             channels = [chs[0]] + channels
-        self.conv = nn.ModuleList([nn.Conv2d(channels[i], channels[i + 1], kernel_size=3, padding=pad) for i in range(self.n_layers)])
+        self.conv = nn.ModuleList(
+            [
+                nn.Conv2d(channels[i], channels[i + 1], kernel_size=3, padding=pad)
+                for i in range(self.n_layers)
+            ]
+        )
         self.relu = nn.ReLU()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -147,8 +165,14 @@ class FinalConv(nn.Module):
 
 
 class NlosNetItof(nn.Module):
-
-    def __init__(self, enc_channels: tuple = (6, 64, 128, 256, 512, 1024), dec_channels: tuple = (1024, 512, 256, 128, 64), pad: int = 1, num_class: int = 1, additional_cnn_layers: int = 0) -> None:
+    def __init__(
+        self,
+        enc_channels: tuple = (6, 64, 128, 256, 512, 1024),
+        dec_channels: tuple = (1024, 512, 256, 128, 64),
+        pad: int = 1,
+        num_class: int = 1,
+        additional_cnn_layers: int = 0,
+    ) -> None:
         """
         NLOS Net
         param:
@@ -160,28 +184,32 @@ class NlosNetItof(nn.Module):
         """
 
         super().__init__()
-        self.encoder = Encoder(enc_channels, pad)                          # Initialize the encoder
-        self.decoder = Decoder(dec_channels, pad)                          # Initialize the decoder
-        self.head = nn.Conv2d(dec_channels[-1], num_class, kernel_size=1)  # Initialize the head (last layer of the UNet reduce the features layer to the one set by num_class)
-        
-        # Final layers
+        self.encoder = Encoder(enc_channels, pad)  # Initialize the encoder
+        self.decoder = Decoder(dec_channels, pad)  # Initialize the decoder
+        self.head = nn.Conv2d(
+            dec_channels[-1], num_class, kernel_size=1
+        )  # Initialize the head (last layer of the UNet reduce the features layer to the one set by num_class)
+
+        # Final layers
         chs = [num_class]
-        n_final_layers = round(sqrt(num_class)) - 1  # Number of layers for the final layers
-        for i in range(n_final_layers):              # Initialize the number of channels for the final layers
+        n_final_layers = (
+            round(sqrt(num_class)) - 1
+        )  # Number of layers for the final layers
+        for i in range(
+            n_final_layers
+        ):  # Initialize the number of channels for the final layers
             chs.append(int(round(num_class / (2 ** (i + 1)))))
-        self.itof_estiamtor = FinalConv(chs=tuple(chs), additional_layers=additional_cnn_layers)  # Initialize the itof data estimator
+        self.itof_estiamtor = FinalConv(
+            chs=tuple(chs), additional_layers=additional_cnn_layers
+        )  # Initialize the itof data estimator
 
         # Initialize the straight through estimators
-        self.STE_type = "std"
-        if self.STE_type == "std":
-            self.st_clean = StraightThroughEstimator(task="clean")
-            self.st_hard = StraightThroughEstimator(task="threshold", threshold=0)
-        elif self.STE_type == "param":
-            self.st_clean = StraightThroughEstimatorParam(task="clean")
-            self.st_hard = StraightThroughEstimatorParam(task="threshold")
+        self.st_clean = StraightThroughEstimator(task="clean")
+        self.st_hard = StraightThroughEstimator(task="threshold", threshold=0)
 
-
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
+    def forward(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
         """
         Forward pass
         param:
@@ -190,11 +218,11 @@ class NlosNetItof(nn.Module):
             - output tensor
         """
 
-        # Run the encoder
+        # Run the encoder
         enc_features = self.encoder(x)
-        # Run the decoder
+        # Run the decoder
         out = self.decoder(enc_features[::-1][0], enc_features[::-1][1:])
-        # Run the head to move back to the number of classes
+        # Run the head to move back to the number of classes
         out = self.head(out)
         # Run the final two branches
         itof = self.itof_estiamtor(out)
