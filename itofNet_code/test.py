@@ -6,7 +6,7 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 from utils.NlosNetItof import NlosNetItof
 from utils.test_function import test
-from utils.utils import format_time
+from modules.utils.helpers import format_time
 
 
 def arg_parser(argv):

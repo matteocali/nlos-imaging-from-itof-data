@@ -1,7 +1,7 @@
 from typing import Any
 import torch
 import torchvision.transforms as T
-from utils.utils import normalize
+from modules.utils import normalize
 
 
 class ItofNormalize(object):

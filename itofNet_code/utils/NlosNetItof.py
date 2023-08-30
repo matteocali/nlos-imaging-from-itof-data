@@ -2,7 +2,7 @@ import torch
 import torchvision
 from torch import nn
 from math import sqrt
-from utils.utils import itof2depth
+from modules.utils import itof2depth
 from utils.StraightThroughEstimators import (
     StraightThroughEstimator,
 )

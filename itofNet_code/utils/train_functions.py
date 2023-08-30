@@ -1,7 +1,7 @@
 from utils.SobelGradient import SobelGrad
 from utils.EarlyStopping import EarlyStopping
 from torchmetrics.functional.classification.jaccard import binary_jaccard_index
-from utils.utils import format_time, generate_fig, itof2depth
+from modules.utils import format_time, generate_fig, itof2depth
 from torchmetrics import StructuralSimilarityIndexMeasure as SSIM
 from torch.utils.tensorboard.writer import SummaryWriter
 from pathlib import Path
