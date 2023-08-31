@@ -31,7 +31,7 @@ def arg_parser(argv):
     arg_data_path = ""  # Argument containing the path where the raw data are located
     arg_shuffle = True  # Argument containing the flag for shuffling the dataset
     arg_bg_value = 0  # Argument containing the background value
-    arg_add_layer = False  # Argument defining if the iToF data will contains an additional 20MHz layer
+    arg_add_layer = True  # Argument defining if the iToF data will contains an additional 20MHz layer
     arg_multi_freq = (
         False  # Argument defining if the dts will use more than 3 frequencies
     )
@@ -256,7 +256,7 @@ if __name__ == "__main__":
         skip_test = False
 
         # Printing the dimension of the dataset
-        print("Dataset dimension:")
+        print("Dataset dimension (considering only pure data no augmented samples):")
         with open(train_csv, "r") as f:
             length = len(f.readlines())
         print("  - Train: ", length)

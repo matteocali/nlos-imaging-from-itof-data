@@ -26,22 +26,14 @@ def arg_parser(argv):
     arg_model_name = ""
     # Argument defining the learning rate
     arg_lr = 1e-4
-    # Argument defining the lambda value for the additional loss
-    arg_lambda = 0.3
-    # Argument defining the lambda value for the iou loss
-    arg_lambda2 = 0.2
-    # Argument defining the scaling factor for the obj weight
-    arg_scaling_factor = 1 / 5
-    # Argument defining the additional loss to be used
-    arg_additional_loss = "grad-mae"
     # Argument defining the encoder channels
-    arg_encoder_channels = (16, 32, 64, 128, 256)
+    arg_encoder_channels = (32, 64, 128, 256, 512)
     # Argument defining the number of the u-net output channels
     arg_n_out_channels = 16
     # Argument defining the number of additional CNN layers
     arg_additional_layers = 0
     # Argument defining the number of epochs
-    arg_n_epochs = 5000
+    arg_n_epochs = 500
     # Argument to set the flag for the data augmentation
     arg_augment_size = 0
     # Argument defining if to use the noisy dts
@@ -51,7 +43,7 @@ def arg_parser(argv):
     # Argument defining if the code will be run on slurm
     arg_slurm = False
     # Help string
-    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -k <lambda-iouh>, -f <scaling-factor>, -A <additional-loss> (ssim, grad-mse, grad-mae), -i <encoder-channels>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -P <pre-train>, -a <data-augment-size>, -N <noisy-dts>, -s <slurm>".format(
+    arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -i <encoder-channels>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -P <pre-train>, -a <data-augment-size>, -N <noisy-dts>, -s <slurm>".format(
         argv[0]
     )
 
@@ -59,16 +51,12 @@ def arg_parser(argv):
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(
             argv[1:],
-            "hd:n:r:l:k:f:A:i:c:p:e:P:a:N:s:",
+            "hd:n:r:i:c:p:e:P:a:N:s:",
             [
                 "help",
                 "dataset=",
                 "name=",
                 "lr=",
-                "lambda=",
-                "lambda-iou=",
-                "scaling-factor=",
-                "additional-loss=",
                 "encoder-channels=",
                 "n-out-channels=",
                 "additional-layers=",
@@ -93,14 +81,6 @@ def arg_parser(argv):
             arg_model_name = arg  # Set the name of the model
         elif opt in ("-r", "--lr"):
             arg_lr = float(arg)  # Set the learning rate
-        elif opt in ("-l", "--lambda"):
-            arg_lambda = float(arg)  # Set the lambda value
-        elif opt in ("-k", "--lambda-iou"):
-            arg_lambda2 = float(arg)  # Set the lambda value for the iou loss
-        elif opt in ("-f", "--scaling-factor"):
-            arg_scaling_factor = float(arg)  # Set the scaling factor
-        elif opt in ("-A", "--additional-loss"):
-            arg_additional_loss = arg  # Set the additional loss
         elif opt in ("-i", "--encoder-channels"):
             arg_encoder_channels = tuple(
                 int(x) for x in arg.split(", ")
@@ -136,10 +116,6 @@ def arg_parser(argv):
     print("Dataset name: ", dts_name)
     print("Model name: ", arg_model_name)
     print("Learning rate: ", arg_lr)
-    print("Lambda: ", arg_lambda)
-    print("Lambda iou: ", arg_lambda2)
-    print("Scaling factor: ", arg_scaling_factor)
-    print("Additional loss: ", arg_additional_loss)
     print("Encoder channels: ", arg_encoder_channels)
     print("Number of output channels: ", arg_n_out_channels)
     print("Number of additional layers: ", arg_additional_layers)
@@ -154,10 +130,6 @@ def arg_parser(argv):
         dts_name,
         arg_model_name,
         arg_lr,
-        arg_lambda,
-        arg_lambda2,
-        arg_scaling_factor,
-        arg_additional_loss,
         arg_encoder_channels,
         arg_n_out_channels,
         arg_additional_layers,
@@ -177,18 +149,14 @@ if __name__ == "__main__":
     dts_name = args[0]  # Set the path to the csv folder
     batch_size = 32  # Set the batch size
     lr = args[2]  # Set the learning rate
-    l_val = args[3]  # Set the lambda value
-    l2_val = args[4]  # Set the lambda value for the depth loss
-    scale = args[5]  # Set the scaling factor
-    additional_loss = args[6]  # Set the additional loss
-    encoder_channels = args[7]  # Set the encoder channels
-    n_out_channels = args[8]  # Set the number of the u-net output channels
-    additional_layers = args[9]  # Set the number of additional CNN layers
-    n_epochs = args[10]  # Set the number of epochs
-    pre_train_path = args[11]  # Set the path to the pre-trained model
-    augment = args[12]  # Set the data augmentation flag
-    noisy = args[13]  # Set the noisy dts flag
-    slurm = args[14]  # Set the slurm flag
+    encoder_channels = args[3]  # Set the encoder channels
+    n_out_channels = args[4]  # Set the number of the u-net output channels
+    additional_layers = args[5]  # Set the number of additional CNN layers
+    n_epochs = args[6]  # Set the number of epochs
+    pre_train_path = args[7]  # Set the path to the pre-trained model
+    augment = args[8]  # Set the data augmentation flag
+    noisy = args[9]  # Set the noisy dts flag
+    slurm = args[10]  # Set the slurm flag
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -310,6 +278,7 @@ if __name__ == "__main__":
     optimizer = Adam(model.parameters(), lr=lr)
 
     # Create the loss function
+    scale = 1/7
     loss_fn = BalancedMAELoss(
         reduction="mean", pos_weight=torch.Tensor([scale * bg_obj_ratio]).to(device)
     ).to(device)
@@ -324,14 +293,11 @@ if __name__ == "__main__":
         val_loader=val_loader,
         optimizer=optimizer,
         loss_fn=loss_fn,
-        l=l_val,
-        l2=l2_val,
-        add_loss=additional_loss,
         device=device,
         n_epochs=n_epochs,
         save_path=(
             net_state_path
-            / f"{args[1]}_model_lr_{lr}_ochannel_{n_out_channels}_l_{l_val}_addlayers_{additional_layers}_aug_{str(augment)}.pt"
+            / f"{args[1]}_model_lr_{lr}_ochannel_{n_out_channels}_addlayers_{additional_layers}_aug_{str(augment)}.pt"
         ),
     )
     f_train_time = time.time()  # Stop the timer for the training

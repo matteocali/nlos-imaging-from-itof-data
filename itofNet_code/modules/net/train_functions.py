@@ -4,7 +4,6 @@ import socket
 import numpy as np
 import torch
 from torchmetrics.functional.classification.jaccard import binary_jaccard_index
-from torchmetrics import StructuralSimilarityIndexMeasure as SSIM
 from torch.utils.tensorboard.writer import SummaryWriter
 from pathlib import Path
 from torch.optim import Optimizer
@@ -12,7 +11,7 @@ from torch.utils.data import DataLoader
 from datetime import datetime
 from torch.cuda import amp
 from torch.backends.cudnn import benchmark
-from ..utils import SobelGrad, format_time, generate_fig, itof2depth
+from ..utils import format_time, generate_fig, itof2depth
 from .EarlyStopping import EarlyStopping
 
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
@@ -25,9 +24,6 @@ def compute_loss_itof(
     depth_mask: torch.Tensor,
     gt_depth: torch.Tensor,
     loss_fn: torch.nn.Module,
-    add_loss: torch.nn.Module | SSIM | None = None,
-    l: float = 0.5,
-    l2: float = 0.0,
 ) -> torch.Tensor:
     """
     Function to compute the loss using itof data
@@ -37,9 +33,6 @@ def compute_loss_itof(
             - depth_mask: predicted mask extracted from the depth
             - gt_depth: ground truth depth
             - loss_fn: loss function to use
-            - add_loss: additional loss function to use
-            - l: lambda value for the additional loss
-            - l2: lambda value for the IoU loss
         return:
             - final loss
     """
@@ -47,52 +40,24 @@ def compute_loss_itof(
     # Compute the main loss (Balanced MAE)
     loss_itof = loss_fn(itof, gt)
 
-    # Compute the additional loss if any (SSIM or Gradient)
-    if isinstance(add_loss, SSIM):
-        # Compute the ssim loss
-        second_loss = 1 - add_loss(
-            depth_mask.unsqueeze(0), gt_depth.unsqueeze(0)
-        )  # type: ignore
-    elif isinstance(add_loss, torch.nn.Module):
-        # Initialize the Sobel gradient operator with window size 7
-        grad = SobelGrad(window_size=7)
-
-        # Initilaize the gradient tensors
-        grad_itof = torch.empty((1, 2, itof.shape[2], itof.shape[3])).to(itof.device)
-        grad_gt = torch.empty((1, 2, gt.shape[2], gt.shape[3])).to(itof.device)
-
-        grad_itof[:, 0, ...], grad_itof[:, 1, ...] = grad(itof)
-        grad_gt[:, 0, ...], grad_gt[:, 1, ...] = grad(gt)
-
-        # Compute the gradient loss (MSE or MAE)
-        second_loss = add_loss(grad_itof, grad_gt)
+    # Compute the Intersection over Union loss
+    if depth_mask.shape[1] == 2:
+        gt_depth = torch.where(gt_depth > 0, 1, 0)
+        iou = torch.tensor(
+            [
+                binary_jaccard_index(depth_mask[:, 0, ...], gt_depth),
+                binary_jaccard_index(depth_mask[:, 1, ...], gt_depth),
+            ]
+        )
+        iou_loss = 1 - torch.mean(iou)
     else:
-        # If no additional loss is used, set the second loss to 0
-        second_loss = 0
-
-    # Compute the Intersection over Union loss (only if l2 is not 0)
-    if l2 != 0:
-        if depth_mask.shape[1] == 2:
-            gt_depth = torch.where(gt_depth > 0, 1, 0)
-            iou = torch.tensor(
-                [
-                    binary_jaccard_index(depth_mask[:, 0, ...], gt_depth),
-                    binary_jaccard_index(depth_mask[:, 1, ...], gt_depth),
-                ]
-            )
-            iou_loss = 1 - torch.mean(iou)
-        else:
-            iou_loss = 1 - binary_jaccard_index(
-                depth_mask, torch.where(gt_depth > 0, 1, 0)
-            )
-    else:
-        iou_loss = 0
+        iou_loss = 1 - binary_jaccard_index(depth_mask, torch.where(gt_depth > 0, 1, 0))
 
     # Compose the losses based on the lambda value
-    return loss_itof + (l * second_loss) + (l2 * iou_loss)
+    return loss_itof + iou_loss
 
 
-def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, add_loss: torch.nn.Module | SSIM | None, device: torch.device, l: float, l2: float, scaler: amp.GradScaler) -> float:  # type: ignore
+def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer, loss_fn: torch.nn.Module, device: torch.device, scaler: amp.GradScaler) -> float:
     """
     Function to train the network on the training set
         param:
@@ -100,10 +65,7 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
             - data_loader: data loader containing the training set
             - optimizer: optimizer used to update the weights
             - loss_fn: loss function to use
-            - add_loss: additional loss function to use
             - device: device used to train the network
-            - l: lambda value for the additional loss
-            - l2: lambda value for the depth loss
             - scaler: scaler used for the mixed precision training
         return:
             - average loss
@@ -131,9 +93,7 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
 
         # Compute the loss
         with amp.autocast():  # type: ignore
-            loss = compute_loss_itof(
-                itof, gt_itof, mask, gt_depth, loss_fn, add_loss, l, l2
-            )
+            loss = compute_loss_itof(itof, gt_itof, mask, gt_depth, loss_fn)
 
         # Backward pass
         scaler.scale(loss).backward()  # type: ignore
@@ -158,11 +118,7 @@ def val_fn(
     net: torch.nn.Module,
     data_loader: DataLoader,
     loss_fn: torch.nn.Module,
-    add_loss: torch.nn.Module | SSIM | None,
     device: torch.device,
-    l: float,
-    l2: float,
-    scaler: amp.GradScaler,
 ) -> tuple[float, tuple[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]:
     """
     Function to validate the network on the validation set
@@ -170,10 +126,7 @@ def val_fn(
             - net: network to validate
             - data_loader: data loader containing the validation set
             - loss_fn: loss function to use
-            - add_loss: additional loss function to use
             - device: device used to validate the network
-            - l: lambda value for the additional loss
-            - l2: lambda value for the depth loss
             - scaler: scaler used for the mixed precision training
         return:
             - tuple containing the average loss, the last gt_itof and gt_depth and the last predicted itof
@@ -203,9 +156,7 @@ def val_fn(
 
             # Compute the loss
             with amp.autocast():
-                loss = compute_loss_itof(
-                    itof, gt_itof, mask, gt_depth, loss_fn, add_loss, l, l2
-                )
+                loss = compute_loss_itof(itof, gt_itof, mask, gt_depth, loss_fn)
 
             # Append the loss
             epoch_loss.append(loss.item())
@@ -221,10 +172,10 @@ def val_fn(
             last_pred = (
                 itof.to("cpu").numpy()[-1, ...],
                 itof2depth(clean_itof.to("cpu").numpy()[-1, ...], 20e06),
-            )  # type: ignore
+            )
 
     # Return the average loss over al the batches
-    return float(np.mean(epoch_loss)), last_gt, last_pred  # type: ignore
+    return float(np.mean(epoch_loss)), last_gt, last_pred
 
 
 def train(
@@ -234,9 +185,6 @@ def train(
     val_loader: DataLoader,
     optimizer: Optimizer,
     loss_fn: torch.nn.Module,
-    l: float,
-    l2: float,
-    add_loss: str,
     device: torch.device,
     n_epochs: int,
     save_path: Path,
@@ -250,9 +198,6 @@ def train(
             - val_loader: data loader containing the validation set
             - optimizer: optimizer used to update the weights
             - loss_fn: loss function to use
-            - l: lambda value to balance the mae loss and the ssim loss
-            - l2: lambda value to balance the depth loss
-            - add_loss: additional loss to use
             - device: device used to train the network
             - n_epochs: number of epochs to train the network
             - save_path: path where to save the model
@@ -263,27 +208,13 @@ def train(
     current_date = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     hostname = socket.gethostname()
     writer = SummaryWriter(
-        log_dir=f"{current_dir}/../tensorboard_logs/{current_date}_{hostname}_{attempt_name}_{net.__class__.__name__}_LR_{optimizer.param_groups[0]['lr']}_l_{l}"
+        log_dir=f"{current_dir}/../../tensorboard_logs/{current_date}_{hostname}_{attempt_name}_{net.__class__.__name__}_LR_{optimizer.param_groups[0]['lr']}"
     )
 
     # Initialize the early stopping
     early_stopping = EarlyStopping(
         tollerance=150, min_delta=0.015, save_path=save_path, net=net
     )
-
-    # Initialize the chosed additional loss
-    if add_loss == "ssim":
-        # SSIM loss
-        add_loss_fn = SSIM().to(device)
-    elif add_loss == "grad-mse":
-        # MSE loss
-        add_loss_fn = torch.nn.MSELoss(reduction="mean").to(device)
-    elif add_loss == "grad-mae":
-        # MAE loss
-        add_loss_fn = torch.nn.L1Loss(reduction="mean").to(device)
-    else:
-        # No additional loss
-        add_loss_fn = None
 
     # Initialize the variable that contains the overall time
     overall_time = 0
@@ -296,15 +227,11 @@ def train(
         start_time = time.time()
 
         # Train the network
-        train_loss = train_fn(
-            net, train_loader, optimizer, loss_fn, add_loss_fn, device, l, l2, scaler
-        )
+        train_loss = train_fn(net, train_loader, optimizer, loss_fn, device, scaler)
 
         # Validate the network
         # Execute the validation function
-        val_loss, gt, pred = val_fn(
-            net, val_loader, loss_fn, add_loss_fn, device, l, l2, scaler
-        )
+        val_loss, gt, pred = val_fn(net, val_loader, loss_fn, device)
         # Unpack the ground truth
         _, gt_depth = gt
         # Unpack the predictions

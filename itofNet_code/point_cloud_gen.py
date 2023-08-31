@@ -7,7 +7,7 @@ import open3d as o3d
 from tqdm import trange
 from matplotlib import pyplot as plt
 from pathlib import Path
-from modules.utils import point_cloud_gen
+from modules.utils.point_clouds import point_cloud_gen
 
 
 def arg_parser(argv):
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         sys.argv
     )  # Recover the input and output folder from the console args
 
-    # Load the numpy data
+    # Load the pickle data
     data_path = Path(arg_in) / "results.pkl"
     with open(data_path, "rb") as f:
         data = pickle.load(f)

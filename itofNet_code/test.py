@@ -22,7 +22,7 @@ def arg_parser(argv):
     # Argument containing the name of the network to load
     arg_net_name = ""
     # Argument defining the encoder channels
-    arg_encoder_channels = (16, 32, 64, 128, 256)
+    arg_encoder_channels = (32, 64, 128, 256, 512)
     # Argument defining the number of the u-net output channels
     arg_n_out_channels = 16
     # Argument defining the number of additional CNN layers
