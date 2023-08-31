@@ -5,7 +5,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from pathlib import Path
-from modules.utils import (
+from ..utils import (
     mean_intersection_over_union as miou,
     save_test_plots_itof,
     depth_radial2cartesian,

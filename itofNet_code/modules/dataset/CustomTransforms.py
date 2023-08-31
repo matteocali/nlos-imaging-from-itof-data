@@ -1,4 +1,3 @@
-from typing import Any
 import torch
 import torchvision.transforms as T
 from modules.utils import normalize

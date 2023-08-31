@@ -2,12 +2,11 @@ import torch
 import numpy as np
 import h5py as h5
 import torchvision.transforms as T
-import utils.CustomTransforms as CT
-from tqdm import tqdm
 from tqdm import tqdm
 from torch.utils.data import Dataset
 from pathlib import Path
-from modules.utils import phi_func, hfov2focal, depth_cartesian2radial, depth2itof
+from . import CustomTransforms as CT
+from ..utils import phi_func, hfov2focal, depth_cartesian2radial, depth2itof
 
 
 class NlosTransientDatasetItofGt(Dataset):

@@ -2,10 +2,8 @@ import torch
 import torchvision
 from torch import nn
 from math import sqrt
-from modules.utils import itof2depth
-from utils.StraightThroughEstimators import (
-    StraightThroughEstimator,
-)
+from ..utils import itof2depth
+from .StraightThroughEstimators import StraightThroughEstimator
 
 
 class Block(nn.Module):
@@ -165,6 +163,11 @@ class FinalConv(nn.Module):
 
 
 class NlosNetItof(nn.Module):
+    """
+    NLOS Net\n
+    Proposet Neural Network for NLOS imaging implemented in PyTorch
+    """
+
     def __init__(
         self,
         enc_channels: tuple = (6, 64, 128, 256, 512, 1024),

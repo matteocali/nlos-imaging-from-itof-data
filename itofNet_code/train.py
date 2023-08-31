@@ -5,12 +5,10 @@ import torch
 import numpy as np
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from utils.CustomLosses import BalancedMAELoss
-from utils.NlosNetItof import NlosNetItof
-from utils.train_functions import train
-from modules.utils.helpers import *
 from pathlib import Path
 from torchinfo import summary
+from modules.net import BalancedMAELoss, NlosNetItof, train
+from modules.utils.helpers import *
 
 
 def arg_parser(argv):
@@ -18,7 +16,7 @@ def arg_parser(argv):
     Function used to parse the input argument given through the command line
         param:
             - argv: system arguments
-        return: 
+        return:
             - list containing the input and output path
     """
 
@@ -33,7 +31,7 @@ def arg_parser(argv):
     # Argument defining the lambda value for the iou loss
     arg_lambda2 = 0.2
     # Argument defining the scaling factor for the obj weight
-    arg_scaling_factor = 1/5
+    arg_scaling_factor = 1 / 5
     # Argument defining the additional loss to be used
     arg_additional_loss = "grad-mae"
     # Argument defining the encoder channels
@@ -54,12 +52,33 @@ def arg_parser(argv):
     arg_slurm = False
     # Help string
     arg_help = "{0} -d <dataset>, -n <name>, -r <lr>, -l <lambda>, -k <lambda-iouh>, -f <scaling-factor>, -A <additional-loss> (ssim, grad-mse, grad-mae), -i <encoder-channels>, -c <n-out-channels>, -p <additional-layers>, -e <n-epochs>, -P <pre-train>, -a <data-augment-size>, -N <noisy-dts>, -s <slurm>".format(
-        argv[0])
+        argv[0]
+    )
 
     try:
         # Recover the passed options and arguments from the command line (if any)
         opts, args = getopt.getopt(
-            argv[1:], "hd:n:r:l:k:f:A:i:c:p:e:P:a:N:s:", ["help", "dataset=", "name=", "lr=", "lambda=", "lambda-iou=", "scaling-factor=", "additional-loss=", "encoder-channels=", "n-out-channels=", "additional-layers=", "n-epochs=", "pre-train=", "data-augment-size=", "noisy-dts=", "slurm="])
+            argv[1:],
+            "hd:n:r:l:k:f:A:i:c:p:e:P:a:N:s:",
+            [
+                "help",
+                "dataset=",
+                "name=",
+                "lr=",
+                "lambda=",
+                "lambda-iou=",
+                "scaling-factor=",
+                "additional-loss=",
+                "encoder-channels=",
+                "n-out-channels=",
+                "additional-layers=",
+                "n-epochs=",
+                "pre-train=",
+                "data-augment-size=",
+                "noisy-dts=",
+                "slurm=",
+            ],
+        )
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -69,48 +88,48 @@ def arg_parser(argv):
             print(arg_help)  # Print the help message
             sys.exit(2)
         elif opt in ("-d", "--dataset"):
-            dts_name = arg                    # Set the name of the dataset
+            dts_name = arg  # Set the name of the dataset
         elif opt in ("-n", "--name"):
-            arg_model_name = arg              # Set the name of the model
+            arg_model_name = arg  # Set the name of the model
         elif opt in ("-r", "--lr"):
-            arg_lr = float(arg)               # Set the learning rate
+            arg_lr = float(arg)  # Set the learning rate
         elif opt in ("-l", "--lambda"):
-            arg_lambda = float(arg)           # Set the lambda value
+            arg_lambda = float(arg)  # Set the lambda value
         elif opt in ("-k", "--lambda-iou"):
-            arg_lambda2 = float(arg)          # Set the lambda value for the iou loss
+            arg_lambda2 = float(arg)  # Set the lambda value for the iou loss
         elif opt in ("-f", "--scaling-factor"):
-            arg_scaling_factor = float(arg)   # Set the scaling factor
+            arg_scaling_factor = float(arg)  # Set the scaling factor
         elif opt in ("-A", "--additional-loss"):
-            arg_additional_loss = arg         # Set the additional loss
+            arg_additional_loss = arg  # Set the additional loss
         elif opt in ("-i", "--encoder-channels"):
             arg_encoder_channels = tuple(
                 int(x) for x in arg.split(", ")
-            )                                 # Set the encoder channels
+            )  # Set the encoder channels
             if len(arg_encoder_channels) == 0:
                 arg_encoder_channels = tuple(
                     int(x) for x in arg.split(",")
-                )                            # Set the encoder channels
+                )  # Set the encoder channels
             if len(arg_encoder_channels) != 5:
                 print("The encoder channels must be a tuple of 6 integers")
                 sys.exit(2)
         elif opt in ("-c", "--n-out-channels"):
-            arg_n_out_channels = int(arg)     # Set the number of the u-net output channels
+            arg_n_out_channels = int(arg)  # Set the number of the u-net output channels
         elif opt in ("-p", "--additional-layers"):
             arg_additional_layers = int(arg)  # Set the number of additional CNN layers
         elif opt in ("-e", "--n-epochs"):
-            arg_n_epochs = int(arg)           # Set the number of epochs
+            arg_n_epochs = int(arg)  # Set the number of epochs
         elif opt in ("-P", "--pre-train"):
-            arg_pre_train_path = str(arg)    # Set the pre-training path
+            arg_pre_train_path = str(arg)  # Set the pre-training path
         elif opt in ("-a", "--data-augment-size"):
-            arg_augment_size = int(arg)       # Set the data augmentation batch size
+            arg_augment_size = int(arg)  # Set the data augmentation batch size
         elif opt in ("-N", "--noisy-dts"):
             if arg.lower() == "true":
-                arg_noisy = True               # Set the noisy dts flag
+                arg_noisy = True  # Set the noisy dts flag
             else:
                 arg_noisy = False
         elif opt in ("-s", "--slurm"):
-            if arg.lower() == "true":         # Check if the code is run on singularity
-                arg_slurm = True              # Set the singularity flag
+            if arg.lower() == "true":  # Check if the code is run on singularity
+                arg_slurm = True  # Set the singularity flag
             else:
                 arg_slurm = False
 
@@ -131,29 +150,45 @@ def arg_parser(argv):
     print("Slurm: ", arg_slurm)
     print()
 
-    return [dts_name, arg_model_name, arg_lr, arg_lambda, arg_lambda2, arg_scaling_factor, arg_additional_loss, arg_encoder_channels, arg_n_out_channels, arg_additional_layers, arg_n_epochs, arg_pre_train_path, arg_augment_size, arg_noisy, arg_slurm]
+    return [
+        dts_name,
+        arg_model_name,
+        arg_lr,
+        arg_lambda,
+        arg_lambda2,
+        arg_scaling_factor,
+        arg_additional_loss,
+        arg_encoder_channels,
+        arg_n_out_channels,
+        arg_additional_layers,
+        arg_n_epochs,
+        arg_pre_train_path,
+        arg_augment_size,
+        arg_noisy,
+        arg_slurm,
+    ]
 
 
-if __name__ == '__main__':
-    torch.manual_seed(2097710)   # Set the random seed
-    np.random.seed(2097710)      # Set the random seed
-    start_time = time.time()     # Start the timer
+if __name__ == "__main__":
+    torch.manual_seed(2097710)  # Set the random seed
+    np.random.seed(2097710)  # Set the random seed
+    start_time = time.time()  # Start the timer
     args = arg_parser(sys.argv)  # Parse the input arguments
-    dts_name = args[0]           # Set the path to the csv folder
-    batch_size = 32              # Set the batch size
-    lr = args[2]                 # Set the learning rate
-    l_val = args[3]              # Set the lambda value
-    l2_val = args[4]             # Set the lambda value for the depth loss
-    scale = args[5]              # Set the scaling factor
-    additional_loss = args[6]    # Set the additional loss
-    encoder_channels = args[7]   # Set the encoder channels
-    n_out_channels = args[8]     # Set the number of the u-net output channels
+    dts_name = args[0]  # Set the path to the csv folder
+    batch_size = 32  # Set the batch size
+    lr = args[2]  # Set the learning rate
+    l_val = args[3]  # Set the lambda value
+    l2_val = args[4]  # Set the lambda value for the depth loss
+    scale = args[5]  # Set the scaling factor
+    additional_loss = args[6]  # Set the additional loss
+    encoder_channels = args[7]  # Set the encoder channels
+    n_out_channels = args[8]  # Set the number of the u-net output channels
     additional_layers = args[9]  # Set the number of additional CNN layers
-    n_epochs = args[10]          # Set the number of epochs
-    pre_train_path = args[11]    # Set the path to the pre-trained model
-    augment = args[12]           # Set the data augmentation flag
-    noisy = args[13]             # Set the noisy dts flag
-    slurm = args[14]             # Set the slurm flag
+    n_epochs = args[10]  # Set the number of epochs
+    pre_train_path = args[11]  # Set the path to the pre-trained model
+    augment = args[12]  # Set the data augmentation flag
+    noisy = args[13]  # Set the noisy dts flag
+    slurm = args[14]  # Set the slurm flag
 
     # Chekc if the gpu is available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -161,18 +196,21 @@ if __name__ == '__main__':
 
     # Load the processed datset
     if not slurm:
-        processed_dts_path = Path(__file__).parent.absolute(
-        ) / "datasets" / dts_name / "processed_data"  # Set the path to the processed datasets
+        processed_dts_path = (
+            Path(__file__).parent.absolute() / "datasets" / dts_name / "processed_data"
+        )  # Set the path to the processed datasets
     else:
         # Set the path to the processed datasets
-        processed_dts_path = Path(__file__).parent.parent.parent.absolute(
-        ) / f"datasets/{dts_name}/processed_data"
+        processed_dts_path = (
+            Path(__file__).parent.parent.parent.absolute()
+            / f"datasets/{dts_name}/processed_data"
+        )
     # Load the augmented dataset
     if augment > 0 and not noisy:
-        augment_dts_path = processed_dts_path.parent.absolute(
-        ) / "augmented_data"  # Set the path to the augmented dataset
-        train_dts = torch.load(
-            augment_dts_path / f"augmented_train_dts_{augment}.pt")
+        augment_dts_path = (
+            processed_dts_path.parent.absolute() / "augmented_data"
+        )  # Set the path to the augmented dataset
+        train_dts = torch.load(augment_dts_path / f"augmented_train_dts_{augment}.pt")
     elif noisy:
         noisy_dts_path = processed_dts_path.parent.absolute() / "noisy_data"
         train_dts = torch.load(noisy_dts_path / "noisy_train_dts.pt")
@@ -184,11 +222,11 @@ if __name__ == '__main__':
         val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")
 
     # Create the dataloaders
-    train_loader = DataLoader(train_dts, batch_size=batch_size,
-                              shuffle=True, num_workers=4)  # Create the train dataloader
+    train_loader = DataLoader(
+        train_dts, batch_size=batch_size, shuffle=True, num_workers=4
+    )  # Create the train dataloader
     # Create the validation dataloader
-    val_loader = DataLoader(val_dts, batch_size=batch_size,
-                            shuffle=True, num_workers=4)
+    val_loader = DataLoader(val_dts, batch_size=batch_size, shuffle=True, num_workers=4)
 
     # Compute the ratio between the number of background and object pixels
     bg_obj_ratio = train_dts.get_bg_obj_ratio()
@@ -200,9 +238,11 @@ if __name__ == '__main__':
     net_state_path.mkdir(parents=True, exist_ok=True)
 
     # Get input dimensions
-    dims = [train_dts[0]["itof_data"].shape[0],
-            train_dts[0]["itof_data"].shape[1],
-            train_dts[0]["itof_data"].shape[2]]
+    dims = [
+        train_dts[0]["itof_data"].shape[0],
+        train_dts[0]["itof_data"].shape[1],
+        train_dts[0]["itof_data"].shape[2],
+    ]
 
     # Set the decoder channels as the reversed encoder channels
     decoder_channels = encoder_channels[::-1]
@@ -211,20 +251,29 @@ if __name__ == '__main__':
     encoder_channels = (dims[0], *encoder_channels)
 
     # Create the model
-    model = NlosNetItof(enc_channels=encoder_channels,
-                        dec_channels=decoder_channels,
-                        num_class=n_out_channels,
-                        additional_cnn_layers=additional_layers).to(device)  # Create the model and move it to the device
+    model = NlosNetItof(
+        enc_channels=encoder_channels,
+        dec_channels=decoder_channels,
+        num_class=n_out_channels,
+        additional_cnn_layers=additional_layers,
+    ).to(
+        device
+    )  # Create the model and move it to the device
 
     # Load the pre-trained model if required
     if pre_train_path is not None:
-        pre_train_path = Path(__file__).parent.absolute() / f"net_state/{pre_train_path}.pt"
+        pre_train_path = (
+            Path(__file__).parent.absolute() / f"net_state/{pre_train_path}.pt"
+        )
         model.load_state_dict(torch.load(pre_train_path, map_location=torch.device(device)))  # type: ignore
 
     # Print the model summary
-    net_summary = summary(model,
-                          input_size=(batch_size, dims[0], dims[1], dims[2]),
-                          device=str(device), mode="train")
+    net_summary = summary(
+        model,
+        input_size=(batch_size, dims[0], dims[1], dims[2]),
+        device=str(device),
+        mode="train",
+    )
     print()
 
     # Print the info on the dataset
@@ -242,8 +291,7 @@ if __name__ == '__main__':
         f.write("Encoder channels: " + str(encoder_channels) + "\n")
         f.write("Decoder channels: " + str(decoder_channels) + "\n")
         f.write("Number of output channels: " + str(n_out_channels) + "\n")
-        f.write("Number of additional CNN layers: " +
-                str(additional_layers) + "\n")
+        f.write("Number of additional CNN layers: " + str(additional_layers) + "\n")
         f.write("Number of epochs: " + str(n_epochs) + "\n")
         f.write("Pre-train model: " + str(pre_train_path) + "\n")
         f.write("Data augmentation: " + str(augment) + "\n")
@@ -253,37 +301,48 @@ if __name__ == '__main__':
         f.write("--- DATASET SUMMARY ---\n")
         f.write("Train dataset size: " + str(len(train_dts)) + "\n")
         f.write("Validation dataset size: " + str(len(val_dts)) + "\n")
-        f.write("Ratio between bg and obj pixels: " +
-                str(round(bg_obj_ratio, 2)) + "\n\n\n")
+        f.write(
+            "Ratio between bg and obj pixels: " + str(round(bg_obj_ratio, 2)) + "\n\n\n"
+        )
         f.write("--- TRAINING SUMMARY ---\n")
 
     # Create the optimizer
     optimizer = Adam(model.parameters(), lr=lr)
 
     # Create the loss function
-    loss_fn = BalancedMAELoss(reduction="mean", pos_weight=torch.Tensor([scale * bg_obj_ratio]).to(device)).to(device)
+    loss_fn = BalancedMAELoss(
+        reduction="mean", pos_weight=torch.Tensor([scale * bg_obj_ratio]).to(device)
+    ).to(device)
     # loss_fn = BalancedMAELoss(reduction="mean")
 
     # Train the model
     s_train_time = time.time()  # Start the timer for the training
-    train(attempt_name=args[1],
-          net=model,
-          train_loader=train_loader,
-          val_loader=val_loader,
-          optimizer=optimizer,
-          loss_fn=loss_fn,
-          l=l_val,
-          l2=l2_val,
-          add_loss=additional_loss,
-          device=device,
-          n_epochs=n_epochs,
-          save_path=(net_state_path / f"{args[1]}_model_lr_{lr}_ochannel_{n_out_channels}_l_{l_val}_addlayers_{additional_layers}_aug_{str(augment)}.pt"))
+    train(
+        attempt_name=args[1],
+        net=model,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        optimizer=optimizer,
+        loss_fn=loss_fn,
+        l=l_val,
+        l2=l2_val,
+        add_loss=additional_loss,
+        device=device,
+        n_epochs=n_epochs,
+        save_path=(
+            net_state_path
+            / f"{args[1]}_model_lr_{lr}_ochannel_{n_out_channels}_l_{l_val}_addlayers_{additional_layers}_aug_{str(augment)}.pt"
+        ),
+    )
     f_train_time = time.time()  # Stop the timer for the training
     print(
-        f"The total computation time for training the model was {format_time(s_train_time, f_train_time)}\n")
+        f"The total computation time for training the model was {format_time(s_train_time, f_train_time)}\n"
+    )
 
     # Send an email to notify the end of the training
     if not slurm:
-        send_email(receiver_email="matteocaly@gmail.com",
-                   subject="Training completed",
-                   body=f"The \"{args[1]}\" training is over (required time: {format_time(start_time, f_train_time)})")
+        send_email(
+            receiver_email="matteocaly@gmail.com",
+            subject="Training completed",
+            body=f'The "{args[1]}" training is over (required time: {format_time(start_time, f_train_time)})',
+        )

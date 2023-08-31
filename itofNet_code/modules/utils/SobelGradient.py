@@ -7,12 +7,12 @@ def sobel(window_size: int) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Function to create the sobel filter of custom size (3, 5, 7)
     Example of matrix for window_size=3:
-		matx=[[-3, 0,+3],
-			  [-10, 0 ,+10],
-			  [-3, 0,+3]]
-		maty=[[-3, -10,-3],
-			  [0, 0 ,0],
-			  [3, 10,3]]
+                matx=[[-3, 0,+3],
+                          [-10, 0 ,+10],
+                          [-3, 0,+3]]
+                maty=[[-3, -10,-3],
+                          [0, 0 ,0],
+                          [3, 10,3]]
     For the window_size=5 and window_size=7 it will be generated a weighted sobel mask,
                 where the weight is 1/r where r is the distance from the center of the mask.
 

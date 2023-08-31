@@ -1,20 +1,19 @@
-from utils.SobelGradient import SobelGrad
-from utils.EarlyStopping import EarlyStopping
+import os
+import time
+import socket
+import numpy as np
+import torch
 from torchmetrics.functional.classification.jaccard import binary_jaccard_index
-from modules.utils import format_time, generate_fig, itof2depth
 from torchmetrics import StructuralSimilarityIndexMeasure as SSIM
 from torch.utils.tensorboard.writer import SummaryWriter
 from pathlib import Path
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from datetime import datetime
-import socket
-import time
-import numpy as np
 from torch.cuda import amp
 from torch.backends.cudnn import benchmark
-import torch
-import os
+from ..utils import SobelGrad, format_time, generate_fig, itof2depth
+from .EarlyStopping import EarlyStopping
 
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 benchmark = True
@@ -155,7 +154,6 @@ def train_fn(net: torch.nn.Module, data_loader: DataLoader, optimizer: Optimizer
     return float(np.mean(epoch_loss))
 
 
-# type: ignore
 def val_fn(
     net: torch.nn.Module,
     data_loader: DataLoader,

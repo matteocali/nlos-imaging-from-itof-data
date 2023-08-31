@@ -5,11 +5,17 @@ import glob
 import torch
 import numpy as np
 from pathlib import Path
-from utils.dts_splitter import dts_splitter
-from utils.NlosTransientDatasetItofGt import NlosTransientDatasetItofGt, NlosTransientDatasetItofReal
-from utils.CustomTransforms import ItofNormalize, ItofNormalizeWithAddLayer, ChangeBgValue, RescaleRealData
-from modules.utils.helpers import *
 from torchvision.transforms import Compose
+from modules.dataset import (
+    NlosTransientDatasetItofGt,
+    NlosTransientDatasetItofReal,
+    ItofNormalize,
+    ItofNormalizeWithAddLayer,
+    ChangeBgValue,
+    RescaleRealData,
+    dts_splitter,
+)
+from modules.utils.helpers import *
 
 
 def arg_parser(argv):
@@ -17,29 +23,47 @@ def arg_parser(argv):
     Function used to parse the input argument given through the command line
         param:
             - argv: system arguments
-        return: 
+        return:
             - list containing the input and output path
     """
 
-    arg_name = "dts"        # Argument containing the name of the dataset
-    arg_data_path = ""      # Argument containing the path where the raw data are located
-    arg_shuffle = True      # Argument containing the flag for shuffling the dataset
-    arg_bg_value = 0        # Argument containing the background value
-    arg_add_layer = False   # Argument defining if the iToF data will contains an additional 20MHz layer
-    arg_multi_freq = False  # Argument defining if the dts will use more than 3 frequencies
-    arg_augment_size = 0    # Argument defining if the dataset will be augmented
-    arg_noise = False       # Argument defining if will be added noise to the dataset
-    arg_real_dts = False    # Argument defining if the dataset is a real dataset
-    arg_slurm = False       # Argument defining if the code will be run on slurm
+    arg_name = "dts"  # Argument containing the name of the dataset
+    arg_data_path = ""  # Argument containing the path where the raw data are located
+    arg_shuffle = True  # Argument containing the flag for shuffling the dataset
+    arg_bg_value = 0  # Argument containing the background value
+    arg_add_layer = False  # Argument defining if the iToF data will contains an additional 20MHz layer
+    arg_multi_freq = (
+        False  # Argument defining if the dts will use more than 3 frequencies
+    )
+    arg_augment_size = 0  # Argument defining if the dataset will be augmented
+    arg_noise = False  # Argument defining if will be added noise to the dataset
+    arg_real_dts = False  # Argument defining if the dataset is a real dataset
+    arg_slurm = False  # Argument defining if the code will be run on slurm
 
     # Help string
     arg_help = "{0} -n <name> -i <input> -b <bg-value> -s <shuffle> -l <add-layer> -f <multi-freqs> -a <data-augment-size> -N <add-noise> -r <real-dts> -S <slurm>".format(
-        argv[0])
+        argv[0]
+    )
 
     try:
         # Recover the passed options and arguments from the command line (if any)
-        opts, args = getopt.getopt(argv[1:], "hn:i:b:s:l:f:a:N:r:S:", [
-                                   "help", "name=", "input=", "bg-value=", "shuffle=", "add-layer=", "multi_freqs=", "data-augment-size=", "add-noise=", "real-dts=", "slurm="])
+        opts, args = getopt.getopt(
+            argv[1:],
+            "hn:i:b:s:l:f:a:N:r:S:",
+            [
+                "help",
+                "name=",
+                "input=",
+                "bg-value=",
+                "shuffle=",
+                "add-layer=",
+                "multi_freqs=",
+                "data-augment-size=",
+                "add-noise=",
+                "real-dts=",
+                "slurm=",
+            ],
+        )
     except getopt.GetoptError:
         print(arg_help)  # If the user provide a wrong options print the help string
         sys.exit(2)
@@ -61,7 +85,7 @@ def arg_parser(argv):
                 arg_shuffle = False
         elif opt in ("-l", "--add-layer"):
             if arg.lower() == "true":  # Set the add_layer flag
-                arg_add_layer = True   
+                arg_add_layer = True
             else:
                 arg_add_layer = False
         elif opt in ("-f", "--multi-freqs"):
@@ -99,24 +123,36 @@ def arg_parser(argv):
     print("Slurm: ", arg_slurm)
     print()
 
-    return [arg_name, arg_data_path, arg_bg_value, arg_shuffle, arg_add_layer, arg_multi_freq, arg_augment_size, arg_noise, arg_real_dts, arg_slurm]
+    return [
+        arg_name,
+        arg_data_path,
+        arg_bg_value,
+        arg_shuffle,
+        arg_add_layer,
+        arg_multi_freq,
+        arg_augment_size,
+        arg_noise,
+        arg_real_dts,
+        arg_slurm,
+    ]
 
 
-if __name__ == '__main__':
-    s_total_time = time.time()   # Start the timer for the total execution time
+if __name__ == "__main__":
+    s_total_time = time.time()  # Start the timer for the total execution time
     torch.manual_seed(20797710)  # Set torch random seed
     args = arg_parser(sys.argv)  # Parse the input arguments
-    bg_value = args[2]           # Get the background value
-    add_layer = args[4]          # Get the add_layer flag
-    multi_freqs = args[5]        # Get the multi_freqs flag
-    data_augment = args[6]       # Get the data augmentation flag
-    data_noise = args[7]         # Get the data noise flag
-    real_dts = args[8]           # Get the real dataset flag
-    slurm = args[9]              # Get the slurm flag
+    bg_value = args[2]  # Get the background value
+    add_layer = args[4]  # Get the add_layer flag
+    multi_freqs = args[5]  # Get the multi_freqs flag
+    data_augment = args[6]  # Get the data augmentation flag
+    data_noise = args[7]  # Get the data noise flag
+    real_dts = args[8]  # Get the real dataset flag
+    slurm = args[9]  # Get the slurm flag
 
     if real_dts:
-        out_path = Path(__file__).parent.absolute() / \
-            "datasets" / args[0] / "processed_data"
+        out_path = (
+            Path(__file__).parent.absolute() / "datasets" / args[0] / "processed_data"
+        )
         if out_path.exists() and len(list(out_path.glob("*.pt"))) > 0:
             print("The dataset has already been processed - skipping...\n")
             sys.exit(0)
@@ -136,36 +172,43 @@ if __name__ == '__main__':
                 transforms_elm.append(ItofNormalizeWithAddLayer(n_freq=n_freqs))
             if bg_value != 0:
                 transforms_elm.append(ChangeBgValue(0, bg_value))
-            #transforms_elm.append(MeanClipping())
+            # transforms_elm.append(MeanClipping())
             transforms_elm.append(RescaleRealData())
             transforms = Compose(transforms_elm)
             # Create the dataset
-            dts = NlosTransientDatasetItofReal(Path(args[1]), frequencies=freqs, transform=transforms)
+            dts = NlosTransientDatasetItofReal(
+                Path(args[1]), frequencies=freqs, transform=transforms
+            )
             # Save the dataset
             torch.save(dts, out_path / "processed_test_dts.pt")
             # End the timer for the dataset creation
             f_dts_time = time.time()
-            print(f"The total computation time for generating the dataset was {format_time(s_dts_time, f_dts_time)}\n")
+            print(
+                f"The total computation time for generating the dataset was {format_time(s_dts_time, f_dts_time)}\n"
+            )
             sys.exit(0)
 
     # Check if the dataset has alreay been splitted
     if not slurm:
-        out_path = Path(__file__).parent.absolute() / \
-            "datasets" / args[0] / "csv_split"
+        out_path = Path(__file__).parent.absolute() / "datasets" / args[0] / "csv_split"
     else:
-        out_path = Path(__file__).parent.parent.parent.absolute() / \
-            "datasets" / args[0] / "csv_split"
+        out_path = (
+            Path(__file__).parent.parent.parent.absolute()
+            / "datasets"
+            / args[0]
+            / "csv_split"
+        )
     if out_path.exists() and len(list(out_path.glob("*.csv"))) > 0:
         print("The dataset has already been splitted - skipping...\n")
     else:
         print("Splitting the dataset...")
         # Create the output folder if it does not exist
         out_path.mkdir(parents=True, exist_ok=True)
-        # Split the dataset
+        # Split the dataset
         dts_splitter(out_path, data_path=args[1], shuffle=args[3])
         print("Dataset splitted!\n")
 
-    # Build the PyTorch dataset
+    # Build the PyTorch dataset
     # Load the different csv files
     # Load the csv files
     csv_files = glob.glob1(str(out_path), "*.csv")
@@ -183,7 +226,7 @@ if __name__ == '__main__':
         freqs = np.array((20e06, 50e06, 60e06), dtype=np.float32)
         n_freqs = freqs.shape[0]
     else:
-        freqs = np.array([i*1e06 for i in range (10, 201, 10)], dtype=np.float32)
+        freqs = np.array([i * 1e06 for i in range(10, 201, 10)], dtype=np.float32)
         n_freqs = freqs.shape[0]
 
     # Create the processed datset if not already created
@@ -232,7 +275,8 @@ if __name__ == '__main__':
         # Create and save the datasets
         print("Creating the training dataset...")
         train_dts = NlosTransientDatasetItofGt(
-            Path(args[1]), train_csv, frequencies=freqs, transform=transforms)  # Create the train dataset
+            Path(args[1]), train_csv, frequencies=freqs, transform=transforms
+        )  # Create the train dataset
         # Save the train dataset
         if skip_val or skip_test:
             torch.save(train_dts, processed_dts_path / "processed_test_dts.pt")
@@ -242,26 +286,31 @@ if __name__ == '__main__':
         if not skip_val:
             print("Creating the validation dataset...")
             val_dts = NlosTransientDatasetItofGt(
-                Path(args[1]), val_csv, frequencies=freqs, transform=transforms)
+                Path(args[1]), val_csv, frequencies=freqs, transform=transforms
+            )
             # Save the validation dataset
             torch.save(val_dts, processed_dts_path / "processed_validation_dts.pt")
         if not skip_test:
             # Create the test dataset
             print("Creating the test dataset...")
             test_dts = NlosTransientDatasetItofGt(
-                Path(args[1]), test_csv, frequencies=freqs, transform=transforms)    # Create the test dataset
+                Path(args[1]), test_csv, frequencies=freqs, transform=transforms
+            )  # Create the test dataset
             # Save the test dataset
             torch.save(test_dts, processed_dts_path / "processed_test_dts.pt")
 
         f_dts_time = time.time()  # Stop the timer for the dataset creation
         print(
-            f"The total computation time for generating the dataset was {format_time(s_dts_time, f_dts_time)}\n")
+            f"The total computation time for generating the dataset was {format_time(s_dts_time, f_dts_time)}\n"
+        )
 
     # Create the augmented dataset if required
     if data_augment > 0:
         # Defien the path to the augmented dataset
         augmented_data_path = processed_dts_path.parent.absolute() / "augmented_data"
-        augment_data_name = augmented_data_path / f"augmented_train_dts_{data_augment}.pt"
+        augment_data_name = (
+            augmented_data_path / f"augmented_train_dts_{data_augment}.pt"
+        )
         # Check if the folder already exists and is not empty
         if augment_data_name.exists():
             print("The augmented dataset already exists - skipping...\n")
@@ -270,18 +319,20 @@ if __name__ == '__main__':
             # Start the timer for the dataset augmentation
             s_aug_time = time.time()
             print("Augmenting the training dataset...")
-            
+
             # Load the training dataset if needed
             if "train_dts" not in locals():
                 train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")
-            
+
             # Augment the training dataset
             train_dts.augment_dts(batch_size=data_augment)  # type: ignore
             # Save the augmented training dataset
             torch.save(train_dts, augment_data_name)  # type: ignore
             # End the timer for the dataset augmentation
             f_aug_time = time.time()
-            print(f"The total computation time for generating the augmented dataset was {format_time(s_aug_time, f_aug_time)}\n")
+            print(
+                f"The total computation time for generating the augmented dataset was {format_time(s_aug_time, f_aug_time)}\n"
+            )
 
     # Create the noisy dataset if required
     if data_noise:
@@ -303,7 +354,7 @@ if __name__ == '__main__':
                 train_dts = torch.load(processed_dts_path / "processed_train_dts.pt")
             if "val_dts" not in locals():
                 val_dts = torch.load(processed_dts_path / "processed_validation_dts.pt")
-            
+
             # Augment the training dataset avoiding the batch with gaussian noise
             train_dts.augment_dts(batch_size=data_augment, gaussian=False)  # type: ignore
             # Add the noise to the whole dataset
@@ -318,12 +369,17 @@ if __name__ == '__main__':
 
             # End the timer for the dataset augmentation
             f_noise_time = time.time()
-            print(f"The total computation time for generating the noisy dataset was {format_time(s_noise_time, f_noise_time)}\n")
+            print(
+                f"The total computation time for generating the noisy dataset was {format_time(s_noise_time, f_noise_time)}\n"
+            )
 
     # Ending total timer
     f_total_time = time.time()
 
     # Send an email to notify the end of the training
     if not slurm:
-        send_email(receiver_email="matteocaly@gmail.com", subject="Dataset creation completed",
-                   body=f"The \"{args[0]}\" dataset is fully processed (required time: {format_time(s_total_time, f_total_time)})")
+        send_email(
+            receiver_email="matteocaly@gmail.com",
+            subject="Dataset creation completed",
+            body=f'The "{args[0]}" dataset is fully processed (required time: {format_time(s_total_time, f_total_time)})',
+        )
