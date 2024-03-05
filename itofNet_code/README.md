@@ -9,7 +9,7 @@ All the scripts in here require the conda environment `pytorch_nn.yml` provided 
 The folder structure is the following:
 
 * [datasets](./datasets): folder where to store all the processed datasets;
-* [extras](./extras/): contains the results of different network evaluations;
+* [extras](./extras/): contains the model architecture image;
 * [modules](./modules): folder where all the additional Python modules are stored;
 * [net_state](./net_state): folder where to store the weights of the trained networks;
 * [tensorboard_logs](./tensorboard_logs/): folder where to store the logs for TensorBoard;
