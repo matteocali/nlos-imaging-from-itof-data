@@ -10,8 +10,8 @@ The repository is organized in three sub folder:
 
 To download the dataset please use the following links:
 
-* synthetic dataset available [here](https://lttm.dei.unipd.it/paper_data/NLoS_iToF_data/synthetic_data/fixed_camera_full.zip),
-* splits used in the paper are available [here](https://lttm.dei.unipd.it/paper_data/NLoS_iToF_data/synthetic_data/fixed_camera_full_splits.zip).
+* synthetic dataset available [here](https://medialab.dei.unipd.it/paper_data/NLoS_iToF_data/synthetic_data/fixed_camera_full.zip),
+* splits used in the paper are available [here](https://medialab.dei.unipd.it/paper_data/NLoS_iToF_data/synthetic_data/fixed_camera_full_splits.zip).
 
 ## How to run the code
 
