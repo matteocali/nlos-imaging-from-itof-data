@@ -6,7 +6,7 @@ import pickle
 
 
 obj_names = ["Cube", "Cone", "Cylinder", "Parallelepiped", "Sphere", "Concave plane", "Random"]
-file = Path("Z:\\decaligm\\mitsuba_renders\\nlos_scenes\\datasets\\dataset_random_close\\dataset_setup\\tr_rot_list")
+file = Path("PATH_TO_tr_rot_list")
 with open(file, "rb") as fp:
         data = pickle.load(fp)
 

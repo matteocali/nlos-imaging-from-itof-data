@@ -9,10 +9,10 @@
 #SBATCH --error=logs/depth_gt.err
 #SBATCH --mem=20G
 #SBATCH --mail-type=FAIL,END
-#SBATCH --mail-user=matteo.caligiuri@sony.com
+#SBATCH --mail-user=YOUR_EMAIL_ADDRESS
 #SBATCH --requeue
 
-source /cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/setpath.sh
+source <path_to_folder>/mitsuba2-transient-nlos/setpath.sh
 
 echo "##### BATCH 01 #####"
 cd xml_files/batch01
@@ -25,7 +25,7 @@ do
 	out_folder="../../renders/batch01/$file_name"
 	mkdir -p $out_folder
 	
-	LD_LIBRARY_PATH=/cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/ /cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/mitsuba $i -o "${out_folder}."
+	LD_LIBRARY_PATH="<path_to_folder>/mitsuba2-transient-nlos/build/dist/" "<path_to_folder>/mitsuba2-transient-nlos/build/dist/mitsuba" $i -o "${out_folder}."
 done
 echo "####################"
 echo ""
@@ -41,7 +41,7 @@ do
 	out_folder="../../renders/batch02/$file_name"
 	mkdir -p $out_folder
 	
-	LD_LIBRARY_PATH=/cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/ /cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/mitsuba $i -o "${out_folder}."
+	LD_LIBRARY_PATH="<path_to_folder>/mitsuba2-transient-nlos/build/dist/" "<path_to_folder>/mitsuba2-transient-nlos/build/dist/mitsuba" $i -o "${out_folder}."
 done
 echo "####################"
 echo ""
@@ -57,7 +57,7 @@ do
 	out_folder="../../renders/batch03/$file_name"
 	mkdir -p $out_folder
 	
-	LD_LIBRARY_PATH=/cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/ /cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/mitsuba $i -o "${out_folder}."
+	LD_LIBRARY_PATH="<path_to_folder>/mitsuba2-transient-nlos/build/dist/" "<path_to_folder>/mitsuba2-transient-nlos/build/dist/mitsuba" $i -o "${out_folder}."
 done
 echo "####################"
 echo ""
@@ -73,7 +73,7 @@ do
 	out_folder="../../renders/batch04/$file_name"
 	mkdir -p $out_folder
 	
-	LD_LIBRARY_PATH=/cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/ /cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/mitsuba $i -o "${out_folder}."
+	LD_LIBRARY_PATH="<path_to_folder>/mitsuba2-transient-nlos/build/dist/" "<path_to_folder>/mitsuba2-transient-nlos/build/dist/mitsuba" $i -o "${out_folder}."
 done
 echo "####################"
 echo ""
@@ -89,7 +89,7 @@ do
 	out_folder="../../renders/batch05/$file_name"
 	mkdir -p $out_folder
 	
-	LD_LIBRARY_PATH=/cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/ /cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/mitsuba $i -o "${out_folder}."
+	LD_LIBRARY_PATH="<path_to_folder>/mitsuba2-transient-nlos/build/dist/" "<path_to_folder>/mitsuba2-transient-nlos/build/dist/mitsuba" $i -o "${out_folder}."
 done
 echo "####################"
 echo ""
@@ -105,7 +105,7 @@ do
 	out_folder="../../renders/batch06/$file_name"
 	mkdir -p $out_folder
 	
-	LD_LIBRARY_PATH=/cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/ /cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/mitsuba $i -o "${out_folder}."
+	LD_LIBRARY_PATH="<path_to_folder>/mitsuba2-transient-nlos/build/dist/" "<path_to_folder>/mitsuba2-transient-nlos/build/dist/mitsuba" $i -o "${out_folder}."
 done
 echo "####################"
 echo ""
@@ -121,7 +121,7 @@ do
 	out_folder="../../renders/batch07/$file_name"
 	mkdir -p $out_folder
 	
-	LD_LIBRARY_PATH=/cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/ /cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/mitsuba $i -o "${out_folder}."
+	LD_LIBRARY_PATH="<path_to_folder>/mitsuba2-transient-nlos/build/dist/" "<path_to_folder>/mitsuba2-transient-nlos/build/dist/mitsuba" $i -o "${out_folder}."
 done
 echo "####################"
 echo ""
@@ -137,7 +137,7 @@ do
 	out_folder="../../renders/batch08/$file_name"
 	mkdir -p $out_folder
 	
-	LD_LIBRARY_PATH=/cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/ /cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/mitsuba $i -o "${out_folder}."
+	LD_LIBRARY_PATH="<path_to_folder>/mitsuba2-transient-nlos/build/dist/" "<path_to_folder>/mitsuba2-transient-nlos/build/dist/mitsuba" $i -o "${out_folder}."
 done
 echo "####################"
 echo ""

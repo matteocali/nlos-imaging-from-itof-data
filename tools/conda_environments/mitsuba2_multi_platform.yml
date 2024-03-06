@@ -20,4 +20,3 @@ dependencies:
   - av
   - scipy
   - numpy
-prefix: /home/matteocali/miniconda3/envs/mitsuba2

@@ -9,13 +9,11 @@
 #SBATCH --error=../logs/batch0b_index/dataset_batch0b_index.err
 #SBATCH --mem=20G
 #SBATCH --mail-type=FAIL,END
-#SBATCH --mail-user=matteo.caligiuri@sony.com
+#SBATCH --mail-user=YOUR_EMAIL_ADDRESS
 #SBATCH --requeue
 
 
-source /cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/setpath.sh
-
-cd "../../xml_files/batch0b_index"
+cd "<path_to_folder>/xml_files/batch0b_index"
 for i in *.xml
 do
 	echo $i
@@ -26,5 +24,5 @@ do
 	mkdir -p "$out_folder"
 	echo "$out_folder"
 	
-	LD_LIBRARY_PATH=/cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/ /cig/common04nb/students/decaligm/tools/mitsuba2-transient-nlos/build/dist/mitsuba $i -o "${out_folder}."
+	LD_LIBRARY_PATH="<path_to_folder>/mitsuba2-transient-nlos/build/dist/" "<path_to_folder>/mitsuba2-transient-nlos/build/dist/mitsuba" $i -o "${out_folder}."
 done

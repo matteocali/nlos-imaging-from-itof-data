@@ -379,7 +379,7 @@ if __name__ == "__main__":
     # Send an email to notify the end of the training
     if not slurm:
         send_email(
-            receiver_email="matteocaly@gmail.com",
+            receiver_email="YOUR_EMAIL_ADDRESS",
             subject="Dataset creation completed",
             body=f'The "{args[0]}" dataset is fully processed (required time: {format_time(s_total_time, f_total_time)})',
         )
