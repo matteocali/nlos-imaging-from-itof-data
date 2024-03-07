@@ -16,14 +16,3 @@ To download the dataset please use the following links:
 ## How to run the code
 
 In order to run the proposed code follow the instruction presented in the [additional_scripts](./additional_scripts/README.md) and [itofNet_code](./itofNet_code/README.md) README.
-
-## Credits
-
-This project was created by:
-
-- [Matteo Caligiuri](https://github.com/matteocali)
-- Gianluca Agresti
-- [Pietro Zanuttigh](https://github.com/zanuttigh)
-- Adriano Simonetto
-
-(Department of Information Engineering (DEI) - UniPD)
