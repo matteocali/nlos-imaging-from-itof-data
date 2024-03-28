@@ -1,6 +1,6 @@
-# Non-Line-of-Sight imaging from indirect Time of Flight data
+# NIGHT - Non-Line-of-Sight Imaging from Indirect Time of Flight Data
 
-This repository contains all the code and tools related to the work pressented in the paper [NIGHT - NLoS Imaging from indirect ToF data](https://arxiv.org).
+This repository contains all the code and tools related to the work pressented in the paper [NIGHT - Non-Line-of-Sight Imaging from Indirect Time of Flight Data](https://arxiv.org).
 
 The repository is organized in three sub folder:
 
