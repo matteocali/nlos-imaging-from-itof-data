@@ -1,6 +1,6 @@
 # NIGHT - Non-Line-of-Sight Imaging from Indirect Time of Flight Data
 
-This repository contains all the code and tools related to the work pressented in the paper [NIGHT - Non-Line-of-Sight Imaging from Indirect Time of Flight Data](https://arxiv.org).
+This repository contains all the code and tools related to the work pressented in the paper [NIGHT - Non-Line-of-Sight Imaging from Indirect Time of Flight Data](http://arxiv.org/abs/2403.19376).
 
 The repository is organized in three sub folder:
 
