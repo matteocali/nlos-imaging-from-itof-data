@@ -27,7 +27,7 @@ In order to run the proposed code follow the instruction presented in the [addit
 ```
 @article{caligiuri2024night,
   title={NIGHT--Non-Line-of-Sight Imaging from Indirect Time of Flight Data},
-  author={Caligiuri, Matteo and Simonetto, Adriano and Agresti, Gianluca and Zanuttigh, Pietro},
+  author={Caligiuri, Matteo and Simonetto, Adriano and Zanuttigh, Pietro},
   journal={arXiv preprint arXiv:2403.19376},
   year={2024}
 }
