@@ -16,3 +16,19 @@ To download the dataset please use the following links:
 ## How to run the code
 
 In order to run the proposed code follow the instruction presented in the [additional_scripts](./additional_scripts/README.md) and [itofNet_code](./itofNet_code/README.md) README.
+
+## Authors
+
+* [Matteo Caligiuri](https://medialab.dei.unipd.it/members/matteo-caligiuri/),
+* [Adriano Simonetto](https://scholar.google.com/citations?user=NYVQV0IAAAAJ),
+* [Pietro Zanuttigh](https://medialab.dei.unipd.it/members/pietro-zanuttigh/).
+
+## Cite as
+```
+@article{caligiuri2024night,
+  title={NIGHT--Non-Line-of-Sight Imaging from Indirect Time of Flight Data},
+  author={Caligiuri, Matteo and Simonetto, Adriano and Agresti, Gianluca and Zanuttigh, Pietro},
+  journal={arXiv preprint arXiv:2403.19376},
+  year={2024}
+}
+```
