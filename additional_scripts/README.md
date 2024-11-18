@@ -130,11 +130,18 @@ In order to generate the *mirror trick* ground truth it is required to follow th
       * now load the `mirror.py`, select all the just generated object and run the script, it will generate all the flipped version of the object
       * after all the object has been generated, using the `mitsuba2-blender-add-on` (located in the [blender add-on](../tools/example_files/standard_dataset_sample_files/blender_addon) folder) export all the object in the mitsuba2 format except from the walls
       * move the `mesh` folder just generated to the same folder where the `out` folder of point (1) is located
-   2. in the same folder where are located the `mesh` and `out` folder copy the folder [textures](../tools/example_files/gt_mirror_sample_files/textures) in case the texture could be generated again using the `test.py` script
-   3. in the same folder where are located the `mesh` folder copy the folder [xml_files_generator](../tools/example_files/gt_mirror_sample_files/xml_files_generator) and the file [launch_render.sh](../tools/example_files/gt_mirror_sample_files/launch_render.sh)
-   4. in the folder [data_configuration](../tools/example_files/gt_mirror_sample_files/xml_files_generator/data_configuration) copy the `tr_rot_list` of the dataset
-   5. run the script [xml_files_gen.py](../tools/example_files/gt_mirror_sample_files/xml_files_generator/xml_files_gen.py)
-   6. run the script `launch_slurm.sh` to generate the dataset using slurm
+   2. in the same folder where are located the `mesh` and `out` folder copy the folder textures, that could be generated using the [multi_tools.py](./multi_tools.py) script as follow:
+      ```bash
+      multi_tools.py -t spot_bitmap -m <img_resolution> -s <img_resolution> -o <output_folder>
+      ```
+      example:
+      ```bash
+      multi_tools.py -t spot_bitmap -m "320,240" -s "320,240" -o ./textures/
+      ```
+   4. in the same folder where are located the `mesh` folder copy the folder [xml_files_generator](../tools/example_files/gt_mirror_sample_files/xml_files_generator) and the file [launch_render.sh](../tools/example_files/gt_mirror_sample_files/launch_render.sh)
+   5. in the folder [data_configuration](../tools/example_files/gt_mirror_sample_files/xml_files_generator/data_configuration) copy the `tr_rot_list` of the dataset
+   6. run the script [xml_files_gen.py](../tools/example_files/gt_mirror_sample_files/xml_files_generator/xml_files_gen.py)
+   7. run the script `launch_slurm.sh` to generate the dataset using slurm
 2. run the `ground_truth_generator.py` script with the following arguments:
    * `-g` or `--ground`: the path to the folder where the ground truth raw *Mitsuba* render is saved (e.g. **"./gt_in"**) the folder should contain 8 folder named as "batch01, batch02, ..." and inside each of them there should be one folder for each render
    * `-i` or `--input`: the path to the folder where the dataset raw *Mitsuba* render is saved (e.g. **"./dts_in"**)  the folder should contain 8 folder named as "batch01, batch02, ..." and inside each of them there should be one folder for each render
