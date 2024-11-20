@@ -96,8 +96,8 @@ In order to generate the standard dataset it is required to follow the following
    * move the `mesh` folder just generated to the same folder where the `out` folder of point (1) is located
 3. in the same folder where are located the `mesh` and `out` folder copy the folder [textures](../tools/example_files/standard_dataset_sample_files/textures), in case the texture could be generated again using the `multi_tools.py` script
 4. in the same folder where are located the `mesh` and `out` folder copy the folder [slurm_data](../tools/example_files/standard_dataset_sample_files/slurm_data) and the file [launch_slurm.sh](../tools/example_files/standard_dataset_sample_files/launch_slurm.sh)
-5. run the script [`slurm_files_gen.py`](..tools/example_files/standard_dataset_sample_files/slurm_data/template/slurm_files_gen.py)
-6. run the script [`launch_slurm.sh`](..tools/example_files/standard_dataset_sample_files/launch_slurm.sh) to generate the dataset using SLURM
+5. run the script [`slurm_files_gen.py`](../tools/example_files/standard_dataset_sample_files/slurm_data/template/slurm_files_gen.py)
+6. run the script [`launch_slurm.sh`](../tools/example_files/standard_dataset_sample_files/launch_slurm.sh) to generate the dataset using SLURM
    if SLURM is not available it is possible to run `mitsuba` standalone using the following command:
    ```bash
    LD_LIBRARY_PATH="<path_to_folder>/mitsuba2-transient-nlos/build/dist/" "<path_to_folder>/mitsuba2-transient-nlos/build/dist/mitsuba" <path_to_xml_config_file> -o "<output_folder>."
@@ -120,8 +120,8 @@ In order to generate the Fermat dataset it is required to follow the following s
    * move the `mesh` folder just generated to the same folder where the `out` folder of point (1) is located
 3. in the same folder where are located the `mesh` and `out` folder copy the folder [textures](../tools/example_files/fermat_data_samples_files/textures), in case the texture could be generated again using the `test.py` script setting the flag to split the grid to True
 4. in the same folder where are located the `mesh` and `out` folder copy the folder [slurm_data](../tools/example_files/standard_dataset_sample_files/slurm_data) and the file [launch_slurm.sh](../tools/example_files/standard_dataset_sample_files/launch_slurm.sh)
-5. run the script [`slurm_files_gen.py`](..tools/example_files/standard_dataset_sample_files/slurm_data/template/slurm_files_gen.py)
-6. run the script [`launch_slurm.sh`](..tools/example_files/standard_dataset_sample_files/launch_slurm.sh) to generate the dataset using SLURM
+5. run the script [`slurm_files_gen.py`](../tools/example_files/standard_dataset_sample_files/slurm_data/template/slurm_files_gen.py)
+6. run the script [`launch_slurm.sh`](../tools/example_files/standard_dataset_sample_files/launch_slurm.sh) to generate the dataset using SLURM
    if SLURM is not available it is possible to run `mitsuba` standalone using the following command:
    ```bash
    LD_LIBRARY_PATH="<path_to_folder>/mitsuba2-transient-nlos/build/dist/" "<path_to_folder>/mitsuba2-transient-nlos/build/dist/mitsuba" <path_to_xml_config_file> -o "<output_folder>."
