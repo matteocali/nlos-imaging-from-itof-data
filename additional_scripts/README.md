@@ -96,8 +96,13 @@ In order to generate the standard dataset it is required to follow the following
    * move the `mesh` folder just generated to the same folder where the `out` folder of point (1) is located
 3. in the same folder where are located the `mesh` and `out` folder copy the folder [textures](../tools/example_files/standard_dataset_sample_files/textures), in case the texture could be generated again using the `multi_tools.py` script
 4. in the same folder where are located the `mesh` and `out` folder copy the folder [slurm_data](../tools/example_files/standard_dataset_sample_files/slurm_data) and the file [launch_slurm.sh](../tools/example_files/standard_dataset_sample_files/launch_slurm.sh)
-5. run the script `slurm_data/template/slurm_files_gen.py`
-6. run the script `launch_slurm.sh` to generate the dataset using slurm
+5. run the script [`slurm_files_gen.py`](..tools/example_files/standard_dataset_sample_files/slurm_data/template/slurm_files_gen.py)
+6. run the script [`launch_slurm.sh`](..tools/example_files/standard_dataset_sample_files/launch_slurm.sh) to generate the dataset using SLURM
+   if SLURM is not available it is possible to run `mitsuba` standalone using the following command:
+   ```bash
+   LD_LIBRARY_PATH="<path_to_folder>/mitsuba2-transient-nlos/build/dist/" "<path_to_folder>/mitsuba2-transient-nlos/build/dist/mitsuba" <path_to_xml_config_file> -o "<output_folder>."
+   ```
+   the `mitsuba` script should be launched for each `.xml` file by hand, for this reason, in order to speed up and accelerate the process it is suggested to use SLURM
 
 In order to generate the Fermat dataset it is required to follow the following steps:
 
@@ -115,9 +120,14 @@ In order to generate the Fermat dataset it is required to follow the following s
    * move the `mesh` folder just generated to the same folder where the `out` folder of point (1) is located
 3. in the same folder where are located the `mesh` and `out` folder copy the folder [textures](../tools/example_files/fermat_data_samples_files/textures), in case the texture could be generated again using the `test.py` script setting the flag to split the grid to True
 4. in the same folder where are located the `mesh` and `out` folder copy the folder [slurm_data](../tools/example_files/standard_dataset_sample_files/slurm_data) and the file [launch_slurm.sh](../tools/example_files/standard_dataset_sample_files/launch_slurm.sh)
-5. run the script `slurm_data/template/slurm_files_gen.py`
-6. run the script `launch_slurm.sh` to generate the dataset using slurm
-
+5. run the script [`slurm_files_gen.py`](..tools/example_files/standard_dataset_sample_files/slurm_data/template/slurm_files_gen.py)
+6. run the script [`launch_slurm.sh`](..tools/example_files/standard_dataset_sample_files/launch_slurm.sh) to generate the dataset using SLURM
+   if SLURM is not available it is possible to run `mitsuba` standalone using the following command:
+   ```bash
+   LD_LIBRARY_PATH="<path_to_folder>/mitsuba2-transient-nlos/build/dist/" "<path_to_folder>/mitsuba2-transient-nlos/build/dist/mitsuba" <path_to_xml_config_file> -o "<output_folder>."
+   ```
+   the `mitsuba` script should be launched for each `.xml` file by hand, for this reason, in order to speed up and accelerate the process it is suggested to use SLURM
+   
 ## ground_truth_generator.py
 
 `ground_truth_generator` contains the code to generate the ground truth both for the *mirror trick* and the *Fermat flow* network.
@@ -141,7 +151,12 @@ In order to generate the *mirror trick* ground truth it is required to follow th
    4. in the same folder where are located the `mesh` folder copy the folder [xml_files_generator](../tools/example_files/gt_mirror_sample_files/xml_files_generator) and the file [launch_render.sh](../tools/example_files/gt_mirror_sample_files/launch_render.sh)
    5. in the folder [data_configuration](../tools/example_files/gt_mirror_sample_files/xml_files_generator/data_configuration) copy the `tr_rot_list` of the dataset
    6. run the script [xml_files_gen.py](../tools/example_files/gt_mirror_sample_files/xml_files_generator/xml_files_gen.py)
-   7. run the script `launch_slurm.sh` to generate the dataset using slurm
+   7. run the script [`launch_render.sh`](../tools/example_files/gt_mirror_sample_files/xml_files_generator/launch_render.sh) to generate the dataset using SLURM
+      if SLURM is not available it is possible to run `mitsuba` standalone using the following command:
+      ```bash
+      LD_LIBRARY_PATH="<path_to_folder>/mitsuba2-transient-nlos/build/dist/" "<path_to_folder>/mitsuba2-transient-nlos/build/dist/mitsuba" <path_to_xml_config_file> -o "<output_folder>."
+      ```
+      the `mitsuba` script should be launched for each `.xml` file by hand, for this reason, in order to speed up and accelerate the process it is suggested to use SLURM
 2. run the `ground_truth_generator.py` script with the following arguments:
    * `-g` or `--ground`: the path to the folder where the ground truth raw *Mitsuba* render is saved (e.g. **"./gt_in"**) the folder should contain 8 folder named as "batch01, batch02, ..." and inside each of them there should be one folder for each render
    * `-i` or `--input`: the path to the folder where the dataset raw *Mitsuba* render is saved (e.g. **"./dts_in"**)  the folder should contain 8 folder named as "batch01, batch02, ..." and inside each of them there should be one folder for each render
